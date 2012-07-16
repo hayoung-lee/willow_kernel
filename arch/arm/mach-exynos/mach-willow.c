@@ -4201,6 +4201,7 @@ static void __init exynos_c2c_reserve(void)
 #endif
 
 MACHINE_START(WILLOW, "WILLOW")
+	/* Maintainer: KooHyun Yu <koohyun@thinkware.co.kr>,<koohyun.yu@gmail.com> */
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
 	.map_io		= willow_map_io,
