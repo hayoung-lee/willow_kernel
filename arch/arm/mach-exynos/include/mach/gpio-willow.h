@@ -15,4 +15,6 @@
 /* BACKLIGHT */
 #define BACKLIGHT_PWM_GPIO		EXYNOS4_GPD0(1)
 
+/* PM_IRQ_N */
+#define PM_IRQ_N				EXYNOS4_GPX3(2)
 #endif /* __ASM_ARCH_GPIO_WILLOW_H */
