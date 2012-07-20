@@ -171,6 +171,13 @@ config LCD_LTE480WV
 	  If you have an LTE480 Panel(WVGA), say Y to enable its
 	  LCD control drvier.
 
+config LCD_LTN101AL03
+	tristate "LCD_LTN101AL03 LCD Driver"
+	default n
+	help
+	  If you have an LTN101AL03 Panel(1280x800), say Y to enable its
+	  LCD control drvier.
+
 endif # LCD_CLASS_DEVICE
 
 #

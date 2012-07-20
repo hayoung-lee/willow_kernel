@@ -87,7 +87,7 @@ config FB_S5P_MIPI_DSIM
 choice
 depends on FB_S5P
 prompt "Select LCD Type"
-default FB_S5P_AMS369FG06
+default FB_S5P_LTN101AL03
 config FB_S5P_LTE480WV
 	bool "LTE480WV"
 	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDKV210 || MACH_SMDKC110
@@ -102,7 +102,7 @@ config FB_S5P_HT101HD1
 
 config FB_S5P_WA101S
 	bool "WA101S"
-	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDK4X12 || MACH_WILLOW
+	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDK4X12
 	select TOUCHSCREEN_S5PV310_MT
 	help
 	  This enables support for 10.1" 1366*768 LCD panel
@@ -114,6 +114,12 @@ config FB_S5P_AMS369FG06
 	select SPI_GPIO
 	help
 	  This enables support for Samsung AMS369FG06 3.7" WVGA AMOLED panel
+
+config FB_S5P_LTN101AL03
+	bool "LTN101AL03"
+	depends on MACH_WILLOW
+	help
+	  This enables support for 10.1" 1280*800 Samsung LCD panel
 
 config FB_S5P_LMS501KF03
 	bool "LMS501KF03"

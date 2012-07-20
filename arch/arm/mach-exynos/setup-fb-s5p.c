@@ -80,6 +80,14 @@ void s3cfb_cfg_gpio(struct platform_device *pdev)
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 }
+#elif defined(CONFIG_FB_S5P_LTN101AL03)
+void s3cfb_cfg_gpio(struct platform_device *pdev)
+{
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+}
 #endif
 #endif
 
@@ -191,8 +199,50 @@ void s3cfb_get_clk_name(char *clk_name)
 #define EXYNOS4_GPD_0_1_TOUT_1  (0x2 << 4)
 #define EXYNOS4_GPD_0_2_TOUT_2  (0x2 << 8)
 #define EXYNOS4_GPD_0_3_TOUT_3  (0x2 << 12)
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+int s3cfb_backlight_on(struct platform_device *pdev)
+{
+#if !defined(CONFIG_BACKLIGHT_PWM)
+	int err;
 
-#if defined(CONFIG_FB_S5P_WA101S)
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPD0 for "
+			"lcd backlight control\n");
+		return err;
+	}
+	gpio_free(EXYNOS4_GPD0(1));
+#endif
+	return 0;
+}
+
+int s3cfb_backlight_off(struct platform_device *pdev)
+{
+#if !defined(CONFIG_BACKLIGHT_PWM)
+	int err;
+
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPD0 for "
+			"lcd backlight control\n");
+		return err;
+	}
+	gpio_free(EXYNOS4_GPD0(1));
+#endif
+	return 0;
+}
+
+int s3cfb_lcd_on(struct platform_device *pdev)
+{
+	return 0;
+}
+
+int s3cfb_lcd_off(struct platform_device *pdev)
+{
+	return 0;
+}
+
+#elif defined(CONFIG_FB_S5P_WA101S)
 int s3cfb_backlight_on(struct platform_device *pdev)
 {
 #if !defined(CONFIG_BACKLIGHT_PWM)
