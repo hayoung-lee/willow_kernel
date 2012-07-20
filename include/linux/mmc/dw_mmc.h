@@ -14,6 +14,8 @@
 #ifndef _LINUX_MMC_DW_MMC_H_
 #define _LINUX_MMC_DW_MMC_H_
 
+#include <linux/scatterlist.h>
+
 #define MAX_MCI_SLOTS	2
 
 enum dw_mci_state {
