@@ -1032,7 +1032,6 @@ static struct s3c_fb_pd_win willow_fb_win2 = {
 	.default_bpp		= 24,
 };
 
-
 static struct s3c_fb_platdata willow_lcd0_pdata __initdata = {
 	.win[0]		= &willow_fb_win0,
 	.win[1]		= &willow_fb_win1,
@@ -1982,6 +1981,14 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 
 static struct i2c_board_info i2c_devs3[] __initdata = {
 	{
+	},
+};
+
+static struct i2c_board_info i2c_devs5[] __initdata = {
+	{
+#ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
+        I2C_BOARD_INFO("ft5x0x_ts", (0x70>>1)),
+#endif
 	},
 };
 
@@ -3062,7 +3069,9 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
+
 	s3c_i2c5_set_platdata(NULL);
+	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
 
 	s3c_i2c7_set_platdata(NULL);
 	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
