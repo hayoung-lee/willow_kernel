@@ -2038,6 +2038,12 @@ static struct platform_device willow_gpio_keys = {
 	},
 };
 
+#ifdef CONFIG_WAKEUP_ASSIST
+static struct platform_device wakeup_assist_device = {
+	.name   = "wakeup_assist",
+};
+#endif
+
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
 	.hw_ver = 0x41,
@@ -2293,6 +2299,9 @@ static struct platform_device *willow_devices[] __initdata = {
 	&samsung_device_keypad,
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
+#endif
+#ifdef CONFIG_WAKEUP_ASSIST
+	&wakeup_assist_device,
 #endif
 	&willow_gpio_keys,
 #ifdef CONFIG_S3C64XX_DEV_SPI
