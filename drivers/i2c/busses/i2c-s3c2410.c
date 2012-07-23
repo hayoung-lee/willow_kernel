@@ -85,6 +85,14 @@ struct s3c24xx_i2c {
 };
 
 /* default platform data removed, dev should always carry data. */
+#define FEATURE_TW_I2C_CLOCK_CHANG
+#if defined(FEATURE_TW_I2C_CLOCK_CHANG)
+struct t10_i2c {
+ int num_bus;
+ struct s3c24xx_i2c *i2c;
+};
+static struct t10_i2c t10s_i2c_backup[10];
+#endif
 
 static inline void dump_i2c_register(struct s3c24xx_i2c *i2c)
 {
@@ -863,7 +871,16 @@ static int s3c24xx_i2c_init(struct s3c24xx_i2c *i2c)
  *
  * called by the bus driver when a suitable device is found
 */
+#if defined(FEATURE_TW_I2C_CLOCK_CHANG)
+void t10s_i2c_clockrate(int i2c_num)
+{
 
+	clk_enable(t10s_i2c_backup[i2c_num].i2c->clk);
+	s3c24xx_i2c_init(t10s_i2c_backup[i2c_num].i2c);
+	clk_disable(t10s_i2c_backup[i2c_num].i2c->clk);
+}
+EXPORT_SYMBOL(t10s_i2c_clockrate);
+#endif
 static int s3c24xx_i2c_probe(struct platform_device *pdev)
 {
 	struct s3c24xx_i2c *i2c;
@@ -987,6 +1004,13 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, i2c);
 
+#if defined(FEATURE_TW_I2C_CLOCK_CHANG)
+	if(pdata->bus_num<10)
+	{
+		t10s_i2c_backup[pdata->bus_num].num_bus= pdata->bus_num;
+		t10s_i2c_backup[pdata->bus_num].i2c=i2c;
+	}
+#endif
 	dev_info(&pdev->dev, "%s: S3C I2C adapter\n", dev_name(&i2c->adap.dev));
 	clk_disable(i2c->clk);
 	return 0;
