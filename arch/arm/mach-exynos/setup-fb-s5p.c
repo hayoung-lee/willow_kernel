@@ -83,10 +83,10 @@ void s3cfb_cfg_gpio(struct platform_device *pdev)
 #elif defined(CONFIG_FB_S5P_LTN101AL03)
 void s3cfb_cfg_gpio(struct platform_device *pdev)
 {
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
 }
 #endif
 #endif
@@ -135,7 +135,7 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk2;
 	}
 
-	ret = clk_set_rate(sclk, 800000000);
+	ret = clk_set_rate(sclk, 668000000);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to clk_set_rate of sclk for fimd\n");
 		goto err_clk2;
