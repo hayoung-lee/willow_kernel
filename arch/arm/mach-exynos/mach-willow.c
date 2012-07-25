@@ -1215,7 +1215,7 @@ static struct regulator_consumer_supply max77686_buck4 =
 REGULATOR_SUPPLY("vdd_g3d", NULL);
 
 static struct regulator_consumer_supply max77686_buck8 =
-REGULATOR_SUPPLY("vdd_emmc_2v8", NULL);
+REGULATOR_SUPPLY("vmmc", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo1_consumer =
 REGULATOR_SUPPLY("vdd_alive", NULL);
