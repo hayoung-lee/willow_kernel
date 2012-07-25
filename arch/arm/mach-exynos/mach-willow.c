@@ -2009,33 +2009,32 @@ static struct gpio_keys_button willow_button[] = {
 		.code               = KEY_POWER,
         .gpio               = WILLOW_POWER_KEY,
 		.active_low         = 1,
-       	.desc               = "Power",
+       	.desc               = "gpio-keys: KEY_POWER",
 		.type               = EV_KEY,
         .wakeup             = 1,
+        .debounce_interval	= 1,
 	},
 	{
 		.code               = KEY_VOLUMEDOWN,
 		.gpio               = WILLOW_VOLUM_DOWN,
 		.active_low         = 1,
-		.desc               = "Volume Down",
+		.desc               = "gpio-keys: KEY_VOLUMEDOWN",
 		.type               = EV_KEY,
-		//    .wakeup             = 1,
-		.wakeup             = 0,
+		.debounce_interval	= 1,
 	},
 	{
 		.code               = KEY_VOLUMEUP,
 		.gpio               = WILLOW_VOLUM_UP,
 		.active_low         = 1,
-		.desc               = "Volume Up" ,
+		.desc               = "gpio-keys: KEY_VOLUMEUP" ,
 		.type               = EV_KEY,
-		//    .wakeup             = 1,
-		.wakeup             = 0,
-	}//,
+		.debounce_interval	= 1,
+	},
 };
 
-struct gpio_keys_platform_data willow_gpiokeys_platform_data = {
-	willow_button,
-	ARRAY_SIZE(willow_button),
+static struct gpio_keys_platform_data willow_gpiokeys_platform_data = {
+	.buttons		= willow_button,
+	.nbuttons		= ARRAY_SIZE(willow_button),
 };
 
 static struct platform_device willow_gpio_keys = {
@@ -2044,6 +2043,16 @@ static struct platform_device willow_gpio_keys = {
 		.platform_data = &willow_gpiokeys_platform_data,
 	},
 };
+
+static void wilow_gpio_key_cfg(void)
+{
+	s3c_gpio_cfgpin(WILLOW_POWER_KEY, S3C_GPIO_SFN(0x0));
+	s3c_gpio_setpull(WILLOW_POWER_KEY, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(WILLOW_VOLUM_DOWN, S3C_GPIO_SFN(0x0));
+	s3c_gpio_setpull(WILLOW_VOLUM_DOWN, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(WILLOW_VOLUM_UP, S3C_GPIO_SFN(0x0));
+	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_NONE);
+}
 
 #ifdef CONFIG_WAKEUP_ASSIST
 static struct platform_device wakeup_assist_device = {
@@ -3433,6 +3442,9 @@ static void __init willow_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DMC1], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
 #endif
+
+	wilow_gpio_key_cfg();
+
 	register_reboot_notifier(&exynos4_reboot_notifier);
 }
 
