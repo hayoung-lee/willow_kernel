@@ -175,11 +175,9 @@ void clear_emer(void)
 
     usr_shot_touch_count = 0;
     touch_emergency = 0;
-//    old_x_touch = 0;
-//    old_y_touch = 0;
     wake_touch_count = 0;            
     check_emer_timer=0;
-    printk(" clear emergency ================= \n");
+    printk("[TSP] clear emergency \n");
 }
 extern int ft5x0x_read_reg(u8 addr, u8 *pdata);
 
@@ -2565,7 +2563,6 @@ static ssize_t ft5x0x_fwupgradeapp_store(struct device *dev,
     msleep(50);  //clock change
 	
 	fts_ctpm_fw_upgrade_with_app_file(fwname);
-
     msleep(50);  //clock change
 	s3c_i2c5_force_stop();
     msleep(50);  //clock change    
@@ -2573,7 +2570,7 @@ static ssize_t ft5x0x_fwupgradeapp_store(struct device *dev,
     msleep(50);  //clock change    
 	t10s_i2c_clockrate(1);
     msleep(50);  //clock change
-	
+
 	enable_irq(IRQ_EINT(4));
 
 // error_return:
@@ -2801,6 +2798,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     printk("[FTS] touch threshold is %d.\n", uc_reg_value * 4);
     printk("[FTS] ============== Touch Information End ================\n");
 
+#if 0
 #if CFG_SUPPORT_AUTO_UPG
     fts_ctpm_auto_upg();
 #endif    
@@ -2812,7 +2810,8 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     msleep(50);  //clock change    
 	t10s_i2c_clockrate(5);
     msleep(50);  //clock change
-    
+#endif    
+
 #if CFG_SUPPORT_UPDATE_PROJECT_SETTING
     fts_ctpm_update_project_setting();
 #endif
