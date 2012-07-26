@@ -1360,7 +1360,7 @@ static struct regulator_init_data max77686_buck4_data = {
 };
 
 static struct regulator_init_data max77686_buck8_data = {
-	.constraints = { //?�시 always_on
+	.constraints = { // temporarily boot_on
 		.name = "vdd_emmc_2v8 range",
 		.min_uV = 2800000,
 		.max_uV = 2800000,
@@ -1557,6 +1557,7 @@ static struct regulator_init_data __initdata max77686_ldo12_data = {
 		.min_uV		= 3300000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1582,7 +1583,7 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 };
 
 static struct regulator_init_data __initdata max77686_ldo14_data = {
-	.constraints	= { // ?�시 always_on
+	.constraints	= { // temporarily always_on
 		.name		= "vdd_mmc_1v8 range",
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
@@ -1604,6 +1605,7 @@ static struct regulator_init_data __initdata max77686_ldo15_data = {
 		.min_uV		= 1000000,
 		.max_uV		= 1000000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1619,6 +1621,7 @@ static struct regulator_init_data __initdata max77686_ldo16_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
