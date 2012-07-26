@@ -1289,8 +1289,12 @@ REGULATOR_SUPPLY("vdd_lcd", NULL);
 static struct regulator_consumer_supply __initdata max77686_ldo24_consumer =
 REGULATOR_SUPPLY("vdd_sensor", NULL);
 
-static struct regulator_consumer_supply __initdata max77686_ldo25_consumer =
-REGULATOR_SUPPLY("vdd_audio", NULL);
+static struct regulator_consumer_supply max77686_ldo25_consumer[] = {
+	REGULATOR_SUPPLY("DCVDD", "1-001a"),
+	REGULATOR_SUPPLY("DBVDD", "1-001a"),
+	REGULATOR_SUPPLY("AVDD1", "1-001a"),
+	REGULATOR_SUPPLY("AVDD2", "1-001a"),
+};
 
 static struct regulator_consumer_supply __initdata max77686_ldo26_consumer =
 REGULATOR_SUPPLY("vdd_tsp", NULL);
@@ -1756,15 +1760,15 @@ static struct regulator_init_data __initdata max77686_ldo24_data = {
 static struct regulator_init_data __initdata max77686_ldo25_data = {
 	.constraints	= {
 		.name		= "vdd_audio range",
-		.min_uV		= 3300000,
-		.max_uV		= 3300000,
+		.min_uV		= 2900000,
+		.max_uV		= 2900000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
 		},
 	},
-	.num_consumer_supplies	= 1,
+	.num_consumer_supplies	= ARRAY_SIZE(max77686_ldo25_consumer),
 	.consumer_supplies	= &max77686_ldo25_consumer,
 };
 
@@ -1971,6 +1975,7 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 
 static struct i2c_board_info i2c_devs1[] __initdata = {
 	{
+		I2C_BOARD_INFO("wm8985", 0x1a),
 	},
 };
 
@@ -3043,6 +3048,7 @@ err_clk:
 
 static void __init willow_machine_init(void)
 {
+
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	struct clk *sclk = NULL;
 	struct clk *prnt = NULL;

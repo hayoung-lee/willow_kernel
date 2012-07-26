@@ -29,7 +29,27 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
+#include <linux/gpio.h>
+#include <mach/gpio.h>
+#include <plat/gpio-cfg.h>
+#include <linux/sec_jack.h>
+#include <mach/gpio-willow.h>
+
 #include "wm8985.h"
+
+static unsigned int save_reg_power1;
+static unsigned int save_reg_power2;
+static unsigned int save_reg_power3;
+
+int g_dacmute_firstseted = 0;
+struct snd_soc_codec *codecwrite;
+
+#define DEBUG_MSG(f, a...)
+//#define DEBUG_MSG(f, a...)  printk(f, ## a)
+
+extern int t10_jack_get_type(void);
+void wm8985_set_path_prev(int mode, int jack_type);
+void wm8985_change_path(struct snd_soc_codec *codec, int lrmode, int pathmode);
 
 #define WM8985_NUM_SUPPLIES 4
 static const char *wm8985_supply_names[WM8985_NUM_SUPPLIES] = {
@@ -123,12 +143,6 @@ static const int volume_update_regs[] = {
 	WM8985_RIGHT_INP_PGA_GAIN_CTRL
 };
 
-struct wm8985_priv {
-	enum snd_soc_control_type control_type;
-	struct regulator_bulk_data supplies[WM8985_NUM_SUPPLIES];
-	unsigned int sysclk;
-	unsigned int bclk;
-};
 
 static const struct {
 	int div;
@@ -239,6 +253,302 @@ static const char *depth_3d_text[] = {
 static const SOC_ENUM_SINGLE_DECL(depth_3d, WM8985_3D_CONTROL, 0,
 				  depth_3d_text);
 
+typedef void (*select_route)(struct snd_soc_codec *);
+typedef void (*select_mic_route)(struct snd_soc_codec *);
+
+#define MAX_PLAYBACK_PATHS 16
+#define MAX_VOICECALL_PATH 9
+#define MAX_FACTRYTEST_PATH_PLAYBACK_PATHS 3
+
+static const char *playback_path[] = {
+  "OFF",            // 0
+  "RCV",            // 1
+  "SPK",            // 2
+  "HP",             // 3
+  "HP_NO_MIC", // 4
+  "BT",             //5
+  "SPK_HP",         //6
+  "CRADLE",         //7
+  "CRADLE_HP",      //8
+  "SPK_BT",         //9
+  "RING_SPK",       //10
+  "RING_HP",        //11
+  "RING_NO_MIC",    //12
+  "RING_SPK_HP",    //13
+  "RING_CRADLE",    //14
+  "RING_CRADLE_HP", //15
+  "RING_SPK_BT"     //16
+};
+static const char *voicecall_path[] = {
+  "OFF",            //0
+  "RCV",            // 1
+  "SPK",            // 2
+  "HP",             // 3
+  "HP_NO_MIC",  // 4
+  "BT",             //5
+  "SPK_HP",         //6
+  "CRADLE",         //7
+  "CRADLE_HP",      //8
+  "SPK_BT",         //9
+};
+static const char *mic_path[] = {
+  "MIC OFF",
+  "Main Mic",
+  "Hands Free Mic",
+  "BT Sco Mic",
+  "Main Mic in Call",
+  "Hands Free Mic in Call",
+};
+static const char *input_source[] = {
+  "Default",
+  "Voice Recognition",
+  "Camcorder"
+};
+static const char *factorytest_path[] = {
+  "FP_OFF",	// 0
+  "FP_LEFT",  // 1
+  "FP_RIGHT",  // 2
+  "FP_BOTH",  // 3
+};
+
+enum output_path  {
+  OFF               = 0,
+  RCV               = 1,
+  SPK               = 2,
+  HP                = 3,
+  HP_NO_MIC         = 4,
+  BT                = 5,
+  SPK_HP            = 6,
+  CRADLE            = 7,
+  CRADLE_HP         = 8,
+  SPK_BT            = 9,
+  RING_SPK          = 10,
+  RING_HP           = 11,
+  RING_NO_MIC       = 12,
+  RING_SPK_HP       = 13,
+  RING_CRADLE       = 14,
+  RING_CRADLE_HP    = 15,
+  RING_SPK_BT       = 16,
+};
+
+enum input_path    {
+  MIC_OFF                   = 0,
+  MAIN_MIC                  = 1,
+  HAND_FREE_MIC             = 2,
+  BT_SOC_MIC                = 3,
+  MAIN_MIC_IN_CALL          = 4,
+  HAND_FREE_MIC_IN_CALL     = 5,
+};
+
+enum ringtone_state  {
+  RING_OFF          = 0,
+  RING_ON           = 1,
+};
+
+enum input_source_state  {
+  DEFAULT           = 0,
+  RECOGNITION       = 1,
+  CAMCORDER         = 2,
+};
+
+enum factorytest_path  {
+  FP_OFF	= 0,
+  FP_LEFT	= 1,
+  FP_RIGHT	= 2,
+  FP_BOTH	=3,
+};
+
+struct wm8985_priv {
+	struct snd_soc_codec codec;
+	enum snd_soc_control_type control_type;
+	u16 reg_cache[WM8985_REGCACHENUM];
+	struct regulator_bulk_data supplies[WM8985_NUM_SUPPLIES];
+	unsigned int sysclk;
+	unsigned int bclk;
+	enum output_path cur_path;
+	enum input_path rec_path;
+	enum input_source_state input_source;
+	enum ringtone_state ringtone_active;
+	select_route *universal_playback_path;
+	select_route *universal_voicecall_path;
+	select_mic_route *universal_mic_path;
+};
+
+static const struct soc_enum path_control_enum[] = {
+  SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(playback_path), playback_path),
+  SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(voicecall_path), voicecall_path),
+  SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(mic_path), mic_path),
+  SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(input_source), input_source),
+};
+
+static const struct soc_enum factorytest_path_enum[] = {
+  SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(factorytest_path), factorytest_path)
+};
+
+void wm8985_set_off(struct snd_soc_codec *codec)
+{
+	//DEBUG_MSG("[%s]",__func__);
+	wm8985_change_path(codec, 3, 0);
+}
+
+void wm8985_set_playback_receiver(struct snd_soc_codec *codec)
+{
+	//struct wm8985_priv *wm8985 = codec->drvdata;
+	//DEBUG_MSG("[%s]",__func__);
+	wm8985_change_path(codec, 3, 0);
+}
+
+void wm8985_set_playback_headset(struct snd_soc_codec *codec)
+{
+	//struct wm8985_priv *wm8985 = codec->drvdata;
+	//DEBUG_MSG("[%s]",__func__);
+	wm8985_change_path(codec, 3, 1);
+}
+
+void wm8985_set_playback_speaker(struct snd_soc_codec *codec)
+{
+	//struct wm8985_priv *wm8985 = codec->drvdata;
+	//DEBUG_MSG("[%s]",__func__);
+	wm8985_change_path(codec, 3, 2);
+}
+
+void wm8985_set_playback_speaker_headset(struct snd_soc_codec *codec)
+{
+	//struct wm8985_priv *wm8985 = codec->drvdata;
+	//DEBUG_MSG("[%s]",__func__);
+	wm8985_change_path(codec, 3, 3);
+}
+
+//------------------------------------------------
+// Definitions of sound path
+//------------------------------------------------
+select_route universal_wm8985_playback_paths[] =
+	{wm8985_set_off, wm8985_set_playback_receiver,
+	wm8985_set_playback_speaker, wm8985_set_playback_headset,
+	wm8985_set_playback_headset, wm8985_set_off,//BT -> OFF
+	wm8985_set_playback_speaker_headset};
+
+static int wm8985_get_path(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct wm8985_priv *wm8985 = snd_soc_codec_get_drvdata(codec);
+	ucontrol->value.integer.value[0] = wm8985->cur_path;
+	return 0;
+}
+
+static int wm8985_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct wm8985_priv *wm8985 = snd_soc_codec_get_drvdata(codec);
+	struct soc_enum *mc = (struct soc_enum *)kcontrol->private_value;
+	int path_num = ucontrol->value.integer.value[0];
+
+	if (strcmp(mc->texts[path_num], playback_path[path_num])) {
+		printk(KERN_ERR "Unknown path %s\n", mc->texts[path_num]);
+		return -ENODEV;
+	}
+
+	if (path_num > MAX_PLAYBACK_PATHS) {
+		printk(KERN_ERR "Unknown Path\n");
+		return -ENODEV;
+	}
+
+	switch (path_num) {
+	case OFF:// 0
+		DEBUG_MSG("Switching off output path\n");
+		break;
+	case RCV:// 1
+	case SPK:// 2
+	case HP:// 3
+	case HP_NO_MIC:// 4
+		DEBUG_MSG("routing to %s\n", mc->texts[path_num]);
+		break;
+	case BT:// 5
+		path_num = 0;
+		break;
+	case SPK_HP:// 6
+		DEBUG_MSG("routing to %s\n", mc->texts[path_num]);
+		break;
+
+	/*Not supported*/
+	case CRADLE:// 7
+	case CRADLE_HP:// 8
+	case SPK_BT:// 9
+		printk(KERN_ERR "audio path[%d] Not supported!!\n", path_num);
+		return -ENODEV;
+		break;
+
+	case RING_SPK:// 10
+	case RING_HP:// 11
+	case RING_NO_MIC:// 12
+	case RING_SPK_HP:// 13
+		DEBUG_MSG("routing to %s\n", mc->texts[path_num]);
+		path_num -= 8;
+		break;
+
+	/*Not supported*/
+	case RING_CRADLE:// 14
+	case RING_CRADLE_HP:// 15
+	case RING_SPK_BT://16
+		printk(KERN_ERR "audio path[%d] Not supported!!\n", path_num);
+		return -ENODEV;
+		break;
+
+	default:
+		printk(KERN_ERR "audio path[%d] does not exists!!\n", path_num);
+		return -ENODEV;
+		break;
+	}
+
+	DEBUG_MSG("[%s]# path_num : %d,  jack_type : %d  \n", __func__,path_num);
+	wm8985->cur_path = path_num;
+	wm8985->universal_playback_path[wm8985->cur_path] (codec);
+
+	return 0;
+}
+
+static int factorytest_get_path(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct wm8985_priv *wm8985 = snd_soc_codec_get_drvdata(codec);
+	ucontrol->value.integer.value[0] = wm8985->cur_path;
+	return 0;
+}
+
+static int factorytest_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	//struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	//struct wm8985_priv *wm8985 = snd_soc_codec_get_drvdata(codec);
+	//struct soc_enum *mc = (struct soc_enum *)kcontrol->private_value;
+	int path_num = ucontrol->value.integer.value[0];
+	DEBUG_MSG("[%s] (%s)\n",__func__,factorytest_path[path_num]);
+
+	switch(path_num)
+	{
+	case FP_OFF:
+		wm8985_set_path_prev(0,0);
+		break;
+//TODO : impletent jack type
+/*
+	case FP_LEFT:
+		wm8985_set_path_prev(1,t10_jack_get_type());
+		break;
+	case FP_RIGHT:
+		wm8985_set_path_prev(2,t10_jack_get_type());
+		break;
+	case FP_BOTH:
+		wm8985_set_path_prev(3,t10_jack_get_type());
+		break;
+*/
+	default:
+		printk(KERN_ERR "factorytest path[%d] does not exists!!\n", path_num);
+		return -ENODEV;
+		break;
+	}
+
+	return 0;
+}
+
 static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE("Digital Loopback Switch", WM8985_COMPANDING_CONTROL,
 		0, 1, 0),
@@ -329,6 +639,9 @@ static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE_TLV("EQ5 Volume", WM8985_EQ5_HIGH_SHELF, 0, 24, 1, eq_tlv),
 
 	SOC_ENUM("3D Depth", depth_3d),
+
+	SOC_ENUM_EXT("Playback Path",     path_control_enum[0], wm8985_get_path,wm8985_set_path),
+	SOC_ENUM_EXT("Factorytest Path",     factorytest_path_enum[0], factorytest_get_path,factorytest_set_path),
 
 	SOC_ENUM("Speaker Mode", speaker_mode)
 };
@@ -546,13 +859,166 @@ static int wm8985_reset(struct snd_soc_codec *codec)
 	return snd_soc_write(codec, WM8985_SOFTWARE_RESET, 0x0);
 }
 
+
+/*
+	Control dac path
+	@mode	   	0:none, 1:left, 2:right, 3: both
+	@jack_type 	0:None, otherwise : jack value
+*/
+void wm8985_set_path_prev(int mode, int jack_type)
+{
+	int value=0, out_value=0, maskval=0;
+
+	if(!codecwrite)
+		return;
+
+	DEBUG_MSG("[%s] # mode : %d, jack_type : %d\n", __func__, mode, jack_type);
+
+	switch(jack_type){
+		case SEC_JACK_NO_DEVICE:
+			out_value = 0;
+			break;
+		case SEC_HEADSET_3POLE:
+		case SEC_HEADSET_4POLE:
+			out_value = 1;
+			break;
+		//TODO : other value.
+		default:
+			break;
+	}
+
+	//set value
+	maskval = 0;
+	value = (mode==0 || 	mode==((maskval==1)?1:2)) || out_value;
+		snd_soc_update_bits(codecwrite, WM8985_LOUT2_SPK_VOLUME_CTRL,
+				   WM8985_LOUT2MUTE_MASK,
+			   !!value << WM8985_LOUT2MUTE_SHIFT);	
+	value = (mode==0 || mode==((maskval==1)?2:1)) || out_value;
+		snd_soc_update_bits(codecwrite, WM8985_ROUT2_SPK_VOLUME_CTRL,
+				   WM8985_ROUT2MUTE_MASK,
+			   !!value << WM8985_ROUT2MUTE_SHIFT);
+
+	maskval = 1;
+	value = (mode==0 || mode==((maskval==1)?1:2)) || !out_value;
+	snd_soc_update_bits(codecwrite, WM8985_LOUT1_HP_VOLUME_CTRL,
+				   WM8985_LOUT1MUTE_MASK,
+			   !!value << WM8985_LOUT1MUTE_SHIFT);
+	value = (mode==0 || mode==((maskval==1)?2:1))|| !out_value;
+	snd_soc_update_bits(codecwrite, WM8985_ROUT1_HP_VOLUME_CTRL,
+				   WM8985_ROUT1MUTE_MASK,
+			   !!value << WM8985_ROUT1MUTE_SHIFT);
+}
+EXPORT_SYMBOL(wm8985_set_path_prev);
+
+/*
+	Change dac path
+	@mode	   	0:none, 1:left, 2:right, 3: both
+	@pathmode 	0:none, 1:hp, 2:spk, 3:both
+*/
+void wm8985_change_path(struct snd_soc_codec *codec, int lrmode, int pathmode)
+{
+	int value, hpspk_invert=0, allenable=0, alldisabel=0, lrinvert=0;
+
+	DEBUG_MSG("[%s] # lrmode : %d,  pathmode : %d\n", __func__, lrmode, pathmode);
+
+	switch(pathmode){
+		case 0://All disable
+			alldisabel = 1;
+			break;
+		case 1:
+			hpspk_invert = 1;
+			break;
+		case 2:
+			hpspk_invert = 0;
+			break;
+		case 3://All enable
+			allenable =1;
+			break;
+		default:
+			break;
+	}
+
+	//set delay to avoid booting pop noise when path is changed before dac_mute routine is called.
+	if(!g_dacmute_firstseted){
+		msleep(100);
+	}
+
+	//set value
+	lrinvert = 0;
+	value = ((lrmode==0 || lrmode==((lrinvert==1)?1:2)) || hpspk_invert || alldisabel) && !allenable;
+	snd_soc_update_bits(codec, WM8985_LOUT2_SPK_VOLUME_CTRL,
+			   WM8985_LOUT2MUTE_MASK,
+			   !!value << WM8985_LOUT2MUTE_SHIFT);	
+	value = ((lrmode==0 || lrmode==((lrinvert==1)?2:1)) || hpspk_invert || alldisabel) && !allenable;
+	snd_soc_update_bits(codec, WM8985_ROUT2_SPK_VOLUME_CTRL,
+			   WM8985_ROUT2MUTE_MASK,
+			   !!value << WM8985_ROUT2MUTE_SHIFT);
+
+	lrinvert = 1;
+	value = ((lrmode==0 || lrmode==((lrinvert==1)?1:2)) || !hpspk_invert || alldisabel) && !allenable;
+	snd_soc_update_bits(codec, WM8985_LOUT1_HP_VOLUME_CTRL,
+				   WM8985_LOUT1MUTE_MASK,
+			   !!value << WM8985_LOUT1MUTE_SHIFT);
+	value = ((lrmode==0 || lrmode==((lrinvert==1)?2:1))|| !hpspk_invert || alldisabel) && !allenable;
+	snd_soc_update_bits(codec, WM8985_ROUT1_HP_VOLUME_CTRL,
+				   WM8985_ROUT1MUTE_MASK,
+			   !!value << WM8985_ROUT1MUTE_SHIFT);
+}
+
+EXPORT_SYMBOL(wm8985_change_path);
+
+
+int wm8985_get_register(u32 reg)
+{
+	u32 retval = 0;
+
+	if(!codecwrite)
+		return -1;
+
+	retval = snd_soc_read(codecwrite, reg);
+	DEBUG_MSG("[%s] reg : 0x%x, retval : 0x%x\n", __func__,reg, retval);
+	return retval;
+}
+EXPORT_SYMBOL(wm8985_get_register);
+
+int wm8985_set_register(u32 reg, u32 val)
+{
+	u32 retval = 0;
+
+	if(!codecwrite)
+		return -1;
+
+	retval = snd_soc_write(codecwrite, reg, val);
+	DEBUG_MSG("[%s] reg : 0x%x, val : 0x%x, retval : 0x%x\n",__func__, reg, val, retval);
+	return retval;
+}
+EXPORT_SYMBOL(wm8985_set_register);
+
 static int wm8985_dac_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
+	int ret;
 
-	return snd_soc_update_bits(codec, WM8985_DAC_CONTROL,
+	if(!g_dacmute_firstseted)
+		g_dacmute_firstseted = 1;
+
+	if(mute){
+		gpio_set_value(GPIO_SPEAKER_AMP_OFF, !mute);
+		gpio_set_value(GPIO_POP_DISABLE, !mute);
+		//msleep(50);
+		ret = snd_soc_update_bits(codec, WM8985_DAC_CONTROL,
+					   WM8985_SOFTMUTE_MASK,
+					   !!mute << WM8985_SOFTMUTE_SHIFT);
+	}else{
+		ret = snd_soc_update_bits(codec, WM8985_DAC_CONTROL,
 				   WM8985_SOFTMUTE_MASK,
 				   !!mute << WM8985_SOFTMUTE_SHIFT);
+		gpio_set_value(GPIO_SPEAKER_AMP_OFF, !mute);
+		gpio_set_value(GPIO_POP_DISABLE, !mute);
+		msleep(100);
+	}
+
+	return ret;
 }
 
 static int wm8985_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
@@ -644,14 +1110,13 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
-	int i;
+
 	struct snd_soc_codec *codec;
 	struct wm8985_priv *wm8985;
-	u16 blen, srate_idx;
-	unsigned int tmp;
-	int srate_best;
+	u16 blen;
 
 	codec = dai->codec;
+	codecwrite = dai->codec;
 	wm8985 = snd_soc_codec_get_drvdata(codec);
 
 	wm8985->bclk = snd_soc_params_to_bclk(params);
@@ -684,7 +1149,7 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 	 * match to the nearest possible sample rate and rely
 	 * on the array index to configure the SR register
 	 */
-	srate_idx = 0;
+/*	srate_idx = 0;
 	srate_best = abs(srates[0] - params_rate(params));
 	for (i = 1; i < ARRAY_SIZE(srates); ++i) {
 		if (abs(srates[i] - params_rate(params)) >= srate_best)
@@ -715,9 +1180,9 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(dai->dev, "MCLK ratio = %dfs\n", fs_ratios[i].ratio);
 	snd_soc_update_bits(codec, WM8985_CLOCK_GEN_CONTROL,
 			    WM8985_MCLKDIV_MASK, i << WM8985_MCLKDIV_SHIFT);
-
+*/
 	/* select the appropriate bclk divider */
-	tmp = (wm8985->sysclk / fs_ratios[i].div) * 10;
+/*	tmp = (wm8985->sysclk / fs_ratios[i].div) * 10;
 	for (i = 0; i < ARRAY_SIZE(bclk_divs); ++i) {
 		if (wm8985->bclk == tmp / bclk_divs[i])
 			break;
@@ -731,6 +1196,28 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(dai->dev, "BCLK div = %d\n", i);
 	snd_soc_update_bits(codec, WM8985_CLOCK_GEN_CONTROL,
 			    WM8985_BCLKDIV_MASK, i << WM8985_BCLKDIV_SHIFT);
+*/
+
+	/* disable the PLL before reprogramming it */
+	snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+			    WM8985_PLLEN_MASK, 0);
+
+	/* set PLLN and PRESCALE */
+	snd_soc_write(codec,WM8985_PLL_N,0x007); 
+	/* set PLLK */
+	snd_soc_write(codec,WM8985_PLL_K_1,0x016);
+	snd_soc_write(codec,WM8985_PLL_K_2,0x0CC);
+// THINKWARE_SIJUN(BSKIM) 2011-06-01 <<<START>>>
+//	snd_soc_write(codec,WM8985_PLL_K_3,0x199);
+	snd_soc_write(codec,WM8985_PLL_K_3,0x19A);
+// THINKWARE_SIJUN(BSKIM) 2011-06-01 <<<END>>>
+	/* set the source of the clock to be the PLL */
+	snd_soc_update_bits(codec, WM8985_CLOCK_GEN_CONTROL,
+			    WM8985_CLKSEL_MASK, 0);
+	/* enable the PLL */
+	snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+			    WM8985_PLLEN_MASK, WM8985_PLLEN);
+
 	return 0;
 }
 
@@ -783,6 +1270,8 @@ static int wm8985_set_pll(struct snd_soc_dai *dai, int pll_id,
 	int ret;
 	struct snd_soc_codec *codec;
 	struct pll_div pll_div;
+
+	memset(&pll_div, 0, sizeof(pll_div));
 
 	codec = dai->codec;
 	if (freq_in && freq_out) {
@@ -877,6 +1366,9 @@ static int wm8985_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
 				    WM8985_VMIDSEL_MASK,
 				    1 << WM8985_VMIDSEL_SHIFT);
+		snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+				    WM8985_MICBEN_MASK,
+				    1 << WM8985_MICBEN_SHIFT);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
@@ -913,6 +1405,7 @@ static int wm8985_set_bias_level(struct snd_soc_codec *codec,
 			snd_soc_update_bits(codec, WM8985_OUT4_TO_ADC,
 					    WM8985_POBCTRL_MASK, 0);
 		}
+	
 		/* VMID at 300k */
 		snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
 				    WM8985_VMIDSEL_MASK,
@@ -943,15 +1436,35 @@ static int wm8985_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
+static void save_power_reg(struct snd_soc_codec *codec)
+{
+	save_reg_power1 = snd_soc_read(codec, WM8985_POWER_MANAGEMENT_1);
+	save_reg_power2 = snd_soc_read(codec, WM8985_POWER_MANAGEMENT_2);
+	save_reg_power3 = snd_soc_read(codec, WM8985_POWER_MANAGEMENT_3);
+}
+
+static void restore_power_reg(struct snd_soc_codec *codec)
+{
+	snd_soc_write(codec, WM8985_POWER_MANAGEMENT_1, save_reg_power1);
+	snd_soc_write(codec, WM8985_POWER_MANAGEMENT_2, save_reg_power2);
+	snd_soc_write(codec, WM8985_POWER_MANAGEMENT_3, save_reg_power3);
+
+	save_reg_power1 = save_reg_power2 = save_reg_power3 = 0;
+}
+
 #ifdef CONFIG_PM
 static int wm8985_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
+	save_power_reg(codec);
+
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
 }
 
 static int wm8985_resume(struct snd_soc_codec *codec)
 {
+	restore_power_reg(codec);
+
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	return 0;
 }
@@ -960,6 +1473,90 @@ static int wm8985_resume(struct snd_soc_codec *codec)
 #define wm8985_resume NULL
 #endif
 
+static void wm8985_register_setting(struct snd_soc_codec *codec )
+{
+        snd_soc_update_bits(codec, WM8985_LEFT_MIXER_CTRL,
+                           WM8985_DACL2LMIX_MASK,
+                           !!0 << WM8985_DACL2LMIX_SHIFT);
+        snd_soc_update_bits(codec, WM8985_RIGHT_MIXER_CTRL,
+                           WM8985_DACR2RMIX_MASK,
+                           !!0 << WM8985_DACR2RMIX_SHIFT);
+
+        snd_soc_update_bits(codec, WM8985_LOUT1_HP_VOLUME_CTRL,
+                           WM8985_LOUT1MUTE_MASK,
+                           !!1 << WM8985_LOUT1MUTE_SHIFT);
+        snd_soc_update_bits(codec, WM8985_ROUT1_HP_VOLUME_CTRL,
+                           WM8985_ROUT1MUTE_MASK,
+                           !!1 << WM8985_ROUT1MUTE_SHIFT);
+
+        snd_soc_update_bits(codec, WM8985_LOUT2_SPK_VOLUME_CTRL,
+                           WM8985_LOUT2MUTE_MASK,
+                           !!0 << WM8985_LOUT2MUTE_SHIFT);
+        snd_soc_update_bits(codec, WM8985_ROUT2_SPK_VOLUME_CTRL,
+                           WM8985_ROUT2MUTE_MASK,
+                           !!0 << WM8985_ROUT2MUTE_SHIFT);
+
+
+        snd_soc_write(codec,WM8985_BIAS_CTRL,0x100);
+        snd_soc_write(codec,WM8985_OUTPUT_CTRL0,0x000);
+
+        msleep(500);
+        snd_soc_write(codec,WM8985_POWER_MANAGEMENT_1,0x0FD);
+        msleep(500);
+
+	snd_soc_write(codec,WM8985_POWER_MANAGEMENT_2,0x180);
+	snd_soc_write(codec,WM8985_POWER_MANAGEMENT_3,0x1EF);
+
+	snd_soc_write(codec,WM8985_AUDIO_INTERFACE,0x012);
+	snd_soc_write(codec,WM8985_COMPANDING_CONTROL,0x000);
+	snd_soc_write(codec,WM8985_ADDITIONAL_CONTROL,0X180);
+	snd_soc_write(codec,WM8985_GPIO_CONTROL,0x000);
+	snd_soc_write(codec,WM8985_JACK_DETECT_CONTROL_2,0x000);
+	snd_soc_write(codec,WM8985_CLOCK_GEN_CONTROL,0x000);//R6
+
+	//DAC
+	snd_soc_write(codec,WM8985_DAC_CONTROL,0x048);//R10(0xA)
+	snd_soc_write(codec,WM8985_LEFT_DAC_DIGITAL_VOL,0x1FD);//R11(0x0B)
+	snd_soc_write(codec,WM8985_RIGHT_DAC_DIGITAL_VOL,0x1FD);//R12(0x0C)
+	snd_soc_write(codec,WM8985_LOUT1_HP_VOLUME_CTRL,0x17A);//R52(0x34)
+	snd_soc_write(codec,WM8985_ROUT1_HP_VOLUME_CTRL,0x17A);//R53(0x35)
+	snd_soc_write(codec,WM8985_LOUT2_SPK_VOLUME_CTRL,0x138);//R54(0x36)
+	snd_soc_write(codec,WM8985_ROUT2_SPK_VOLUME_CTRL,0x138);//R55(0x37)
+
+	//ADC-EQ
+	snd_soc_write(codec,WM8985_EQ1_LOW_SHELF,0x06C);//R18(0x12)
+	snd_soc_write(codec,WM8985_EQ2_PEAK_1,0x02C);//R19(0x13)
+	snd_soc_write(codec,WM8985_EQ3_PEAK_2,0x02C);//R20(0x14)
+	snd_soc_write(codec,WM8985_EQ4_PEAK_3,0x02C);//R21(0x15)
+	snd_soc_write(codec,WM8985_EQ5_HIGH_SHELF,0x02C);//R22(0x16)
+
+	//ADC-Vol
+	snd_soc_write(codec,WM8985_ADC_CONTROL,0x1A0);//R14(0x0E)
+	snd_soc_write(codec,WM8985_LEFT_ADC_DIGITAL_VOL,0x1F5);//R15(0x0F)
+	snd_soc_write(codec,WM8985_RIGHT_ADC_DIGITAL_VOL,0x1F5);//R16(0x10)
+	snd_soc_write(codec,WM8985_LEFT_INP_PGA_GAIN_CTRL,0x13A);//R45(0x2D)
+	snd_soc_write(codec,WM8985_RIGHT_INP_PGA_GAIN_CTRL,0x17A);//R46(0x2E)
+	//snd_soc_write(codec,WM8985_LEFT_ADC_BOOST_CTRL,0x000);//R47(0x2F)
+	//snd_soc_write(codec,WM8985_RIGHT_ADC_BOOST_CTRL,0x000);//R48(0x30)
+
+	//ADC-Howling
+	snd_soc_write(codec,WM8985_LEFT_MIXER_CTRL,0x8);//0x32 (50) - BYPL2LMIX[1] : ON,	BYPLMIX VOL[4:2] : 2
+	//snd_soc_write(codec,WM8985_BEEP_CONTROL,0x000);	//0x2B (43) - BYPL2RMIX[8]  ; ON, 	BYPR2LMIX[7]  ; OFF
+	snd_soc_write(codec,WM8985_RIGHT_MIXER_CTRL,0x0);//0x33 (51) - BYPR2RMIX[8] : OFF, - BYPRMIX VOL [4:2] : 0
+
+}
+
+static void amp_on(struct snd_soc_codec *codec)
+{
+        msleep(500);
+	snd_soc_update_bits(codec, WM8985_LEFT_MIXER_CTRL,
+			        WM8985_DACL2LMIX_MASK,
+                                !!1 << WM8985_DACL2LMIX_SHIFT);
+        snd_soc_update_bits(codec, WM8985_RIGHT_MIXER_CTRL,
+                                WM8985_DACR2RMIX_MASK,
+                                !!1 << WM8985_DACR2RMIX_SHIFT);
+}
+
 static int wm8985_remove(struct snd_soc_codec *codec)
 {
 	struct wm8985_priv *wm8985;
@@ -967,6 +1564,10 @@ static int wm8985_remove(struct snd_soc_codec *codec)
 	wm8985 = snd_soc_codec_get_drvdata(codec);
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	regulator_bulk_free(ARRAY_SIZE(wm8985->supplies), wm8985->supplies);
+
+	gpio_free(GPIO_SPEAKER_AMP_OFF);
+	gpio_free(GPIO_POP_DISABLE);
+
 	return 0;
 }
 
@@ -984,6 +1585,20 @@ static int wm8985_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to set cache i/o: %d\n", ret);
 		return ret;
 	}
+
+	ret = gpio_request(GPIO_SPEAKER_AMP_OFF, "SPEAKER_AMP_OFF");
+	if (ret) {
+		dev_err(codec->dev,"[%s] SPEAKER_AMP_OFF gpio request error : %d\n",__func__,ret);
+		goto exit_spk_amp_off_gpio_request_failed;
+	} 
+	gpio_direction_output(GPIO_SPEAKER_AMP_OFF, 0);
+	
+	ret = gpio_request(GPIO_POP_DISABLE, "POP_DISABLE");
+	if (ret) {
+		dev_err(codec->dev,"[%s] GPIO_POP_DISABLE gpio request error : %d\n",__func__,ret);
+		goto exit_pop_disable_gpio_request_failed;
+	} 
+	gpio_direction_output(GPIO_POP_DISABLE, 0);
 
 	for (i = 0; i < ARRAY_SIZE(wm8985->supplies); i++)
 		wm8985->supplies[i].supply = wm8985_supply_names[i];
@@ -1021,12 +1636,22 @@ static int wm8985_probe(struct snd_soc_codec *codec)
 	wm8985_add_widgets(codec);
 
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	wm8985_register_setting(codec);
+
+	amp_on(codec);
 	return 0;
+
 
 err_reg_enable:
 	regulator_bulk_disable(ARRAY_SIZE(wm8985->supplies), wm8985->supplies);
 err_reg_get:
 	regulator_bulk_free(ARRAY_SIZE(wm8985->supplies), wm8985->supplies);
+exit_pop_disable_gpio_request_failed:	
+	gpio_free(GPIO_POP_DISABLE);
+exit_spk_amp_off_gpio_request_failed:
+	gpio_free(GPIO_SPEAKER_AMP_OFF);
+	
 	return ret;
 }
 
@@ -1052,13 +1677,13 @@ static struct snd_soc_dai_driver wm8985_dai = {
 	},
 	.capture = {
 		.stream_name = "Capture",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = WM8985_FORMATS,
 	},
 	.ops = &wm8985_dai_ops,
-	.symmetric_rates = 1
+	.symmetric_rates = 0
 };
 
 static struct snd_soc_codec_driver soc_codec_dev_wm8985 = {
@@ -1072,6 +1697,12 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8985 = {
 	.reg_cache_default = wm8985_reg_defs
 };
 
+static void wm8985_set_priv_data(struct wm8985_priv *wm8985){
+	wm8985->universal_playback_path = universal_wm8985_playback_paths;
+	wm8985->cur_path = OFF;
+	wm8985->rec_path = MIC_OFF;	
+}
+
 #if defined(CONFIG_SPI_MASTER)
 static int __devinit wm8985_spi_probe(struct spi_device *spi)
 {
@@ -1083,6 +1714,8 @@ static int __devinit wm8985_spi_probe(struct spi_device *spi)
 		return -ENOMEM;
 
 	wm8985->control_type = SND_SOC_SPI;
+	wm8985_set_priv_data(wm8985);
+	
 	spi_set_drvdata(spi, wm8985);
 
 	ret = snd_soc_register_codec(&spi->dev,
@@ -1121,12 +1754,15 @@ static __devinit int wm8985_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 
 	wm8985->control_type = SND_SOC_I2C;
+	wm8985_set_priv_data(wm8985);
+
 	i2c_set_clientdata(i2c, wm8985);
 
 	ret = snd_soc_register_codec(&i2c->dev,
 				     &soc_codec_dev_wm8985, &wm8985_dai, 1);
 	if (ret < 0)
 		kfree(wm8985);
+
 	return ret;
 }
 
@@ -1138,7 +1774,7 @@ static __devexit int wm8985_i2c_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id wm8985_i2c_id[] = {
-	{ "wm8985", 0 },
+	{ "wm8985", 1 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, wm8985_i2c_id);
@@ -1164,6 +1800,7 @@ static int __init wm8985_modinit(void)
 		printk(KERN_ERR "Failed to register wm8985 I2C driver: %d\n",
 		       ret);
 	}
+	return ret;	
 #endif
 #if defined(CONFIG_SPI_MASTER)
 	ret = spi_register_driver(&wm8985_spi_driver);

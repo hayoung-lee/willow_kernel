@@ -24,5 +24,25 @@
 #define PMIC_DVS3				EXYNOS4_GPL0(6)
 #define PM_IRQ_N				EXYNOS4_GPX3(2)
 
+#define GPIO_SPEAKER_AMP_OFF  EXYNOS4212_GPM1(2)
+#define GPIO_POP_DISABLE     EXYNOS4212_GPM1(3)
+
+#define GPIO_HW_VERSION_0           EXYNOS4_GPL2(2)     //IN
+#define GPIO_HW_VERSION_1           EXYNOS4_GPL2(1)     //IN
+#define GPIO_HW_VERSION_2           EXYNOS4_GPL2(0)     //IN
+
+typedef enum
+{
+  WILLOW_HW_VERSION_NONE  = 0,
+  WILLOW_HW_VERSION_WS    = 1,
+  WILLOW_HW_VERSION_ES1   = 2,
+  WILLOW_HW_VERSION_ES2   = 3,
+  WILLOW_HW_VERSION_PP    = 4,
+  WILLOW_HW_VERSION_MP    = 5,
+  WILLOW_HW_VERSION_MAX   = 6
+} willow_hw_version_type;
+
+extern willow_hw_version_type WILLOW_get_hw_version( void );
+
 #endif /* __ASM_ARCH_GPIO_WILLOW_H */
 

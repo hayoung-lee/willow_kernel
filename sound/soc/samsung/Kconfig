@@ -226,3 +226,11 @@ config SND_SOC_SPEYSIDE
 	select SND_SAMSUNG_I2S
 	select SND_SOC_WM8915
 	select SND_SOC_WM9081
+
+config SND_SOC_WILLOW_WM8985
+	tristate "SoC I2S Audio support for WM8985 on WILLOW"
+	depends on SND_SOC_SAMSUNG && (MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDK4X12 || MACH_SMDK5250 || MACH_WILLOW)
+	select SND_SOC_WM8985
+	select SND_SAMSUNG_I2S
+	help
+	  Say Y if you want to add support for SoC audio on the SMDKs
