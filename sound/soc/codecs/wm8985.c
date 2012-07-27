@@ -32,7 +32,7 @@
 #include <linux/gpio.h>
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
-#include <linux/sec_jack.h>
+//#include <linux/sec_jack.h>
 #include <mach/gpio-willow.h>
 
 #include "wm8985.h"
@@ -874,6 +874,8 @@ void wm8985_set_path_prev(int mode, int jack_type)
 
 	DEBUG_MSG("[%s] # mode : %d, jack_type : %d\n", __func__, mode, jack_type);
 
+	//TODO : impletent jack type
+	/*
 	switch(jack_type){
 		case SEC_JACK_NO_DEVICE:
 			out_value = 0;
@@ -886,6 +888,7 @@ void wm8985_set_path_prev(int mode, int jack_type)
 		default:
 			break;
 	}
+	*/
 
 	//set value
 	maskval = 0;
