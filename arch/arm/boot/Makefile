@@ -56,6 +56,8 @@ $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
+	@echo '          => zImage, copy to ../img/zImage'
+	@cp -a $(obj)/zImage ../img/zImage
 
 endif
 
