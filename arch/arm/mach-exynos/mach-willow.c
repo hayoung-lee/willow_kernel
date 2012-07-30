@@ -1978,12 +1978,30 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 		I2C_BOARD_INFO("wm8985", 0x1a),
 	},
 };
+static void sensor_gpio_init(void){
+    int err;
+#if 0
+    err = gpio_request(EXYNOS4_GPX3(6), "ACC_INT");
+    if(err) {
+      printk(KERN_ERR "failed to request ACC_INT\n");
+    }
+#endif 
+    gpio_direction_input(EXYNOS4_GPX3(6));
+    s3c_gpio_setpull(EXYNOS4_GPX3(6), S3C_GPIO_PULL_DOWN);
+    gpio_free(EXYNOS4_GPX3(6));
+}
 
 static struct i2c_board_info i2c_devs2[] __initdata = {
 #ifdef CONFIG_VIDEO_TVOUT
 	{
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
 	},
+#endif
+
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    }
 #endif
 };
 
@@ -2930,6 +2948,7 @@ static void __init willow_map_io(void)
 	s3c24xx_init_uarts(willow_uartcfgs, ARRAY_SIZE(willow_uartcfgs));
 
 	exynos4_reserve_mem();
+    sensor_gpio_init();
 }
 
 static void __init exynos_sysmmu_init(void)
