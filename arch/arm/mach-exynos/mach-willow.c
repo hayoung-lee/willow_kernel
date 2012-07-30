@@ -125,7 +125,11 @@
 
 #include <mach/gpio-willow.h>
 
-
+#define WILLOW_BOOT_NORMAL			1
+#define WILLOW_BOOT_RECOVERY		2
+#define WILLOW_BOOT_MMC_RECOVERY	3
+#define WILLOW_BOOT_FACTORYTEST_L	4
+#define WILLOW_BOOT_FACTORYTEST_H	5
 #define REG_INFORM4            (S5P_INFORM4)
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
@@ -1045,6 +1049,52 @@ static struct s3c_fb_platdata willow_lcd0_pdata __initdata = {
 #endif
 #endif
 
+static void willow_power_off(void)
+{
+//	if (dc_is_connected ||usb_is_connected) {
+		// reboot
+//		writel(2, S5P_INFORM6);
+//		arm_machine_restart('r', NULL);
+//	} else {
+		// shutdown
+		pr_info("%s: set PS_HOLD low\n", __func__);
+		writel(readl(EXYNOS4_PS_HOLD_CONTROL) & 0xFFFFFEFF, EXYNOS4_PS_HOLD_CONTROL);
+		while(1);
+//	}
+}
+
+static void willow_pm_restart(char mode, const char *cmd)
+{
+  if (cmd!=0){
+	  printk("%s : %s\n",__func__,cmd);
+    if(strncmp(cmd,"recovery",7)==0){
+      writel(WILLOW_BOOT_RECOVERY, S5P_INFORM5);
+    }
+    else if(strncmp(cmd,"mmc_recovery",11)==0){
+      writel(WILLOW_BOOT_MMC_RECOVERY, S5P_INFORM5);
+    }
+    else if(strncmp(cmd,"FACTORYTEST_L",13)==0){
+      writel(WILLOW_BOOT_FACTORYTEST_L, S5P_INFORM5);
+    }
+    else if(strncmp(cmd,"FACTORYTEST_H",13)==0){
+      writel(WILLOW_BOOT_FACTORYTEST_H, S5P_INFORM5);
+    }
+    //unknown reboot command, anyway set register to normal boot
+    else
+      writel(WILLOW_BOOT_NORMAL, S5P_INFORM5);
+  }
+  else
+    writel(WILLOW_BOOT_NORMAL, S5P_INFORM5);
+
+	/*
+	 * Code from t10s gingerbrad kernel 'arch/arm/kernel/process.c.'
+	 * If INFORM6 has '3', bootloader will not enter the charger mode.
+	 */
+	writel(3, S5P_INFORM6);
+	mdelay(50);
+
+	arm_machine_restart(mode, cmd);
+}
 static int exynos4_notifier_call(struct notifier_block *this,
 					unsigned long code, void *_cmd)
 {
@@ -1979,9 +2029,9 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 static void sensor_gpio_init(void){
-    int err;
 #if 0
-    err = gpio_request(EXYNOS4_GPX3(6), "ACC_INT");
+    int err;
+	err = gpio_request(EXYNOS4_GPX3(6), "ACC_INT");
     if(err) {
       printk(KERN_ERR "failed to request ACC_INT\n");
     }
@@ -3067,6 +3117,8 @@ err_clk:
 
 static void __init willow_machine_init(void)
 {
+	arm_pm_restart = willow_pm_restart;
+	pm_power_off = willow_power_off;
 
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	struct clk *sclk = NULL;

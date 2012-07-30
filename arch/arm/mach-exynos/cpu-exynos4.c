@@ -427,7 +427,7 @@ int __init exynos4_init(void)
 	}
 
 	/* set sw_reset function */
-	s5p_reset_hook = exynos4_sw_reset;
+	//s5p_reset_hook = exynos4_sw_reset;
 
 	/* Disable auto wakeup from power off mode */
 	for (i = 0; i < num_possible_cpus(); i++) {
