@@ -494,4 +494,23 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_YAS_ACCELEROMETER
+         tristate "YAS Acceleration Sensor"
+         depends on I2C
+
+config INPUT_YAS_ACCELEROMETER_POSITION
+         int "YAS Acceleration Sensor Mounting Position on Board"
+         depends on INPUT_YAS_ACCELEROMETER
+         default "0"
+         help
+           Chip mounting position (pin 1).
+              0: top, upper-left
+              1: top, upper-right
+              2: top, lower-right
+              3: top, lower-left
+              4: bottom, upper-left
+              5: bottom, upper-right
+              6: bottom, lower-right
+              7: bottom, lower-left
+
 endif
