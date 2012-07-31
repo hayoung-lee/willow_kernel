@@ -32,6 +32,11 @@
 #include <asm/irq.h>
 #include <plat/regs-rtc.h>
 
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+extern int max77686_rtc_set_time_hack(struct rtc_time *tm);
+extern int max77686_rtc_read_time_hack(struct rtc_time *tm);
+#endif
+
 enum s3c_cpu_type {
 	TYPE_S3C2410,
 	TYPE_S3C64XX,
@@ -137,6 +142,10 @@ static int s3c_rtc_settime(struct device *dev, struct rtc_time *tm)
 		dev_err(dev, "rtc only supports 100 years\n");
 		return -EINVAL;
 	}
+
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+	max77686_rtc_set_time_hack(tm);
+#endif
 
 	writeb(bin2bcd(tm->tm_sec),  base + S3C2410_RTCSEC);
 	writeb(bin2bcd(tm->tm_min),  base + S3C2410_RTCMIN);
@@ -382,6 +391,7 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 
+#ifndef CONFIG_MACH_WILLOW
 	/* Check RTC Time */
 
 	s3c_rtc_gettime(NULL, &rtc_tm);
@@ -398,6 +408,12 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 		dev_warn(&pdev->dev, "warning: invalid RTC value so initializing it\n");
 	}
+#endif
+
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+	max77686_rtc_read_time_hack(&rtc_tm);
+	s3c_rtc_settime(&pdev->dev, &rtc_tm);
+#endif
 
 	/* register RTC and exit */
 

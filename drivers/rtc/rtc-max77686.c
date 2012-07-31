@@ -329,7 +329,7 @@ static int max77686_rtc_start_alarm(struct max77686_rtc_info *info)
 	data[RTC_SEC] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_MIN] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_HOUR] |= (1 << ALARM_ENABLE_SHIFT);
-	data[RTC_WEEKDAY] |= (1 << ALARM_ENABLE_SHIFT)
+	data[RTC_WEEKDAY] |= (1 << ALARM_ENABLE_SHIFT);
 	if (data[RTC_MONTH] & 0xf)
 		data[RTC_MONTH] |= (1 << ALARM_ENABLE_SHIFT);
 	if (data[RTC_YEAR] & 0x7f)
@@ -404,6 +404,7 @@ static int max77686_rtc_alarm_irq_enable(struct device *dev,
 	return ret;
 }
 
+#ifdef CONFIG_RTC_DRV_MAX77686
 static irqreturn_t max77686_rtc_alarm_irq(int irq, void *data)
 {
 	struct max77686_rtc_info *info = data;
@@ -414,6 +415,38 @@ static irqreturn_t max77686_rtc_alarm_irq(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
+#endif
+
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+static struct device *max77686_rtc_dev = NULL;
+int max77686_rtc_read_time_hack(struct rtc_time *tm)
+{
+	int ret;
+
+	pr_debug("%s \n", __func__);
+
+	if (WARN_ON(!max77686_rtc_dev))
+		return -ENODEV;
+
+	ret = max77686_rtc_read_time(max77686_rtc_dev, tm);
+
+	pr_debug("read %s time %02d.%02d.%02d %02d/%02d/%02d\n",__func__,
+		tm->tm_year, tm->tm_mon, tm->tm_mday,
+		tm->tm_hour, tm->tm_min, tm->tm_sec);
+	return ret;
+}
+
+int max77686_rtc_set_time_hack(struct rtc_time *tm)
+{
+	if (WARN_ON(!max77686_rtc_dev))
+		return -ENODEV;
+
+	pr_debug("%s  %02d.%02d.%02d %02d/%02d/%02d\n",__func__,
+		tm->tm_year, tm->tm_mon, tm->tm_mday,
+		tm->tm_hour, tm->tm_min, tm->tm_sec);
+	return max77686_rtc_set_time(max77686_rtc_dev, tm);
+}
+#endif
 
 static const struct rtc_class_ops max77686_rtc_ops = {
 	.read_time = max77686_rtc_read_time,
@@ -521,6 +554,10 @@ static int __devinit max77686_rtc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, info);
 
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+	max77686_rtc_dev = info->dev;
+#endif
+
 	ret = max77686_rtc_init_reg(info);
 
 	if (ret < 0) {
@@ -535,6 +572,7 @@ static int __devinit max77686_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 
+#ifdef CONFIG_RTC_DRV_MAX77686
 	info->rtc_dev = rtc_device_register("max77686-rtc", &pdev->dev,
 			&max77686_rtc_ops, THIS_MODULE);
 
@@ -557,6 +595,11 @@ static int __devinit max77686_rtc_probe(struct platform_device *pdev)
 	}
 
 	goto out;
+#endif
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+	ret = 0;
+	goto out;
+#endif
 err_rtc:
 	kfree(info);
 	return ret;
@@ -569,8 +612,13 @@ static int __devexit max77686_rtc_remove(struct platform_device *pdev)
 	struct max77686_rtc_info *info = platform_get_drvdata(pdev);
 
 	if (info) {
+#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
+		max77686_rtc_dev = NULL;
+#endif
+#ifdef CONFIG_RTC_DRV_MAX77686
 		free_irq(info->irq, info);
 		rtc_device_unregister(info->rtc_dev);
+#endif
 		kfree(info);
 	}
 

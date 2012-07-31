@@ -1908,8 +1908,8 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 static struct max77686_platform_data exynos4_max77686_info = {
 	.num_regulators = ARRAY_SIZE(max77686_regulators),
 	.regulators = max77686_regulators,
-	.irq_gpio	= PM_IRQ_N,
-	.irq_base	= PM_IRQ_N,
+	.irq_gpio	= 0,
+	.irq_base	= 0,
 	.wakeup		= 1,
 
 	.opmode_data = max77686_opmode_data,

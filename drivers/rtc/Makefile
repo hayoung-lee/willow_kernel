@@ -92,7 +92,13 @@ obj-$(CONFIG_RTC_DRV_RV3029C2)	+= rtc-rv3029c2.o
 obj-$(CONFIG_RTC_DRV_RX8025)	+= rtc-rx8025.o
 obj-$(CONFIG_RTC_DRV_RX8581)	+= rtc-rx8581.o
 obj-$(CONFIG_RTC_DRV_S35390A)	+= rtc-s35390a.o
+ifeq ($(CONFIG_MACH_WILLOW),y)
+#ifeq ($(CONFIG_WILLOW_WS),y)
+obj-$(CONFIG_RTC_DRV_S3C)	+= rtc-max77686.o rtc-s3c.o
+#endif
+else
 obj-$(CONFIG_RTC_DRV_S3C)	+= rtc-s3c.o
+endif
 obj-$(CONFIG_RTC_DRV_S5M)	+= rtc-s5m.o
 obj-$(CONFIG_RTC_DRV_SA1100)	+= rtc-sa1100.o
 obj-$(CONFIG_RTC_DRV_SH)	+= rtc-sh.o
