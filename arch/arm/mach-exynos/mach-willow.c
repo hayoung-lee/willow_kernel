@@ -1353,13 +1353,11 @@ static struct regulator_init_data max77686_buck1_data = {
 	.constraints = {
 		.name = "vdd_mif range",
 		.min_uV = 800000,
-		.max_uV = 1050000,
+		.max_uV = 1100000,
 		.boot_on = 1,
+		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
-		.state_mem = {
-			.disabled = 1,
-		},
 	},
 	.num_consumer_supplies = 1,
 	.consumer_supplies = &max77686_buck1,
@@ -1369,12 +1367,13 @@ static struct regulator_init_data max77686_buck2_data = {
 	.constraints = {
 		.name = "vdd_arm range",
 		.min_uV = 800000,
-		.max_uV = 1350000,
+		.max_uV = 1500000,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.disabled = 1,
+			.enabled 	= 0,
+			.disabled	= 1,
 		},
 	},
 	.num_consumer_supplies = 1,
@@ -1390,7 +1389,8 @@ static struct regulator_init_data max77686_buck3_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.disabled = 1,
+			.enabled 	= 0,
+			.disabled	= 1,
 		},
 	},
 	.num_consumer_supplies = 1,
@@ -1401,13 +1401,10 @@ static struct regulator_init_data max77686_buck4_data = {
 	.constraints = {
 		.name = "vdd_g3d range",
 		.min_uV = 850000,
-		.max_uV = 1200000,
-		.boot_on = 1,
+		.max_uV = 1100000,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
-		.state_mem = {
-			.disabled = 1,
-		},
+
 	},
 	.num_consumer_supplies = 1,
 	.consumer_supplies = &max77686_buck4,
@@ -1419,6 +1416,7 @@ static struct regulator_init_data max77686_buck8_data = {
 		.min_uV = 2800000,
 		.max_uV = 2800000,
 		.boot_on = 1,
+		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
 		.state_mem = {
@@ -1485,8 +1483,9 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 		.max_uV		= 3950000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-						  REGULATOR_CHANGE_STATUS,
+					  REGULATOR_CHANGE_STATUS,
 		.boot_on 	= 1,
+		.always_on	= 1,
 		.state_mem	= {
 			.uV		= 2800000,
 			.mode		= REGULATOR_MODE_NORMAL,
@@ -1598,7 +1597,7 @@ static struct regulator_init_data __initdata max77686_ldo11_data = {
 		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 1,
+			.disabled = 1,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1675,7 +1674,6 @@ static struct regulator_init_data __initdata max77686_ldo16_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
-		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1908,21 +1906,26 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 static struct max77686_platform_data exynos4_max77686_info = {
 	.num_regulators = ARRAY_SIZE(max77686_regulators),
 	.regulators = max77686_regulators,
-	.irq_gpio	= 0,
-	.irq_base	= 0,
+	.irq_gpio	= GPIO_PMIC_IRQ,
+	.irq_base	= IRQ_BOARD_PMIC_START,
 	.wakeup		= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
+	.wtsr_smpl = MAX77686_WTSR_ENABLE | MAX77686_SMPL_ENABLE,
 
-	.buck234_gpio_dvs[0] = PMIC_SET2,
-	.buck234_gpio_dvs[1] = PMIC_SET3,
-	.buck234_gpio_dvs[2] = PMIC_SET4,
-
-	.buck234_gpio_selb[0] = PMIC_DVS1,
-	.buck234_gpio_selb[1] = PMIC_DVS2,
-	.buck234_gpio_selb[2] = PMIC_DVS3,
-
+	.buck234_gpio_dvs = {
+			/* Use DVS2 register of each bucks to supply stable power
+			 * after sudden reset */
+			{PMIC_SET2, 1},
+			{PMIC_SET3, 0},
+			{PMIC_SET4, 0},
+		},
+	.buck234_gpio_selb = {
+			PMIC_DVS1,
+			PMIC_DVS2,
+			PMIC_DVS3,
+		},
 	.buck2_voltage[0] = 1300000,	/* 1.3V */
 	.buck2_voltage[1] = 1000000,	/* 1.0V */
 	.buck2_voltage[2] = 950000,	/* 0.95V */
