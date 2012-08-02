@@ -1956,7 +1956,7 @@ static void ft5x0x_report_value(void)
 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
 #endif
 #endif
-			printk("[FocalTech] [x = %4d, y = %4d] \n", event->au16_x[i], event->au16_y[i]);
+			//printk("[FocalTech] [x = %4d, y = %4d] \n", event->au16_x[i], event->au16_y[i]);
 
 #if defined(FEATURE_TW_SYSTEM_SLEEP_WAKEUP)
 			if (touch_emergency) 
