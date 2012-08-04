@@ -20,6 +20,9 @@
 
 #define MAX_VMMC_NAME 20
 
+/* ignore mmc suspend/resume for BCM WIFI */
+#define S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME	(1 << 30)
+
 struct platform_device;
 struct mmc_host;
 struct mmc_card;
@@ -76,6 +79,8 @@ struct s3c_sdhci_platdata {
 
 	int		ext_cd_gpio;
 	bool		ext_cd_gpio_invert;
+	unsigned int	pm_flags;
+
 	int	(*ext_cd_init)(void (*notify_func)(struct platform_device *,
 						   int state));
 	int	(*ext_cd_cleanup)(void (*notify_func)(struct platform_device *,
@@ -395,6 +400,8 @@ static inline void exynos4_default_sdhci2(void) { }
 static inline void exynos4_default_sdhci3(void) { }
 
 #endif /* CONFIG_EXYNOS4_SETUP_SDHCI */
+
+extern void mmc_force_presence_change(struct platform_device *pdev);
 
 /* EXYNOS5 SDHCI setup */
 #ifdef CONFIG_EXYNOS4_SETUP_SDHCI

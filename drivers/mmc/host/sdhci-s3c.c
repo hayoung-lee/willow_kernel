@@ -534,6 +534,10 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	if (pdata->host_caps)
 		host->mmc->caps |= pdata->host_caps;
 
+	/* for BCM WIFI */
+	if (pdata->pm_flags)
+		host->mmc->pm_flags |= pdata->pm_flags;
+
 	ret = sdhci_add_host(host);
 	if (ret) {
 		dev_err(dev, "sdhci_add_host() failed\n");

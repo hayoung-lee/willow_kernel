@@ -28,6 +28,13 @@
 #error "ARCH_EXYNOS* is not defined"
 #endif
 
+#define GPIO_LEVEL_LOW		0
+#define GPIO_LEVEL_HIGH		1
+#define GPIO_LEVEL_NONE		2
+
+#define GPIO_INPUT		0
+#define GPIO_OUTPUT		1
+
 #include <asm-generic/gpio.h>
 
 #endif /* __ASM_ARCH_GPIO_H */

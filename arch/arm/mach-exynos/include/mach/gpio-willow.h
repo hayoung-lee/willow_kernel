@@ -31,6 +31,26 @@
 #define GPIO_HW_VERSION_1           EXYNOS4_GPL2(1)     //IN
 #define GPIO_HW_VERSION_2           EXYNOS4_GPL2(0)     //IN
 
+/* WIFI */
+#define GPIO_WLAN_EN            EXYNOS4212_GPM0(4)
+#define GPIO_WLAN_EN_AF         1
+#define GPIO_WLAN_HOST_WAKE     EXYNOS4_GPX0(3)
+#define GPIO_WLAN_HOST_WAKE_AF  0xF
+#define GPIO_WLAN_SDIO_CLK      EXYNOS4_GPK3(0)
+#define GPIO_WLAN_SDIO_CLK_AF   2
+#define GPIO_WLAN_SDIO_CMD      EXYNOS4_GPK3(1)
+#define GPIO_WLAN_SDIO_CMD_AF   2
+#define GPIO_WLAN_SDIO_CD       EXYNOS4_GPK3(2)
+#define GPIO_WLAN_SDIO_CD_AF    2
+#define GPIO_WLAN_SDIO_D0       EXYNOS4_GPK3(3)
+#define GPIO_WLAN_SDIO_D0_AF    2
+#define GPIO_WLAN_SDIO_D1       EXYNOS4_GPK3(4)
+#define GPIO_WLAN_SDIO_D1_AF    2
+#define GPIO_WLAN_SDIO_D2       EXYNOS4_GPK3(5)
+#define GPIO_WLAN_SDIO_D2_AF    2
+#define GPIO_WLAN_SDIO_D3       EXYNOS4_GPK3(6)
+#define GPIO_WLAN_SDIO_D3_AF    2
+
 typedef enum
 {
   WILLOW_HW_VERSION_NONE  = 0,

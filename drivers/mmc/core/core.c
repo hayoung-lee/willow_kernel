@@ -2422,7 +2422,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 			host->bus_ops->remove(host);
 
 		mmc_detach_bus(host);
-		mmc_power_off(host);
+		/* for BCM WIFI */
+		if (!(host->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME))
+			mmc_power_off(host);
 		mmc_release_host(host);
 		host->pm_flags = 0;
 		break;
@@ -2439,7 +2441,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		host->rescan_disable = 0;
 		host->power_notify_type = MMC_HOST_PW_NOTIFY_LONG;
 		spin_unlock_irqrestore(&host->lock, flags);
-		mmc_detect_change(host, 0);
+		/* for BCM WIFI */
+		if (!(host->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME))
+			mmc_detect_change(host, 0);
 
 	}
 

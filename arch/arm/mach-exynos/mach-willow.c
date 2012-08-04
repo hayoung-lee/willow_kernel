@@ -125,6 +125,9 @@
 
 #include <mach/gpio-willow.h>
 
+/* wifi */
+extern int brcm_wlan_init(void);
+
 #define WILLOW_BOOT_NORMAL			1
 #define WILLOW_BOOT_RECOVERY		2
 #define WILLOW_BOOT_MMC_RECOVERY	3
@@ -1162,6 +1165,54 @@ static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 };
 #endif
 
+static DEFINE_MUTEX(notify_lock);
+
+#define DEFINE_MMC_CARD_NOTIFIER(num) \
+static void (*hsmmc##num##_notify_func)(struct platform_device *, int state); \
+static int ext_cd_init_hsmmc##num(void (*notify_func)( \
+					struct platform_device *, int state)) \
+{ \
+	mutex_lock(&notify_lock); \
+	WARN_ON(hsmmc##num##_notify_func); \
+	hsmmc##num##_notify_func = notify_func; \
+	mutex_unlock(&notify_lock); \
+	return 0; \
+} \
+static int ext_cd_cleanup_hsmmc##num(void (*notify_func)( \
+					struct platform_device *, int state)) \
+{ \
+	mutex_lock(&notify_lock); \
+	WARN_ON(hsmmc##num##_notify_func != notify_func); \
+	hsmmc##num##_notify_func = NULL; \
+	mutex_unlock(&notify_lock); \
+	return 0; \
+}
+
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	DEFINE_MMC_CARD_NOTIFIER(3)
+#endif
+
+/*
+ * call this when you need sd stack to recognize insertion or removal of card
+ * that can't be told by SDHCI regs
+ */
+void mmc_force_presence_change(struct platform_device *pdev)
+{
+	void (*notify_func)(struct platform_device *, int state) = NULL;
+	mutex_lock(&notify_lock);
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	if (pdev == &s3c_device_hsmmc3)
+		notify_func = hsmmc3_notify_func;
+#endif
+
+	if (notify_func)
+		notify_func(pdev, 1);
+	else
+		pr_warn("%s: called for device with no notifier\n", __func__);
+	mutex_unlock(&notify_lock);
+}
+EXPORT_SYMBOL_GPL(mmc_force_presence_change);
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata willow_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
@@ -1193,8 +1244,12 @@ static struct s3c_sdhci_platdata willow_hsmmc2_pdata __initdata = {
 
 #ifdef CONFIG_S3C_DEV_HSMMC3
 static struct s3c_sdhci_platdata willow_hsmmc3_pdata __initdata = {
-	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+/* new code for brm4334 */
+	.cd_type		= S3C_SDHCI_CD_EXTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+	.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
+	.ext_cd_init = ext_cd_init_hsmmc3,
+	.ext_cd_cleanup = ext_cd_cleanup_hsmmc3,
 };
 #endif
 
@@ -1735,6 +1790,8 @@ static struct regulator_init_data __initdata max77686_ldo20_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
+		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1765,6 +1822,8 @@ static struct regulator_init_data __initdata max77686_ldo22_data = {
 		.min_uV		= 3300000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
+		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2689,6 +2748,7 @@ static void __init smdk4x12_subdev_config(void)
 }
 static void __init smdk4x12_camera_config(void)
 {
+#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
@@ -2699,7 +2759,7 @@ static void __init smdk4x12_camera_config(void)
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM1(0), 2, S3C_GPIO_SFN(3));
 	/* CAM B port(b0011) : VSYNC, HREF, CLKOUT*/
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM2(0), 3, S3C_GPIO_SFN(3));
-
+#endif
 	/* note : driver strength to max is unnecessary */
 #ifdef CONFIG_VIDEO_M5MOLS
 	s3c_gpio_cfgpin(EXYNOS4_GPX2(6), S3C_GPIO_SFN(0xF));
@@ -3435,6 +3495,8 @@ static void __init willow_machine_init(void)
 #ifdef CONFIG_EXYNOS_C2C
 	exynos_c2c_set_platdata(&willow_c2c_pdata);
 #endif
+
+	brcm_wlan_init();
 
 	exynos_sysmmu_init();
 
