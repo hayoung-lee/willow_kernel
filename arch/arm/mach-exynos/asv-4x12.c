@@ -19,7 +19,6 @@
 
 #include <mach/asv.h>
 #include <mach/map.h>
-
 #include <plat/cpu.h>
 
 /* ASV function for Fused Chip */
@@ -160,6 +159,7 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 		exynos_mod_sp = (tmp >> MOD_SG_OFFSET) & MOD_SG_MASK;
 
 		exynos_cal_asv = exynos_orig_sp - exynos_mod_sp;
+
 		/*
 		 * If There is no origin speed group,
 		 * store 1 asv group into exynos_result_of_asv.
