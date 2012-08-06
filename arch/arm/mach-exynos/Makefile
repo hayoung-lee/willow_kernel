@@ -117,5 +117,6 @@ obj-$(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
 obj-$(CONFIG_WAKEUP_ASSIST)		+= wakeup_assist.o
 
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
+obj-$(CONFIG_BT_BCM4334)		+= bluetooth-bcm4334.o
 obj-$(CONFIG_EXYNOS_C2C)		+= setup-c2c.o
 obj-$(CONFIG_EXYNOS_THERMAL)		+= tmu-exynos.o

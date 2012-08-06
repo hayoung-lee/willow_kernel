@@ -503,6 +503,107 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 	},
 };
 
+/* EXYNOS4 machine dependent GPIO help function */
+int s3c_gpio_slp_cfgpin(unsigned int pin, unsigned int config)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	void __iomem *reg;
+	unsigned long flags;
+	int offset;
+	u32 con;
+	int shift;
+
+	if (!chip)
+		return -EINVAL;
+
+	if ((pin >= EXYNOS4_GPX0(0)) && (pin <= EXYNOS4_GPX3(7)))
+		return -EINVAL;
+
+	if (config > S3C_GPIO_SLP_PREV)
+		return -EINVAL;
+
+	reg = chip->base + 0x10;
+
+	offset = pin - chip->chip.base;
+	shift = offset * 2;
+
+	local_irq_save(flags);
+
+	con = __raw_readl(reg);
+	con &= ~(3 << shift);
+	con |= config << shift;
+	__raw_writel(con, reg);
+
+	local_irq_restore(flags);
+	return 0;
+}
+
+s3c_gpio_pull_t s3c_gpio_get_slp_cfgpin(unsigned int pin)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	void __iomem *reg;
+	unsigned long flags;
+	int offset;
+	u32 con;
+	int shift;
+
+	if (!chip)
+		return -EINVAL;
+
+	if ((pin >= EXYNOS4_GPX0(0)) && (pin <= EXYNOS4_GPX3(7)))
+		return -EINVAL;
+
+	reg = chip->base + 0x10;
+
+	offset = pin - chip->chip.base;
+	shift = offset * 2;
+
+	local_irq_save(flags);
+
+	con = __raw_readl(reg);
+	con >>= shift;
+	con &= 0x3;
+
+	local_irq_restore(flags);
+
+	return (__force s3c_gpio_pull_t)con;
+}
+
+int s3c_gpio_slp_setpull_updown(unsigned int pin, unsigned int config)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	void __iomem *reg;
+	unsigned long flags;
+	int offset;
+	u32 con;
+	int shift;
+
+	if (!chip)
+		return -EINVAL;
+
+	if ((pin >= EXYNOS4_GPX0(0)) && (pin <= EXYNOS4_GPX3(7)))
+		return -EINVAL;
+
+	if (config > S3C_GPIO_PULL_UP)
+		return -EINVAL;
+
+	reg = chip->base + 0x14;
+
+	offset = pin - chip->chip.base;
+	shift = offset * 2;
+
+	local_irq_save(flags);
+
+	con = __raw_readl(reg);
+	con &= ~(3 << shift);
+	con |= config << shift;
+	__raw_writel(con, reg);
+
+	local_irq_restore(flags);
+
+	return 0;
+}
+
 static __init int exynos4_gpiolib_init(void)
 {
 	struct s3c_gpio_chip *chip;

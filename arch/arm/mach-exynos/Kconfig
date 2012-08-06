@@ -822,3 +822,10 @@ config EXYNOS5250_ABB_WA
 	default y
 	help
 	 Add W/A to fix ARM/INT ABB errata in EVT0
+
+config BT_BCM4334
+	bool "Enable BCM4334 driver"
+	default n
+	help
+	  Adds BCM4334 RFKILL driver for Broadcom BCM4334 chipset
+

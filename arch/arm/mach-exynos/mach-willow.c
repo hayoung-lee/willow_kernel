@@ -2433,6 +2433,14 @@ static struct platform_device exynos4_busfreq = {
 	.name = "exynos-busfreq",
 };
 
+/* Bluetooth */
+#ifdef CONFIG_BT_BCM4334
+static struct platform_device bcm4334_bluetooth_device = {
+	.name = "bcm4334_bluetooth",
+	.id = -1,
+};
+#endif
+
 static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_adc,
 	/* Samsung Power Domain */
@@ -2621,6 +2629,9 @@ static struct platform_device *willow_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS_THERMAL
 	&exynos_device_tmu,
+#endif
+#ifdef CONFIG_BT_BCM4334
+	&bcm4334_bluetooth_device,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
@@ -2902,12 +2913,11 @@ static void __init smdk4x12_subdev_config(void)
 }
 static void __init smdk4x12_camera_config(void)
 {
-
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 4, S3C_GPIO_SFN(2));
-#if 1 //EXYNOS4212_GPM0(3) is used for wlan enable	
+#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
 	/* CAM B port(b0011) : PCLK, DATA[0-6] */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
 	/* CAM B port(b0011) : FIELD, DATA[7]*/

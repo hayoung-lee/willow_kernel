@@ -51,6 +51,20 @@
 #define GPIO_WLAN_SDIO_D3       EXYNOS4_GPK3(6)
 #define GPIO_WLAN_SDIO_D3_AF    2
 
+/* Bluetooth */
+#define GPIO_BT_EN			EXYNOS4212_GPM0(5)
+#define GPIO_BT_WAKE		EXYNOS4212_GPM0(7)
+#define GPIO_BT_HOST_WAKE	EXYNOS4_GPX0(2)
+#define IRQ_BT_HOST_WAKE	IRQ_EINT(2)
+#define GPIO_BT_RXD			EXYNOS4_GPA0(0)
+#define GPIO_BT_RXD_AF		2
+#define GPIO_BT_TXD			EXYNOS4_GPA0(1)
+#define GPIO_BT_TXD_AF		2
+#define GPIO_BT_CTS			EXYNOS4_GPA0(2)
+#define GPIO_BT_CTS_AF		2
+#define GPIO_BT_RTS			EXYNOS4_GPA0(3)
+#define GPIO_BT_RTS_AF		2
+
 typedef enum
 {
   WILLOW_HW_VERSION_NONE  = 0,
