@@ -872,6 +872,66 @@ static int s3c24xx_i2c_init(struct s3c24xx_i2c *i2c)
  * called by the bus driver when a suitable device is found
 */
 #if defined(FEATURE_TW_I2C_CLOCK_CHANG)
+int s3c24xx_i2c_set(int num, int slave, int setfreq)
+{
+	unsigned long iicon = S3C2410_IICCON_IRQEN | S3C2410_IICCON_ACKEN;
+	unsigned int freq;
+	unsigned long clkin = clk_get_rate(t10s_i2c_backup[num].i2c->clk);
+	unsigned int divs, div1;
+	unsigned long target_frequency;
+	unsigned long siicon =0;
+	/* get the plafrom data */
+
+	clk_enable(t10s_i2c_backup[num].i2c->clk);
+
+	/* write slave address */
+	clkin /= 1000;		/* clkin now in KHz */
+
+	writeb(slave, t10s_i2c_backup[num].i2c->regs+ S3C2410_IICADD);
+
+	printk( "i2c num =%d slave address 0x%02x  setfreq=%d \n",num,  slave,setfreq);
+
+	writel(iicon, t10s_i2c_backup[num].i2c->regs+ S3C2410_IICCON);
+
+	/* we need to work out the divisors for the clock... */
+
+	printk( "pdata desired setfreq frequency %lu t10s_i2c_backup[num].i2c->clkrate=%lu clkin=%lu \n", setfreq,t10s_i2c_backup[num].i2c->clkrate,clkin);
+
+	freq = s3c24xx_i2c_calcdivisor(clkin, setfreq, &div1, &divs);
+
+	siicon = readl(t10s_i2c_backup[num].i2c->regs + S3C2410_IICCON);
+	siicon &= ~(S3C2410_IICCON_SCALEMASK | S3C2410_IICCON_TXDIV_512);
+	siicon |= (divs-1);
+
+	if (div1 == 512)
+		siicon |= S3C2410_IICCON_TXDIV_512;
+
+	writel(siicon, t10s_i2c_backup[num].i2c->regs + S3C2410_IICCON);
+
+	{
+		unsigned long sda_delay=0;
+
+			sda_delay = clkin * (S3C2410_IICLC_SDA_DELAY5 | S3C2410_IICLC_FILTER_ON);
+			sda_delay = DIV_ROUND_UP(sda_delay, 1000000);
+			sda_delay = DIV_ROUND_UP(sda_delay, 5);
+			if (sda_delay > 3)
+				sda_delay = 3;
+			sda_delay |= S3C2410_IICLC_FILTER_ON;
+
+
+		printk( "IICLC=%08lx\n", sda_delay);
+		writel(sda_delay,t10s_i2c_backup[num].i2c->regs + S3C2440_IICLC);
+	}
+	/* todo - check that the i2c lines aren't being dragged anywhere */
+
+	printk( "bus frequency set to %d KHz\n", freq);
+	printk( "S3C2410_IICCON=0x%02lx\n", iicon);
+	clk_disable(t10s_i2c_backup[num].i2c->clk);
+
+	return 0;
+}
+EXPORT_SYMBOL(s3c24xx_i2c_set);
+
 void t10s_i2c_clockrate(int i2c_num)
 {
 

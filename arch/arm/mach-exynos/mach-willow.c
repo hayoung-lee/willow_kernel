@@ -135,6 +135,14 @@ extern int brcm_wlan_init(void);
 #define WILLOW_BOOT_FACTORYTEST_H	5
 #define REG_INFORM4            (S5P_INFORM4)
 
+#include <linux/i2c-gpio.h>
+
+#ifdef CONFIG_VIDEO_MT9M113
+#include <media/mt9m113_platform.h>
+#define CONFIG_ITU_A
+#undef  CAM_ITU_CH_B
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define WILLOW_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -187,7 +195,7 @@ struct platform_device exynos_device_md0 = {
 };
 #endif
 
-#define WRITEBACK_ENABLED
+//#define WRITEBACK_ENABLED
 
 #if defined(CONFIG_VIDEO_FIMC) || defined(CONFIG_VIDEO_SAMSUNG_S5P_FIMC)
 /*
@@ -710,6 +718,144 @@ static struct s3c_platform_camera m5mo = {
 };
 #endif
 
+#ifdef CONFIG_VIDEO_MT9M113
+static int mt9m113_power_en(int onoff)
+{
+	int err;
+	/* Camera A */
+	// Vdd_cam_io 1.8 vdd_cam 2.8v
+	struct regulator *camera_vio = regulator_get(NULL, "vdd_cam");  
+	struct regulator *camera_vdd = regulator_get(NULL, "vdd_cam_io");
+
+	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4"); //reset
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
+
+	err = gpio_request(EXYNOS4212_GPM1(5), "GPM1_5"); //stnby
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_5 ####\n");
+
+	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_SFN(1));
+	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM1(5), S3C_GPIO_SFN(1));
+	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
+
+	if (onoff) {
+		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
+		
+		regulator_enable(camera_vio);
+		//mdelay(50);
+		regulator_enable(camera_vdd);
+		mdelay(50);
+		
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+
+		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
+		msleep(50);
+		gpio_direction_output(EXYNOS4212_GPM1(4), 1);
+		msleep(100);
+		//gpio_direction_output(EXYNOS4212_GPJ1(5), 0);
+	
+	} else {
+		gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+		msleep(50);	
+		if (regulator_is_enabled(camera_vdd))
+			regulator_disable(camera_vdd);
+		msleep(50);		
+		if (regulator_is_enabled(camera_vio))
+		regulator_disable(camera_vio);
+		msleep(50);
+		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
+	}
+	gpio_free(EXYNOS4212_GPM1(4));
+	gpio_free(EXYNOS4212_GPM1(5));
+	msleep(10);
+
+	printk("mt9m113_power_en %d \n", onoff);
+	return 0;
+}
+
+void mt9m113_gpio_init(void)
+{
+	/* i2c scl, sda */
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
+}
+
+static struct mt9m113_platform_data mt9m113_plat = {
+	.default_width = 640,
+	.default_height = 480,
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.freq = 24000000,
+	.is_mipi = 0,
+};
+static struct i2c_board_info mt9m113_i2c_info = {
+	I2C_BOARD_INFO("MT9M113", 0x78),
+	.platform_data = &mt9m113_plat,
+};
+
+static struct s3c_platform_camera mt9m113 = {
+
+	.id		= CAMERA_PAR_A,
+	.clk_name	= "sclk_cam0",
+	.cam_power	= mt9m113_power_en,
+	.i2c_busnum = 9,
+	.type		= CAM_TYPE_ITU,
+	.fmt		= ITU_601_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_CBYCRY,
+	.info		= &mt9m113_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.srclk_name	= "xusbxti",
+
+	.clk_rate	= 24000000,
+	.line_length	= 1920,
+	.width		= 640,
+	.height		= 480,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 640,
+		.height	= 480,
+	},
+
+	.mipi_lanes	= 0,
+	.mipi_settle	= 0,
+	.mipi_align	= 0,
+
+	/* Polarity */
+	.inv_pclk	= 0,
+	.inv_vsync	= 0,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+	.use_isp	= 0,
+	.initialized	= 0,
+};
+
+static struct i2c_gpio_platform_data i2c9_platdata = {
+	.sda_pin = EXYNOS4212_GPM4(1),
+	.scl_pin = EXYNOS4212_GPM4(0),
+//	.udelay = 1,
+	.udelay = 2,  //250Mhz
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
+};
+
+static struct platform_device s3c_device_i2c9= {
+	.name = "i2c-gpio",
+	.id = 9,
+	.dev.platform_data = &i2c9_platdata,
+};
+
+static struct i2c_board_info willow_i2c_devs9[] __initdata = {
+	{
+		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
+	},
+};
+
+#endif
 /* Interface setting */
 static struct s3c_platform_fimc fimc_plat = {
 #ifdef CONFIG_ITU_A
@@ -728,6 +874,9 @@ static struct s3c_platform_fimc fimc_plat = {
 	.default_cam	= CAMERA_WB,
 #endif
 	.camera		= {
+#ifdef CONFIG_VIDEO_MT9M113	
+		&mt9m113,
+#endif	
 #ifdef CONFIG_VIDEO_S5K4BA
 		&s5k4ba,
 #endif
@@ -2322,6 +2471,11 @@ static struct platform_device *willow_devices[] __initdata = {
 #ifdef CONFIG_USB_EHCI_S5P
 	&s5p_device_ehci,
 #endif
+
+#ifdef CONFIG_VIDEO_MT9M113	
+	&s3c_device_i2c9,
+#endif	
+
 #ifdef CONFIG_USB_OHCI_S5P
 	&s5p_device_ohci,
 #endif
@@ -2748,11 +2902,12 @@ static void __init smdk4x12_subdev_config(void)
 }
 static void __init smdk4x12_camera_config(void)
 {
-#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
+
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(2));
+	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 4, S3C_GPIO_SFN(2));
+#if 1 //EXYNOS4212_GPM0(3) is used for wlan enable	
 	/* CAM B port(b0011) : PCLK, DATA[0-6] */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
 	/* CAM B port(b0011) : FIELD, DATA[7]*/
@@ -3237,6 +3392,12 @@ static void __init willow_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+
+#ifdef CONFIG_VIDEO_MT9M113
+	mt9m113_gpio_init();
+	i2c_register_board_info(9, willow_i2c_devs9,
+			ARRAY_SIZE(willow_i2c_devs9));
+#endif
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();

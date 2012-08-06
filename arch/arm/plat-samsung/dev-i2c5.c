@@ -53,15 +53,15 @@ struct platform_device s3c_device_i2c5 = {
 static struct s3c2410_platform_i2c touch_100k_i2c_data __initdata = {
 	.flags		= 0,
 	.slave_addr	= 0x10,
-	.frequency	= 100*1000,
-	.sda_delay	= 100,
+	.frequency	= 95*1000,
+	.sda_delay	= S3C2410_IICLC_SDA_DELAY10,
 };
 
 static struct s3c2410_platform_i2c touch_300k_i2c_data __initdata = {
 	.flags		= 0,
 	.slave_addr	= 0x10,
 	.frequency	= 300*1000,
-	.sda_delay	= 100,
+	.sda_delay	= S3C2410_IICLC_SDA_DELAY10,
 };
 
 void __init s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd)

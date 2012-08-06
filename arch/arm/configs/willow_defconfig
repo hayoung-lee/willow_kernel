@@ -1466,7 +1466,7 @@ CONFIG_I2C_HELPER_AUTO=y
 # I2C system bus drivers (mostly embedded / system-on-chip)
 #
 # CONFIG_I2C_DESIGNWARE is not set
-# CONFIG_I2C_GPIO is not set
+CONFIG_I2C_GPIO=y
 # CONFIG_I2C_OCORES is not set
 # CONFIG_I2C_PCA_PLATFORM is not set
 # CONFIG_I2C_PXA_PCI is not set
@@ -1833,6 +1833,7 @@ CONFIG_CSI_C=y
 # CONFIG_VIDEO_NOON010PC30 is not set
 # CONFIG_VIDEO_M5MOLS is not set
 # CONFIG_SOC_CAMERA is not set
+CONFIG_VIDEO_MT9M113=y
 # CONFIG_VIDEO_SAMSUNG_S5P_FIMC is not set
 # CONFIG_VIDEO_S5P_MIPI_CSIS is not set
 CONFIG_SAMSUNG_MFC_DRIVERS=y

@@ -123,6 +123,7 @@ extern void set_touch_autoCal(int Setvalue);
 void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_value);
 extern void s3c_i2c5_force_stop(void);
 extern void t10s_i2c_clockrate(int i2c_num);
+extern int s3c24xx_i2c_set(int num, int slave, int setfreq);
 #endif
 
 #if CFG_SUPPORT_TOUCH_KEY
@@ -329,13 +330,13 @@ void focaltech_touch_off(void)
 	printk("[FocalTech] TS_POWER OFF\n");
 
 	//TS_RESET low
-	err = gpio_request(EXYNOS4_GPX0(4), "TOUCH_RESET");
+	err = gpio_request(EXYNOS4_GPB(4), "TOUCH_RESET");
 	if (err) {
 		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
 	}
-	gpio_direction_output(EXYNOS4_GPX0(4), 1);
-	gpio_set_value(EXYNOS4_GPX0(4), 0);
-	gpio_free(EXYNOS4_GPX0(4));
+	gpio_direction_output(EXYNOS4_GPB(4), 1);
+	gpio_set_value(EXYNOS4_GPB(4), 0);
+	gpio_free(EXYNOS4_GPB(4));
 //	printk("[FocalTech] TS_RESET Low\n");
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
    msleep(1);
@@ -939,20 +940,19 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 
     /*********Step 1:Reset  CTPM *****/
     /*write 0xaa to register 0xfc*/
-	focaltech_touch_off();
-	msleep(50);
-	//focaltech_touch_on();
-	printk("[FocalTech] TS_POWER ON\n");
-	s3c_i2c5_force_stop();
+   // Reset Low
+	gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "GPB4");
+	gpio_set_value(EXYNOS4_GPB(4), 0);
+   msleep(1);
 	focaltech_interrupt_low_gpio();
-	focaltech_touch_reset(0);
-	msleep(10);
+    regulator_disable(touch_ldo);
+	msleep(150);
+
 	regulator_enable(touch_ldo);
-	//Power On sequence need dealy	
-	//msleep(300);
    delay_qt_ms(1);   
-   focaltech_touch_reset(1);
-	delay_qt_ms(1);
+	gpio_set_value(EXYNOS4_GPB(4), 1);
+	gpio_free(EXYNOS4_GPB(4));
+	delay_qt_ms(50);
     /*********Step 2:Enter upgrade mode *****/
     printk("[FTS] Step 2:Enter debug mode\n");
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
@@ -963,13 +963,14 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
     {
         i ++;
         i_ret = ft5x0x_i2c_txdata(auc_i2c_write_buf, 2);
-        delay_qt_ms(3);//delay_qt_ms(5);
+        delay_qt_ms(50);//delay_qt_ms(5);
     }while(i_ret <= 0 && i < 5 );
 
     printk("[FTS] Step2 result  i=%d \n",i);
 
     /*********Step 3:FT5606_WriteEnable***********************/ 
     printk("[FTS] Step 3:Enter FT5606_WriteEnable mode\n");
+	msleep(100);
 
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x09;
@@ -977,6 +978,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 	auc_i2c_write_buf[2] = 0xfd;
 	auc_i2c_write_buf[3] = 0x0d;
 	i_ret = byte_write(auc_i2c_write_buf, 4);
+	msleep(1);
 
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x09;
@@ -984,13 +986,16 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 	auc_i2c_write_buf[2] = 0xfe;
 	auc_i2c_write_buf[3] = 0x84;
 	i_ret = byte_write(auc_i2c_write_buf, 4);
-	
+
+	msleep(1);	
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x09;
 	auc_i2c_write_buf[1] = 0xf6;
 	auc_i2c_write_buf[2] = 0xfd;
 	auc_i2c_write_buf[3] = 0x0f;
 	i_ret = byte_write(auc_i2c_write_buf, 4);
+
+	msleep(1);	
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x09;
 	auc_i2c_write_buf[1] = 0xf6;
@@ -999,6 +1004,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 	i_ret = byte_write(auc_i2c_write_buf, 4);
     /*********Step 4:EraseFlash***********************/ 
     printk("[FTS] Step 4:EraseFlash \n");
+	delay_qt_ms(100);
 
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x09;
@@ -1017,7 +1023,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 	auc_i2c_write_buf[11] = 0x54;
 	auc_i2c_write_buf[12] = 0x55;
    byte_write(auc_i2c_write_buf,13);   
-	delay_qt_ms(30);
+	delay_qt_ms(50);
 #else
 	auc_i2c_write_buf[9] = 0x06; 
 	auc_i2c_write_buf[10] = 0x00;
@@ -1025,12 +1031,12 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 	auc_i2c_write_buf[12] = 0x54;
 	auc_i2c_write_buf[13] = 0x55;
    byte_write(auc_i2c_write_buf,14);   
-	delay_qt_ms(30);
+	delay_qt_ms(40);
 #endif 
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x15;
 	i_ret = byte_write(auc_i2c_write_buf, 1);
-    delay_qt_ms(3);   
+    delay_qt_ms(5);   
 
 	memset(auc_i2c_write_buf, 0x00, sizeof(auc_i2c_write_buf));
 	auc_i2c_write_buf[0] = 0x14;
@@ -1071,7 +1077,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 		}
 
 		byte_write(&packet_buf[0],FTS_ALL_PACKET_LENGTH + 6);
-		delay_qt_ms(50);//delay_qt_ms(50);  
+		delay_qt_ms(100);//delay_qt_ms(50);  
 #if 0
 		if ((j * FTS_PACKET_LENGTH % 1024) == 0)
 		{
@@ -1102,7 +1108,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_all_file_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_
 			printk("[FTS] Step 5: write fail >>> \n");
 			return ERR_DL_PROGRAM_FAIL;
 		}
-		delay_qt_ms(20);//delay_qt_ms(20);
+		delay_qt_ms(100);//delay_qt_ms(20);
 	}
 	
 #if	0
@@ -2270,8 +2276,8 @@ int fts_ctpm_fw_upgrade_with_app_file(char * firmware_name)
 {
 	FTS_BYTE*     pbt_buf = FTS_NULL;
 	int i_ret; u8 fwver;
-	int fwsize = ft5x0x_GetFirmwareSize(firmware_name);
-	printk("[FocalTech] %s() fwsize=%d firmware_name=%s \n", __func__,fwsize,firmware_name);
+	int fwsize = ft5x0x_GetFirmwareSize(FIRMWARE_NAME);
+	printk("[FocalTech] %s() fwsize=%d firmware_name=%s \n", __func__,fwsize,FIRMWARE_NAME);
 	if(fwsize <= 0)
 	{
 		pr_err("%s ERROR:Get firmware size failed\n", __FUNCTION__);
@@ -2279,12 +2285,18 @@ int fts_ctpm_fw_upgrade_with_app_file(char * firmware_name)
 	}
 	//=========FW upgrade========================*/
 	pbt_buf = (unsigned char *) kmalloc(fwsize+1,GFP_ATOMIC);
-	if(ft5x0x_ReadFirmware(firmware_name, pbt_buf))
+	if(ft5x0x_ReadFirmware(FIRMWARE_NAME, pbt_buf))
 	{
 		pr_err("%s() - ERROR: request_firmware failed\n", __FUNCTION__);
 		kfree(pbt_buf);
 		return -1;
 	}
+
+	set_touch_autoCal(1);
+    msleep(50);  //clock change    
+	s3c24xx_i2c_set(5,0x38,100);	
+    msleep(50);  //clock change
+	
 	/*call the upgrade function*/
 #if defined(FEATURE_TOUCH_ALL_FILE_UPDATE)
 		i_ret=fts_ctpm_all_file_fw_upgrade(pbt_buf,fwsize);
@@ -2300,13 +2312,18 @@ int fts_ctpm_fw_upgrade_with_app_file(char * firmware_name)
 	}
 	else
 	{
-#if 1
 		pr_info("[FTS] upgrade successfully.\n");
 		if(ft5x0x_read_reg(FT5x06_REG_FW_VER, &fwver)>=0)
 			pr_info("the new fw ver is 0x%02x\n", fwver);
 		fts_ctpm_auto_clb();  //start auto CLB
-#endif		
 	}
+
+	msleep(50);  //clock change
+	s3c24xx_i2c_set(5,0x38,300);	
+	msleep(50);  //clock change
+	printk(" [tsp] touch firmware update end...  \n ");
+	set_touch_autoCal(0);		
+	
 	kfree(pbt_buf);
 	return i_ret;
 }
@@ -2554,22 +2571,7 @@ static ssize_t ft5x0x_fwupgradeapp_store(struct device *dev,
 	mutex_lock(&data->device_mode_mutex);
 	disable_irq(IRQ_EINT(4));
 
-    msleep(50);  //clock change
-	s3c_i2c5_force_stop();
-    msleep(50);  //clock change    
-	touch_s3c_i2c5_set_platdata(NULL,0); 
-    msleep(50);  //clock change    
-	t10s_i2c_clockrate(1);
-    msleep(50);  //clock change
-	
 	fts_ctpm_fw_upgrade_with_app_file(fwname);
-    msleep(50);  //clock change
-	s3c_i2c5_force_stop();
-    msleep(50);  //clock change    
-	touch_s3c_i2c5_set_platdata(NULL,1);
-    msleep(50);  //clock change    
-	t10s_i2c_clockrate(1);
-    msleep(50);  //clock change
 
 	enable_irq(IRQ_EINT(4));
 
@@ -2798,20 +2800,19 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     printk("[FTS] touch threshold is %d.\n", uc_reg_value * 4);
     printk("[FTS] ============== Touch Information End ================\n");
 
-#if 0
 #if CFG_SUPPORT_AUTO_UPG
+	set_touch_autoCal(1);
+    msleep(50);  //clock change    
+	s3c24xx_i2c_set(5,0x38,95);	
+    msleep(50);  //clock change
     fts_ctpm_auto_upg();
-#endif    
 
-    msleep(50);  //clock change
-	s3c_i2c5_force_stop();
+	set_touch_autoCal(0);
     msleep(50);  //clock change    
-	touch_s3c_i2c5_set_platdata(NULL,1); //300khz
-    msleep(50);  //clock change    
-	t10s_i2c_clockrate(5);
+	s3c24xx_i2c_set(5,0x38,300);	
     msleep(50);  //clock change
 #endif    
-
+  
 #if CFG_SUPPORT_UPDATE_PROJECT_SETTING
     fts_ctpm_update_project_setting();
 #endif

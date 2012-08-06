@@ -20,6 +20,12 @@
 
 #define FT5X0X_NAME	"ft5x0x_ts"//"synaptics_i2c_rmi"//"synaptics-rmi-ts"// 
 
+#define FIRMWARE_NAME	"ft5606_all.bin"
+
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_SKTPOS_FIRMWARE)
+#define FEATURE_TW_SKTPOS_FIRMWARE
+#endif
+
 #define KEY_PRESS       1
 #define KEY_RELEASE     0
 
