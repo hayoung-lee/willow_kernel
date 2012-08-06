@@ -282,8 +282,8 @@ static void *brcm_wlan_get_country_code(char *ccode)
 static struct resource brcm_wlan_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
-		.start	= IRQ_EINT(2),
-		.end	= IRQ_EINT(2),
+		.start	= IRQ_EINT(3),
+		.end	= IRQ_EINT(3),
 		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
 	},
 };
