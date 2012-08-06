@@ -122,12 +122,12 @@ static int brcm_init_wlan_mem(void)
 #endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
 
 static unsigned int wlan_on_gpio_table[][4] = {
-        {GPIO_WLAN_EN, GPIO_WLAN_EN_AF, GPIO_LEVEL_HIGH, S3C_GPIO_PULL_UP},
+        {GPIO_WLAN_EN, GPIO_WLAN_EN_AF, GPIO_LEVEL_HIGH, S3C_GPIO_PULL_NONE},
         {GPIO_WLAN_HOST_WAKE, GPIO_WLAN_HOST_WAKE_AF, GPIO_LEVEL_NONE, S3C_GPIO_PULL_NONE},
 };
 
 static unsigned int wlan_off_gpio_table[][4] = {
-        {GPIO_WLAN_EN, GPIO_WLAN_EN_AF, GPIO_LEVEL_LOW, S3C_GPIO_PULL_UP},
+        {GPIO_WLAN_EN, GPIO_WLAN_EN_AF, GPIO_LEVEL_LOW, S3C_GPIO_PULL_NONE},
         {GPIO_WLAN_HOST_WAKE, 0 , GPIO_LEVEL_NONE, S3C_GPIO_PULL_DOWN},
 };
 
