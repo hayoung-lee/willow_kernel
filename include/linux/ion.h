@@ -36,8 +36,8 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
 #ifdef CONFIG_ION_EXYNOS
-	ION_HEAP_TYPE_EXYNOS,
 	ION_HEAP_TYPE_EXYNOS_CONTIG,
+	ION_HEAP_TYPE_EXYNOS,
 	ION_HEAP_TYPE_EXYNOS_USER,
 #endif
 	ION_NUM_HEAPS,
@@ -51,6 +51,7 @@ enum ion_heap_type {
 #define ION_HEAP_EXYNOS_MASK		(1 << ION_HEAP_TYPE_EXYNOS)
 #define ION_HEAP_EXYNOS_CONTIG_MASK	(1 << ION_HEAP_TYPE_EXYNOS_CONTIG)
 #define ION_HEAP_EXYNOS_USER_MASK	(1 << ION_HEAP_TYPE_EXYNOS_USER)
+#define ION_EXYNOS_NONCACHE_MASK	(1 << (BITS_PER_LONG - 2))
 #define ION_EXYNOS_WRITE_MASK		(1 << (BITS_PER_LONG - 1))
 #endif
 
