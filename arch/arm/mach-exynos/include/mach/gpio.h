@@ -16,6 +16,9 @@
 #include "gpio-exynos4.h"
 #include "gpio-exynos5.h"
 
+extern void (*exynos4_sleep_gpio_table_set)(void);
+extern void (*exynos5_sleep_gpio_table_set)(void);
+
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define S3C_GPIO_END		EXYNOS4_GPIO_END
 #define ARCH_NR_GPIOS		(EXYNOS4XXX_GPIO_END +	\
