@@ -51,3 +51,6 @@ obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_SAMSUNG_C2C)	+= c2c/
+
+obj-$(CONFIG_VIBRATOR_ISA1200)		+= isa1200.o
+obj-$(CONFIG_HAPTIC_ISA1200)		+= isa1200_haptic.o

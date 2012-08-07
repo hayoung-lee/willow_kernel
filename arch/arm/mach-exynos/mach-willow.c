@@ -31,7 +31,9 @@
 #include <linux/delay.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
-
+#ifdef CONFIG_HAPTIC_ISA1200
+#include <linux/i2c/isa1200.h>
+#endif
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 
@@ -2284,6 +2286,81 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_HAPTIC_ISA1200
+static int isa1200_power(int vreg_on)
+{
+	int ret = 0;
+
+	ret = gpio_request(GPIO_VIB_PWR_EN, "vibrator-ldo-en");
+	if (ret < 0) {
+		printk(KERN_ERR "[%s] gpio_request fail! ret : %d\n", __func__, ret);
+		return ret;
+	}
+
+	if ( vreg_on ) {
+		gpio_set_value(GPIO_VIB_PWR_EN, 1);
+		mdelay(10);
+	} else {
+		gpio_set_value(GPIO_VIB_PWR_EN, 0);
+		mdelay(10);
+	}
+
+	ret = gpio_get_value(GPIO_VIB_PWR_EN);
+	gpio_free(GPIO_VIB_PWR_EN);
+	printk(KERN_DEBUG "GPIO_VIB_PWR_EN: %s\n", ret ? "ON" : "OFF");
+
+	return !ret;
+}
+
+static struct isa1200_platform_data isa1200_pdata = {
+	.name = "vibrator",
+	.power_on = isa1200_power,
+	.pwm_ch_id = 0, /*channel id*/
+	/*gpio to enable haptic*/
+	.hap_en_gpio = GPIO_VIB_EN,
+	.max_timeout = 15000,
+};
+
+static void isa1200_init(void)
+{
+	int ret = 0;
+
+	ret = gpio_request(GPIO_VIB_PWR_EN, "vibrator-ldo-en");
+	if (ret < 0) {
+		printk(KERN_ERR "[%s] gpio_request fail! ret : %d\n", __func__, ret);
+		return;
+	}
+
+	gpio_direction_output(GPIO_VIB_PWR_EN, 0);
+	s3c_gpio_cfgpin(GPIO_VIB_PWM, (2));
+	gpio_free(GPIO_VIB_PWR_EN);
+
+	return;
+}
+
+static  struct  i2c_gpio_platform_data  i2c8_platdata = {
+        .sda_pin                = EXYNOS4_GPB(6),
+        .scl_pin                = EXYNOS4_GPB(7),
+        .udelay                 = 5,    // 100KHz
+        .sda_is_open_drain      = 0,
+        .scl_is_open_drain      = 0,
+        .scl_is_output_only     = 0,
+};
+
+struct platform_device s3c_device_i2c8 = {
+        .name                   = "i2c-gpio",
+        .id                     = 8,
+        .dev.platform_data      = &i2c8_platdata,
+};
+
+static struct i2c_board_info i2c_devs8[] __initdata = {
+	{
+		I2C_BOARD_INFO("isa1200", (0x91 >> 1)),
+		.platform_data = &isa1200_pdata,
+	},
+};
+#endif
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -2476,14 +2553,16 @@ static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
 	&s3c_device_i2c7,
-#ifdef CONFIG_USB_EHCI_S5P
-	&s5p_device_ehci,
+#ifdef CONFIG_HAPTIC_ISA1200
+	&s3c_device_timer[0],
+	&s3c_device_i2c8,
 #endif
-
 #ifdef CONFIG_VIDEO_MT9M113	
 	&s3c_device_i2c9,
 #endif	
-
+#ifdef CONFIG_USB_EHCI_S5P
+	&s5p_device_ehci,
+#endif
 #ifdef CONFIG_USB_OHCI_S5P
 	&s5p_device_ohci,
 #endif
@@ -3217,7 +3296,6 @@ static struct platform_pwm_backlight_data willow_bl_data = {
 #endif
 };
 
-
 static void __init willow_map_io(void)
 {
 	clk_xusbxti.rate = 24000000;
@@ -3402,6 +3480,11 @@ static void __init willow_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+
+#ifdef CONFIG_HAPTIC_ISA1200
+	isa1200_init();
+	i2c_register_board_info(8, i2c_devs8, ARRAY_SIZE(i2c_devs8));
+#endif
 
 #ifdef CONFIG_VIDEO_MT9M113
 	mt9m113_gpio_init();
