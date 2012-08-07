@@ -58,11 +58,10 @@
 #include <linux/memcontrol.h>
 #include <linux/prefetch.h>
 
+#include <linux/slp_lowmem_notify.h>
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
 #include "internal.h"
-
-#include <mach/sec_debug.h>
 
 #ifdef CONFIG_USE_PERCPU_NUMA_NODE_ID
 DEFINE_PER_CPU(int, numa_node);
@@ -79,8 +78,6 @@ EXPORT_PER_CPU_SYMBOL(numa_node);
 DEFINE_PER_CPU(int, _numa_mem_);		/* Kernel "local memory" node */
 EXPORT_PER_CPU_SYMBOL(_numa_mem_);
 #endif
-
-struct rw_semaphore page_alloc_slow_rwsem;
 
 /*
  * Array of node states.
@@ -102,14 +99,6 @@ unsigned long totalram_pages __read_mostly;
 unsigned long totalreserve_pages __read_mostly;
 int percpu_pagelist_fraction;
 gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
-
-#ifdef CONFIG_COMPACTION_RETRY_DEBUG
-static inline void show_buddy_info(void);
-#else
-static inline void show_buddy_info(void)
-{
-}
-#endif
 
 #ifdef CONFIG_PM_SLEEP
 /*
@@ -509,10 +498,10 @@ static inline int page_is_buddy(struct page *page, struct page *buddy,
  * free pages of length of (1 << order) and marked with _mapcount -2. Page's
  * order is recorded in page_private(page) field.
  * So when we are allocating or freeing one, we can derive the state of the
- * other.  That is, if we allocate a small block, and both were   
- * free, the remainder of the region must be split into blocks.   
+ * other.  That is, if we allocate a small block, and both were
+ * free, the remainder of the region must be split into blocks.
  * If a block is freed, and its buddy is also free, then this
- * triggers coalescing into a block of larger size.            
+ * triggers coalescing into a block of larger size.
  *
  * -- wli
  */
@@ -1041,17 +1030,17 @@ retry_reserve:
 	return page;
 }
 
-/* 
+/*
  * Obtain a specified number of elements from the buddy allocator, all under
  * a single hold of the lock, for efficiency.  Add them to the supplied list.
  * Returns the number of new pages which were placed at *list.
  */
-static int rmqueue_bulk(struct zone *zone, unsigned int order, 
+static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			unsigned long count, struct list_head *list,
 			int migratetype, int cold)
 {
 	int i;
-	
+
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
 		struct page *page = __rmqueue(zone, order, migratetype);
@@ -1874,10 +1863,6 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 	int migratetype)
 {
 	struct page *page;
-#ifdef CONFIG_COMPACTION_RETRY
-	struct zoneref *z;
-	struct zone *zone;
-#endif
 
 	/* Acquire the OOM killer lock for the zones in zonelist */
 	if (!try_set_zonelist_oom(zonelist, gfp_mask)) {
@@ -1896,32 +1881,6 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 		preferred_zone, migratetype);
 	if (page)
 		goto out;
-
-#ifdef CONFIG_COMPACTION_RETRY
-	/*
-	 * When we reach here, we already tried direct reclaim.
-	 * Therefore it might be possible that we have enough
-	 * free memory but extremely fragmented.
-	 * So we give it a last chance to try memory compaction and get pages.
-	 */
-	if (order) {
-		pr_info("reclaim before oom : retry compaction.\n");
-		show_buddy_info();
-
-		for_each_zone_zonelist_nodemask(zone, z, zonelist,
-					high_zoneidx, nodemask)
-			compact_zone_order(zone, -1, gfp_mask, true);
-
-		show_buddy_info();
-		pr_info("reclaim :end\n");
-		page = get_page_from_freelist(gfp_mask|__GFP_HARDWALL,
-			nodemask, order, zonelist, high_zoneidx,
-			ALLOC_WMARK_HIGH|ALLOC_CPUSET,
-			preferred_zone, migratetype);
-		if (page)
-			goto out;
-	}
-#endif
 
 	if (!(gfp_mask & __GFP_NOFAIL)) {
 		/* The OOM killer will not help higher order allocs */
@@ -2155,14 +2114,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 #ifdef CONFIG_ANDROID_WIP
 	unsigned long start_tick = jiffies;
 #endif
-
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	unsigned long long start_time;
-	unsigned int retry_cnt = 0;
-	unsigned int types;
-	static atomic_t dup = ATOMIC_INIT(0);
-#endif
-
 	/*
 	 * In the slowpath, we sanity check order to avoid ever trying to
 	 * reclaim >= MAX_ORDER areas which will never succeed. Callers may
@@ -2173,13 +2124,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 		WARN_ON_ONCE(!(gfp_mask & __GFP_NOWARN));
 		return NULL;
 	}
-
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	atomic_inc(&dup);
-#endif
-
-	if (gfp_mask & __GFP_WAIT)
-		down_read(&page_alloc_slow_rwsem);
 
 	/*
 	 * GFP_THISNODE (meaning __GFP_THISNODE, __GFP_NORETRY and
@@ -2213,34 +2157,20 @@ restart:
 					&preferred_zone);
 
 rebalance:
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	retry_cnt++;
-#endif
 	/* This is the last chance, in general, before the goto nopage. */
 	page = get_page_from_freelist(gfp_mask, nodemask, order, zonelist,
 			high_zoneidx, alloc_flags & ~ALLOC_NO_WATERMARKS,
 			preferred_zone, migratetype);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 1;
-#endif
+	if (page)
 		goto got_pg;
-	}
 
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	start_time = cpu_clock(raw_smp_processor_id());
-#endif
 	/* Allocate without watermarks if the context allows */
 	if (alloc_flags & ALLOC_NO_WATERMARKS) {
 		page = __alloc_pages_high_priority(gfp_mask, order,
 				zonelist, high_zoneidx, nodemask,
 				preferred_zone, migratetype);
-		if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-			types = 2;
-#endif
+		if (page)
 			goto got_pg;
-		}
 	}
 
 	/* Atomic allocations - we can't balance anything */
@@ -2265,12 +2195,8 @@ rebalance:
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress,
 					sync_migration);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 3;
-#endif
+	if (page)
 		goto got_pg;
-	}
 	sync_migration = true;
 
 	/* Try direct reclaim and then allocating */
@@ -2279,12 +2205,8 @@ rebalance:
 					nodemask,
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 4;
-#endif
+	if (page)
 		goto got_pg;
-	}
 
 	/*
 	 * If we failed to make any progress reclaiming, then we are
@@ -2300,21 +2222,12 @@ rebalance:
 		if ((gfp_mask & __GFP_FS) && !(gfp_mask & __GFP_NORETRY)) {
 			if (oom_killer_disabled)
 				goto nopage;
-#ifdef CONFIG_ANDROID_WIP
-			if (did_some_progress)
-				pr_info("time's up : calling "
-						"__alloc_pages_may_oom\n");
-#endif
 			page = __alloc_pages_may_oom(gfp_mask, order,
 					zonelist, high_zoneidx,
 					nodemask, preferred_zone,
 					migratetype);
-			if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-				types = 5;
-#endif
+			if (page)
 				goto got_pg;
-			}
 
 			if (!(gfp_mask & __GFP_NOFAIL)) {
 				/*
@@ -2364,33 +2277,16 @@ rebalance:
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress,
 					sync_migration);
-		if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-			types = 6;
-#endif
+		if (page)
 			goto got_pg;
-		}
 	}
 
 nopage:
 	warn_alloc_failed(gfp_mask, order, NULL);
-	if (gfp_mask & __GFP_WAIT)
-		up_read(&page_alloc_slow_rwsem);
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	sec_debug_alloc_profile(start_time, retry_cnt, types, dup, order);
-	atomic_dec(&dup);
-#endif
 	return page;
 got_pg:
 	if (kmemcheck_enabled)
 		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
-	if (gfp_mask & __GFP_WAIT)
-		up_read(&page_alloc_slow_rwsem);
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	if (types != 1)
-		sec_debug_alloc_profile(start_time, retry_cnt, types, dup, order);
-	atomic_dec(&dup);
-#endif
 	return page;
 
 }
@@ -2433,6 +2329,8 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		put_mems_allowed();
 		return NULL;
 	}
+	/* SLP low memory notifier */
+	memnotify_threshold(gfp_mask);
 
 	/* First allocation attempt */
 	page = get_page_from_freelist(gfp_mask|__GFP_HARDWALL, nodemask, order,
@@ -2804,7 +2702,7 @@ void show_free_areas(unsigned int filter)
 	}
 
 	for_each_populated_zone(zone) {
- 		unsigned long nr[MAX_ORDER], flags, order, total = 0;
+		unsigned long nr[MAX_ORDER], flags, order, total = 0;
 
 		if (skip_free_areas_node(filter, zone_to_nid(zone)))
 			continue;
@@ -2826,37 +2724,6 @@ void show_free_areas(unsigned int filter)
 
 	show_swap_cache_info();
 }
-
-#ifdef CONFIG_COMPACTION_RETRY_DEBUG
-void show_buddy_info(void)
-{
-	struct zone *zone;
-	unsigned long nr[MAX_ORDER], flags, order, total = 0;
-	char buf[256];
-	int len;
-
-	for_each_populated_zone(zone) {
-
-		if (skip_free_areas_node(SHOW_MEM_FILTER_NODES,
-					zone_to_nid(zone)))
-			continue;
-		show_node(zone);
-		len = sprintf(buf, "%s: ", zone->name);
-
-		spin_lock_irqsave(&zone->lock, flags);
-		for (order = 0; order < MAX_ORDER; order++) {
-			nr[order] = zone->free_area[order].nr_free;
-			total += nr[order] << order;
-		}
-		spin_unlock_irqrestore(&zone->lock, flags);
-		for (order = 0; order < MAX_ORDER; order++)
-			len += sprintf(buf + len, "%lu*%lukB ",
-					nr[order], K(1UL) << order);
-		len += sprintf(buf + len, "= %lukB", K(total));
-		pr_err("%s\n", buf);
-	}
-}
-#endif
 
 static void zoneref_set_zone(struct zone *zone, struct zoneref *zoneref)
 {
@@ -2922,7 +2789,7 @@ char numa_zonelist_order[16] = "default";
  * interface for configure zonelist ordering.
  * command line option "numa_zonelist_order"
  *	= "[dD]efault	- default, automatic configuration.
- *	= "[nN]ode 	- order by node locality, then by zone within node
+ *	= "[nN]ode	- order by node locality, then by zone within node
  *	= "[zZ]one      - order by zone, then by locality within zone
  */
 
@@ -3164,8 +3031,8 @@ static int default_zonelist_order(void)
 		return ZONELIST_ORDER_NODE;
 	/*
 	 * look into each node's config.
-  	 * If there is a node whose DMA/DMA32 memory is very big area on
- 	 * local memory, NODE_ORDER may be suitable.
+	 * If there is a node whose DMA/DMA32 memory is very big area on
+	 * local memory, NODE_ORDER may be suitable.
          */
 	average_size = total_size /
 				(nodes_weight(node_states[N_HIGH_MEMORY]) + 1);
@@ -4470,7 +4337,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 	init_waitqueue_head(&pgdat->kswapd_wait);
 	pgdat->kswapd_max_order = 0;
 	pgdat_page_cgroup_init(pgdat);
-	
+
 	for (j = 0; j < MAX_NR_ZONES; j++) {
 		struct zone *zone = pgdat->node_zones + j;
 		unsigned long size, realsize, memmap_pages;
@@ -4837,7 +4704,7 @@ static unsigned long __init early_calculate_totalpages(void)
 		if (pages)
 			node_set_state(early_node_map[i].nid, N_HIGH_MEMORY);
 	}
-  	return totalpages;
+	return totalpages;
 }
 
 /*
@@ -5177,7 +5044,6 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
 void __init page_alloc_init(void)
 {
 	hotcpu_notifier(page_alloc_cpu_notify, 0);
-	init_rwsem(&page_alloc_slow_rwsem);
 }
 
 /*
@@ -5363,7 +5229,7 @@ static void __meminit setup_per_zone_inactive_ratio(void)
  * we want it large (64MB max).  But it is not linear, because network
  * bandwidth does not increase linearly with machine size.  We use
  *
- * 	min_free_kbytes = 4 * sqrt(lowmem_kbytes), for better accuracy:
+ *	min_free_kbytes = 4 * sqrt(lowmem_kbytes), for better accuracy:
  *	min_free_kbytes = sqrt(lowmem_kbytes * 16)
  *
  * which yields
@@ -5400,11 +5266,11 @@ int __meminit init_per_zone_wmark_min(void)
 module_init(init_per_zone_wmark_min)
 
 /*
- * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so 
+ * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so
  *	that we can call two helper functions whenever min_free_kbytes
  *	changes.
  */
-int min_free_kbytes_sysctl_handler(ctl_table *table, int write, 
+int min_free_kbytes_sysctl_handler(ctl_table *table, int write,
 	void __user *buffer, size_t *length, loff_t *ppos)
 {
 	proc_dointvec(table, write, buffer, length, ppos);

@@ -136,6 +136,7 @@ extern unsigned long total_forks;
 extern int nr_threads;
 DECLARE_PER_CPU(unsigned long, process_counts);
 extern int nr_processes(void);
+extern unsigned long get_cpu_nr_running(unsigned int cpu);
 extern unsigned long nr_running(void);
 extern unsigned long nr_uninterruptible(void);
 extern unsigned long nr_iowait(void);
@@ -648,6 +649,8 @@ struct signal_struct {
 	int oom_score_adj;	/* OOM kill score adjustment */
 	int oom_score_adj_min;	/* OOM kill score adjustment minimum value.
 				 * Only settable by CAP_SYS_RESOURCE. */
+
+	int oom_killed;    /* 1 means for a task to have a SIGKILL signal.*/
 
 	struct mutex cred_guard_mutex;	/* guard against foreign influences on
 					 * credential calculations

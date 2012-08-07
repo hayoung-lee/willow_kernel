@@ -529,6 +529,9 @@ static void object_err(struct kmem_cache *s, struct page *page,
 {
 	slab_bug(s, "%s", reason);
 	print_trailer(s, page, object);
+
+	if(slub_debug)
+		panic("SLUB ERROR: object_err");
 }
 
 static void slab_err(struct kmem_cache *s, struct page *page, char *fmt, ...)
@@ -542,6 +545,9 @@ static void slab_err(struct kmem_cache *s, struct page *page, char *fmt, ...)
 	slab_bug(s, "%s", buf);
 	print_page_info(page);
 	dump_stack();
+
+	if(slub_debug)
+		panic("SLUB ERROR: slab_err");
 }
 
 static void init_object(struct kmem_cache *s, void *object, u8 val)
@@ -595,7 +601,11 @@ static int check_bytes_and_report(struct kmem_cache *s, struct page *page,
 					fault, end - 1, fault[0], value);
 	print_trailer(s, page, object);
 
+	if(slub_debug)
+		panic("SLUB ERROR: check_bytes_and_report. Can it be restored?");
+
 	restore_bytes(s, what, value, fault, end);
+
 	return 0;
 }
 
