@@ -143,7 +143,7 @@ static void _target(struct busfreq_data *data,
 			data->busfreq_prepare(index);
 	}
 
-	data->target(type, index);
+	data->target(data, type, index);
 
 	if (newfreq < data->curr_freq[type]) {
 		if (type == PPMU_MIF && data->busfreq_post)
@@ -276,7 +276,7 @@ static ssize_t show_level_lock(struct device *device,
 
 	len = sprintf(buf, "Current Freq(MIF/INT) : (%lu - %lu)\n",
 			data->curr_freq[PPMU_MIF], data->curr_freq[PPMU_INT]);
-	len += sprintf(buf + len, "Current Lock Freq(MIF/INT) : (%lu - %lu\n)", mif_freq, int_freq);
+	len += sprintf(buf + len, "Current Lock Freq(MIF/INT) : (%lu - %lu)\n", mif_freq, int_freq);
 
 	return len;
 }
@@ -339,9 +339,9 @@ static ssize_t show_time_in_state(struct device *device,
 	return len;
 }
 
-static DEVICE_ATTR(curr_freq, 0666, show_level_lock, store_level_lock);
-static DEVICE_ATTR(lock_list, 0666, show_locklist, NULL);
-static DEVICE_ATTR(time_in_state, 0666, show_time_in_state, NULL);
+static DEVICE_ATTR(curr_freq, 0664, show_level_lock, store_level_lock);
+static DEVICE_ATTR(lock_list, 0664, show_locklist, NULL);
+static DEVICE_ATTR(time_in_state, 0664, show_time_in_state, NULL);
 
 static struct attribute *busfreq_attributes[] = {
 	&dev_attr_curr_freq.attr,
@@ -355,7 +355,7 @@ int exynos_request_register(struct notifier_block *n)
 	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
 }
 
-void exynos_request_apply(unsigned long freq, bool fix, bool disable)
+void exynos_request_apply(unsigned long freq)
 {
 	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, NULL);
 }

@@ -24,6 +24,18 @@
 
 #define TIMINGROW_OFFSET	0x34
 
+#define EXYNOS4412_DMC_MAX_THRESHOLD	30
+#define EXYNOS4212_DMC_MAX_THRESHOLD	30
+
+extern unsigned int up_threshold;
+extern unsigned int ppmu_threshold;
+extern unsigned int idle_threshold;
+extern unsigned int up_cpu_threshold;
+extern unsigned int max_cpu_threshold;
+extern unsigned int cpu_slope_size;
+extern unsigned int dmc_max_threshold;
+extern unsigned int load_history_size;
+
 struct opp;
 struct device;
 struct busfreq_table;
@@ -35,7 +47,6 @@ struct busfreq_data {
 	struct opp *curr_opp;
 	struct opp *max_opp;
 	struct opp *min_opp;
-	struct opp *force_opp;
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
 	unsigned int sampling_rate;
@@ -51,15 +62,17 @@ struct busfreq_data {
 	struct notifier_block exynos_reboot_notifier;
 	struct notifier_block exynos_request_notifier;
 	struct notifier_block exynos_cpufreq_notifier;
+	struct notifier_block exynos_busqos_notifier;
 	struct early_suspend busfreq_early_suspend_handler;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	struct opp *(*monitor)(struct busfreq_data *data);
 	void (*target)	(int index);
-	unsigned int (*get_int_volt) (unsigned long freq);
+	unsigned int (*get_int_volt) (unsigned long index);
 	unsigned int (*get_table_index) (struct opp *opp);
 	void (*busfreq_prepare) (unsigned int index);
 	void (*busfreq_post) (unsigned int index);
+	void (*set_qos) (unsigned int index);
 	void (*busfreq_suspend) (void);
 	void (*busfreq_resume) (void);
 };
@@ -73,7 +86,7 @@ struct busfreq_table {
 	unsigned int clk_dmc1div;
 };
 
-void exynos_request_apply(unsigned long freq, bool fix, bool disable);
+void exynos_request_apply(unsigned long freq);
 struct opp *step_down(struct busfreq_data *data, int step);
 
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
@@ -83,6 +96,7 @@ unsigned int exynos4x12_get_table_index(struct opp *opp);
 struct opp *exynos4x12_monitor(struct busfreq_data *data);
 void exynos4x12_prepare(unsigned int index);
 void exynos4x12_post(unsigned int index);
+void exynos4x12_set_qos(unsigned int index);
 void exynos4x12_suspend(void);
 void exynos4x12_resume(void);
 int exynos4x12_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq);

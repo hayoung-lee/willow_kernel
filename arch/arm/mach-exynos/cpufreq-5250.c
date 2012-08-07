@@ -21,6 +21,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/regs-pmu-5250.h>
 #include <mach/cpufreq.h>
+#include <mach/asv.h>
 
 #include <plat/clock.h>
 #include <plat/cpu.h>
@@ -83,20 +84,20 @@ static unsigned int clkdiv_cpu0_5250[CPUFREQ_LEVEL_END][8] = {
 	{ 0, 5, 7, 7, 7, 1, 5, 0 },	/* L2: 2000Mhz */
 	{ 0, 4, 7, 7, 7, 1, 5, 0 },	/* L3: 1900Mhz */
 	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L4: 1800Mhz */
-	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L5: 1700Mhz */
-	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L6: 1600MHz */
-	{ 0, 3, 7, 7, 7, 1, 4, 0 },	/* L7: 1500Mhz */
-	{ 0, 3, 7, 7, 6, 1, 3, 0 },	/* L8: 1400Mhz */
-	{ 0, 3, 7, 7, 6, 1, 3, 0 },	/* L9: 1300Mhz */
-	{ 0, 3, 7, 7, 5, 1, 3, 0 },	/* L10: 1200Mhz */
-	{ 0, 2, 7, 7, 5, 1, 2, 0 },	/* L11: 1100MHz */
-	{ 0, 2, 7, 7, 4, 1, 2, 0 },	/* L12: 1000MHz */
-	{ 0, 2, 7, 7, 4, 1, 2, 0 },	/* L13: 900MHz */
-	{ 0, 2, 7, 7, 3, 1, 1, 0 },	/* L14: 800MHz */
+	{ 0, 3, 7, 7, 7, 3, 5, 0 },	/* L5: 1700Mhz */
+	{ 0, 3, 7, 7, 7, 1, 4, 0 },	/* L6: 1600MHz */
+	{ 0, 2, 7, 7, 7, 1, 4, 0 },	/* L7: 1500Mhz */
+	{ 0, 2, 7, 7, 6, 1, 4, 0 },	/* L8: 1400Mhz */
+	{ 0, 2, 7, 7, 6, 1, 3, 0 },	/* L9: 1300Mhz */
+	{ 0, 2, 7, 7, 5, 1, 3, 0 },	/* L10: 1200Mhz */
+	{ 0, 3, 7, 7, 5, 1, 3, 0 },	/* L11: 1100MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L12: 1000MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L13: 900MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L14: 800MHz */
 	{ 0, 1, 7, 7, 3, 1, 1, 0 },	/* L15: 700MHz */
-	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L16: 600MHz */
+	{ 0, 1, 7, 7, 3, 1, 1, 0 },	/* L16: 600MHz */
 	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L17: 500MHz */
-	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L18: 400MHz */
+	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L18: 400MHz */
 	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L19: 300MHz */
 	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L20: 200MHz */
 };
@@ -156,21 +157,48 @@ static unsigned int exynos5_apll_pms_table[CPUFREQ_LEVEL_END] = {
  * ASV group voltage table
  */
 
-#define NUM_ASV_GROUP	1
+#define NUM_ASV_GROUP	L10
 
-static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
+
+static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP+1] = {
+	/* ASV0 is not exist */
+	/* ASV0,  ASV1,    ASV2,     ASV3,    ASV4,    ASV5,    ASV6,    ASV7,    ASV8,    ASV9,   ASV10 */
+	{ 0 },  /* L0 */
+	{ 0 },  /* L1 */
+	{ 0 },  /* L2 */
+	{ 0 },  /* L3 */
+	{ 0 },  /* L4 */
+	{ 0,   1300000, 1275000, 1287500, 1275000, 1275000, 1262500, 1250000, 1237500, 1225000, 1225000 },    /* L5 */
+	{ 0,   1250000, 1237500, 1250000, 1237500, 1250000, 1237500, 1225000, 1212500, 1200000, 1200000 },    /* L6 */
+	{ 0,   1225000, 1200000, 1212500, 1200000, 1212500, 1200000, 1187500, 1175000, 1175000, 1150000 },    /* L7 */
+	{ 0,   1200000, 1175000, 1200000, 1175000, 1187500, 1175000, 1162500, 1150000, 1137500, 1125000 },    /* L8 */
+	{ 0,   1150000, 1125000, 1150000, 1125000, 1137500, 1125000, 1112500, 1100000, 1087500, 1075000 },    /* L9 */
+	{ 0,   1125000, 1112500, 1125000, 1112500, 1125000, 1112500, 1100000, 1087500, 1075000, 1062500 },    /* L10 */
+	{ 0,   1100000, 1075000, 1100000, 1087500, 1100000, 1087500, 1075000, 1062500, 1050000, 1037500 },    /* L11 */
+	{ 0,   1075000, 1050000, 1062500, 1050000, 1062500, 1050000, 1050000, 1037500, 1025000, 1012500 },    /* L12 */
+	{ 0,   1050000, 1025000, 1050000, 1037500, 1050000, 1037500, 1025000, 1012500, 1000000,  987500 },    /* L13 */
+	{ 0,   1025000, 1012500, 1025000, 1012500, 1025000, 1012500, 1000000, 1000000,  987500,  975000 },     /* L14 */
+	{ 0,   1012500, 1000000, 1012500, 1000000, 1012500, 1000000,  987500,  975000,  975000,  962500 },     /* L15 */
+	{ 0,   1000000,  975000, 1000000,  975000, 1000000,  987500,  975000,  962500,  962500,  950000 },     /* L16 */
+	{ 0,    975000,  962500,  975000,  962500,  975000,  962500,  950000,  937500,  925000,  925000 },     /* L17 */
+	{ 0,    950000,  937500,  950000,  937500,  950000,  937500,  925000,  925000,  925000,  912500 },     /* L18 */
+	{ 0,    937500,  925000,  937500,  925000,  937500,  925000,  912500,  912500,  900000,  900000 },     /* L19 */
+	{ 0,    925000,  912500,  925000,  912500,  925000,  912500,  900000,  900000,  887500,  887500  },    /* L20 */
+};
+
+static const unsigned int asv_voltage_rev0[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 0 },	/* L0 */
 	{ 0 },	/* L1 */
 	{ 0 },	/* L2 */
 	{ 0 },	/* L3 */
 	{ 0 },	/* L4 */
-	{ 0 },	/* L5 */
-	{ 0 },	/* L6 */
-	{ 0 },	/* L7 */
-	{ 1250000 },	/* L8 */
+	{ 1200000 },	/* L5 */
+	{ 1200000 },	/* L6 */
+	{ 1200000 },	/* L7 */
+	{ 1200000 },	/* L8 */
 	{ 1200000 },	/* L9 */
-	{ 1150000 },	/* L10 */
-	{ 1100000 },	/* L11 */
+	{ 1200000 },	/* L10 */
+	{ 1200000 },	/* L11 */
 	{ 1175000 },	/* L12 */
 	{ 1125000 },	/* L13 */
 	{ 1075000 },	/* L14 */
@@ -307,8 +335,10 @@ static void exynos5250_set_frequency(unsigned int old_index,
 #if defined(CONFIG_EXYNOS5250_ABB_WA)
 	unsigned int voltage;
 
-	voltage = asv_voltage[new_index][0];
-	exynos5250_set_arm_abbg(voltage, INT_VOLT);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		voltage = asv_voltage_rev0[new_index][0];
+		exynos5250_set_arm_abbg(voltage, INT_VOLT);
+	}
 #endif
 	if (old_index > new_index) {
 		if (!exynos5250_pms_change(old_index, new_index)) {
@@ -348,7 +378,7 @@ static void exynos5250_set_frequency(unsigned int old_index,
 
 static void __init set_volt_table(void)
 {
-	unsigned int asv_group = 0;
+	unsigned int asv_group;
 	unsigned int i;
 
 	if (soc_is_exynos5250()) {
@@ -357,30 +387,43 @@ static void __init set_volt_table(void)
 		exynos5250_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
-#ifdef CONFIG_EXYNOS5250_1400MHZ_SUPPORT
-		max_support_idx = L8;
-#elif defined(CONFIG_EXYNOS5250_1200MHZ_SUPPORT)
-		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
 
-		max_support_idx = L10;
-#else
-		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L10].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
+		switch (samsung_rev() & 0xf0) {
+		case EXYNOS5250_REV_0:
+			exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L10].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
 
-		max_support_idx = L12;
-#endif
+			max_support_idx = L12;
+			break;
+		case EXYNOS5250_REV_1_0:
+			max_support_idx = L5;
+			break;
+		default:
+			pr_err("%s: Can't find cpu revision(%d) type\n", __func__,
+				samsung_rev());
+			break;
+		}
 	}
 
-	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0)
+		asv_group = 0;
+	else
+		asv_group = exynos_result_of_asv;
 
-	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-		exynos5250_volt_table[i] = asv_voltage[i][asv_group];
+	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
+	pr_info("DVFS : VDD_ARM Voltage of max level is %d\n", asv_voltage[max_support_idx][asv_group]);
+	
+	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
+		if (samsung_rev() < EXYNOS5250_REV_1_0)
+			exynos5250_volt_table[i] = asv_voltage_rev0[i][asv_group];
+		else
+			exynos5250_volt_table[i] = asv_voltage[i][asv_group];
+	}
 }
 
 int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)

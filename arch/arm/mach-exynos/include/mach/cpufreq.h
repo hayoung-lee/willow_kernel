@@ -34,13 +34,31 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_TV,	/* TV */
 	DVFS_LOCK_ID_MFC,	/* MFC */
 	DVFS_LOCK_ID_USB,	/* USB */
+	DVFS_LOCK_ID_USB_IF,	/* USB_IF */
 	DVFS_LOCK_ID_CAM,	/* CAM */
 	DVFS_LOCK_ID_PM,	/* PM */
 	DVFS_LOCK_ID_USER,	/* USER */
 	DVFS_LOCK_ID_TMU,	/* TMU */
 	DVFS_LOCK_ID_LPA,	/* LPA */
-	DVFS_LOCK_ID_DRM,	/* DRM */
+	DVFS_LOCK_ID_TSP,	/* TSP */
+	DVFS_LOCK_ID_PEN,	/* E-PEN */
 	DVFS_LOCK_ID_G3D,	/* G3D */
+	DVFS_LOCK_ID_IR_LED,	/* IR_LED */
+	DVFS_LOCK_ID_LCD,	/* LCD */
+	DVFS_LOCK_ID_DRM,	/* DRM */
+	DVFS_LOCK_ID_ROTATION_BOOSTER,	/* ROTATION_BOOSTER */
+
+	/*
+	 * QoS Request on DMA Latency.
+	 *
+	 * dvfs_lock is a non standard implementation that can be
+	 * replaced with PM QoS framework.
+	 * However, in this implementation, in order to provide
+	 * a prototype and test of PM QoS on CPU (DMA Latency),
+	 * PM QoS uses dvfs_lock on CPU until we have a full
+	 * implementation in CPUFREQ framework of QoS.
+	 */
+	DVFS_LOCK_ID_QOS_DMA_LATENCY,
 	DVFS_LOCK_ID_END,
 };
 
@@ -70,18 +88,33 @@ int exynos_cpufreq_is_fixed(void);
 
 #define MAX_INDEX	10
 
+#ifdef CONFIG_SLP
+struct dvfs_qos_info {
+	unsigned int qos_value;
+	unsigned int min_freq;
+	enum cpufreq_level_index level;
+};
+#endif
+
 struct exynos_dvfs_info {
 	unsigned long	mpll_freq_khz;
 	unsigned int	pll_safe_idx;
 	unsigned int	pm_lock_idx;
 	unsigned int	max_support_idx;
 	unsigned int	min_support_idx;
+	unsigned int	gov_support_freq;
 	struct clk	*cpu_clk;
 	unsigned int	*volt_table;
 	struct cpufreq_frequency_table	*freq_table;
 	void (*set_freq)(unsigned int, unsigned int);
 	bool (*need_apll_change)(unsigned int, unsigned int);
+
+#ifdef CONFIG_SLP
+	struct dvfs_qos_info *cpu_dma_latency;
+#endif
 };
+
+extern struct exynos_dvfs_info *exynos_info;
 
 #define SUPPORT_1400MHZ	(1<<31)
 #define SUPPORT_1200MHZ	(1<<30)
