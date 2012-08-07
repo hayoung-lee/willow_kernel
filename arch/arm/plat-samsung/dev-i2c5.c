@@ -52,16 +52,16 @@ struct platform_device s3c_device_i2c5 = {
 
 static struct s3c2410_platform_i2c touch_100k_i2c_data __initdata = {
 	.flags		= 0,
-	.slave_addr	= 0x10,
+	.slave_addr	= (0x70>>1), // 0x10,
 	.frequency	= 95*1000,
-	.sda_delay	= S3C2410_IICLC_SDA_DELAY10,
+	.sda_delay	= 150,//S3C2410_IICLC_SDA_DELAY10,
 };
 
 static struct s3c2410_platform_i2c touch_300k_i2c_data __initdata = {
 	.flags		= 0,
-	.slave_addr	= 0x10,
+	.slave_addr	=(0x70>>1),// 0x10,
 	.frequency	= 300*1000,
-	.sda_delay	= S3C2410_IICLC_SDA_DELAY10,
+	.sda_delay	=  150,//S3C2410_IICLC_SDA_DELAY10,
 };
 
 void __init s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd)
@@ -94,7 +94,7 @@ void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_valu
 	npd = s3c_set_platdata(pd, sizeof(struct s3c2410_platform_i2c),
 			       &s3c_device_i2c5);
 
-	if (!npd->cfg_gpio)
+	//if (!npd->cfg_gpio)
 		npd->cfg_gpio = s3c_i2c5_cfg_gpio;
 }
 EXPORT_SYMBOL(touch_s3c_i2c5_set_platdata);

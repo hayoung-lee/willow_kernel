@@ -281,15 +281,15 @@ int focaltech_touch_reset(int onoff)
 {
 	int err;
 	// touch gpb4
- 	err = gpio_request(EXYNOS4_GPB(4), "TOUCH_RESET");
+
+	if(onoff)
+		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_HIGH, "TOUCH_RESET");
+	else
+		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "TOUCH_RESET");		
 	if (err) {
 		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
-		return err;
+		//return err;
 	}
-	gpio_direction_output(EXYNOS4_GPB(4), 1);
-
-	gpio_set_value(EXYNOS4_GPB(4), onoff);
-
 	gpio_free(EXYNOS4_GPB(4));
  
 	return 0;
@@ -299,13 +299,14 @@ void focaltech_touch_on(void)
 {
 //	regulator_enable(t9_touch_ldo);
 	printk("[FocalTech] TS_POWER ON\n");
-	s3c_i2c5_force_stop();
+	//s3c_i2c5_force_stop();
    msleep(10);
 
-	focaltech_interrupt_low_gpio();
+	//focaltech_interrupt_low_gpio();
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
    focaltech_touch_reset(0);
 #endif
+	msleep(200);
 
     regulator_enable(touch_ldo);
 	//Power On sequence need dealy	
@@ -330,6 +331,9 @@ void focaltech_touch_off(void)
 	printk("[FocalTech] TS_POWER OFF\n");
 
 	//TS_RESET low
+#if  1
+   focaltech_touch_reset(0);
+#else
 	err = gpio_request(EXYNOS4_GPB(4), "TOUCH_RESET");
 	if (err) {
 		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
@@ -337,6 +341,7 @@ void focaltech_touch_off(void)
 	gpio_direction_output(EXYNOS4_GPB(4), 1);
 	gpio_set_value(EXYNOS4_GPB(4), 0);
 	gpio_free(EXYNOS4_GPB(4));
+#endif	
 //	printk("[FocalTech] TS_RESET Low\n");
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
    msleep(1);
@@ -2800,6 +2805,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     printk("[FTS] touch threshold is %d.\n", uc_reg_value * 4);
     printk("[FTS] ============== Touch Information End ================\n");
 
+#if 1
 #if CFG_SUPPORT_AUTO_UPG
 	set_touch_autoCal(1);
     msleep(50);  //clock change    
@@ -2812,7 +2818,8 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	s3c24xx_i2c_set(5,0x38,300);	
     msleep(50);  //clock change
 #endif    
-  
+#endif  
+
 #if CFG_SUPPORT_UPDATE_PROJECT_SETTING
     fts_ctpm_update_project_setting();
 #endif
