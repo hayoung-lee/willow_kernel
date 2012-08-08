@@ -1215,7 +1215,7 @@ static void willow_power_off(void)
 //	} else {
 		// shutdown
 		pr_info("%s: set PS_HOLD low\n", __func__);
-		writel(readl(EXYNOS4_PS_HOLD_CONTROL) & 0xFFFFFEFF, EXYNOS4_PS_HOLD_CONTROL);
+		writel(readl(S5P_PS_HOLD_CONTROL) & 0xFFFFFEFF, S5P_PS_HOLD_CONTROL);
 		while(1);
 //	}
 }
