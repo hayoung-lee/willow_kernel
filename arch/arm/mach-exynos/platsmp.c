@@ -80,6 +80,10 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	void __iomem *cpu_base = S5P_VA_GIC_CPU +
 				(gic_bank_offset * cpu);
 
+	/* Enable the full line of zero */
+	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+		enable_cache_foz();
+
 	/*
 	 * if any interrupts are already enabled for the primary
 	 * core (e.g. timer irq), then they will not have been enabled

@@ -101,7 +101,7 @@ resume_with_mmu:
 	smc	0
 #else
 	mov	r0, #1
-	ldr	r1, =0xF8600000
+	ldr	r1, =S5P_VA_L2CC
 	str	r0, [r1, #0x100]
 #endif
 #endif
@@ -150,6 +150,11 @@ l2x0_save:
 	.word	0
 	.word	0
 
+	.global scu_save
+scu_save:
+	.word	0
+	.word	0
+
 	/*
 	 * exynos4_idle_resume
 	 *
@@ -163,10 +168,13 @@ l2x0_save:
 ENTRY(exynos4_idle_resume)
 	/* SCU enable */
 	ldr	r1, =0x10500000
-	ldr	r0, [r1]
-	orr	r0, r0, #1
-	orr	r0, r0, #(1 << 5)
-	str	r0, [r1]
+	adr	r0, scu_save
+
+	ldr	r5, [r0]
+	ldr	r6, [r0, #4]
+
+	str	r5, [r1, #0x30]
+	str	r6, [r1]
 
 #ifdef CONFIG_CACHE_L2X0
 	/* Restore register value for L2X0 */
