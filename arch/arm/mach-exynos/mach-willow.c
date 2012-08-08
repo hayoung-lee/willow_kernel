@@ -128,6 +128,11 @@
 #ifdef CONFIG_INPUT_L3G4200D_GYR
 #include <linux/l3g4200d_gyr.h>
 #endif
+
+#ifdef CONFIG_BATTERY_MAX17040_OLD
+#include <linux/max17040_battery.h>
+#endif
+
 #include <mach/gpio-willow.h>
 
 /* wifi */
@@ -837,6 +842,87 @@ static struct s3c_platform_camera mt9m113 = {
 	.use_isp	= 0,
 	.initialized	= 0,
 };
+
+#ifdef CONFIG_BATTERY_MAX17040_OLD
+static int max8903g_charger_enable(void)
+{
+	gpio_set_value(nCHG_EN, 0);
+	return	gpio_get_value(nCHARGING) ? 0 : 1;
+}
+
+static void max8903g_charger_disable(void)
+{
+	gpio_set_value(nCHG_EN, 1);
+}
+
+static int max8903g_charger_done(void)
+{
+	return	gpio_get_value(nCHARGING) ? 1 : 0;
+}
+
+static int max8903g_charger_online(void)
+{
+	gpio_set_value(nCHG_EN, 0);
+
+	return	gpio_get_value(nDC_OK) ? 0 : 1;
+}
+
+static int max8903g_battery_online(void)
+{
+	/*think that  battery always is inserted */
+	return 1;
+}
+
+static struct max8903_output_desc max8903_output_descs[] = {
+	{
+		.gpio               = nDC_OK,
+		.active_low         = 1,
+		.desc               = "vcharge_det_n",
+		.wakeup             = 1,
+		.debounce_interval  = 30,
+		.enable_int         = 1,
+	},
+#if 0
+	{
+		.gpio               = nUSB_OK,
+		.active_low         = 1,
+		.desc               = "usb_det_n",
+		.wakeup             = 0,
+		.debounce_interval  = 30,
+		.enable_int         = 0,
+	},
+#endif
+	{
+		.gpio               = nCHARGING,
+		.active_low         = 1,
+		.desc               = "chg_stat_n",
+		.wakeup             = 0,
+		.debounce_interval  = 30,
+		.enable_int         = 1,
+	},
+	{
+		.gpio               = nBAT_FLT,
+		.active_low         = 1,
+		.desc               = "chg_fault_n",
+		.wakeup             = 0,
+		.debounce_interval  = 30,
+		.enable_int         = 0,
+	}
+};
+
+static struct max17040_platform_data max17040_platform_data = {
+	.output_desc = max8903_output_descs,
+	.nOutputs	= ARRAY_SIZE(max8903_output_descs),
+	.rep      = 0,
+	.chg_en_gpio = nCHG_EN,
+	.charger_enable = max8903g_charger_enable,
+	.charger_online = max8903g_charger_online,
+	.battery_online = max8903g_battery_online,
+	.charger_done = max8903g_charger_done,
+	.charger_disable = max8903g_charger_disable,
+	//.rcomp_value = 0xD700,
+};
+#endif //CONFIG_BATTERY_MAX17040_OLD
 
 static struct i2c_gpio_platform_data i2c9_platdata = {
 	.sda_pin = EXYNOS4212_GPM4(1),
@@ -2391,6 +2477,10 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 
 static struct i2c_board_info i2c_devs3[] __initdata = {
 	{
+#ifdef CONFIG_BATTERY_MAX17040_OLD
+		I2C_BOARD_INFO("max17040", (0x6D >> 1)),
+		.platform_data = &max17040_platform_data,
+#endif
 	},
 };
 

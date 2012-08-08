@@ -313,7 +313,7 @@ int s3c_vbus_enable(struct usb_gadget *gadget, int is_active)
 		stop_activity(dev, dev->driver);
 		spin_unlock_irqrestore(&dev->lock, flags);
 		udc_disable(dev);
-#if defined(CONFIG_BATTERY_SAMSUNG)
+#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040_OLD)
 		s3c_udc_cable_disconnect(dev);
 #endif
 	} else {

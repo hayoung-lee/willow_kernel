@@ -70,6 +70,13 @@
 #define GPIO_BT_RTS			EXYNOS4_GPA0(3)
 #define GPIO_BT_RTS_AF		2
 
+/* max17040, max8903 (charger/fuel) */
+#define nCHG_EN    EXYNOS4212_GPM0(2) //nCHG_EN   //CHGARGE_EN
+#define nCHARGING  EXYNOS4_GPX2(5)    //nCHARGING //CHG
+#define nDC_OK     EXYNOS4_GPX2(4)    //nDC_OK    //DOK
+#define nUSB_OK    EXYNOS4_GPX2(6)    //nUSB_OK   //USB_OK
+#define nBAT_FLT   EXYNOS4_GPX3(0)    //nBAT_FLT  //FLT
+
 typedef enum
 {
   WILLOW_HW_VERSION_NONE  = 0,
