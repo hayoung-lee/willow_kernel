@@ -45,7 +45,7 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#include "l3g4200d_gyr.h"
+#include <linux/l3g4200d_gyr.h>
 
 #define L3G4200D_GYR_DEV_NAME	"l3g4200d_gyr"
 
