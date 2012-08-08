@@ -1461,17 +1461,23 @@ static void __init willow_usbgadget_init(void)
 #endif
 
 /* max77686 */
-static struct regulator_consumer_supply max77686_buck1 =
-REGULATOR_SUPPLY("vdd_mif", NULL);
+static struct regulator_consumer_supply max77686_buck1[] = {
+		REGULATOR_SUPPLY("vdd_mif", NULL),
+		REGULATOR_SUPPLY("vdd_mif", "exynos4412-busfreq"),
+};
 
 static struct regulator_consumer_supply max77686_buck2 =
 REGULATOR_SUPPLY("vdd_arm", NULL);
 
-static struct regulator_consumer_supply max77686_buck3 =
-REGULATOR_SUPPLY("vdd_int", NULL);
+static struct regulator_consumer_supply max77686_buck3[] = {
+		REGULATOR_SUPPLY("vdd_int", NULL),
+		REGULATOR_SUPPLY("vdd_int", "exynoss4412-busfreq"),
+};
 
-static struct regulator_consumer_supply max77686_buck4 =
-REGULATOR_SUPPLY("vdd_g3d", NULL);
+static struct regulator_consumer_supply max77686_buck4[] = {
+		REGULATOR_SUPPLY("vdd_g3d", NULL),
+		REGULATOR_SUPPLY("vdd_g3d", "mali_dev.0"),
+};
 
 static struct regulator_consumer_supply max77686_buck8 =
 REGULATOR_SUPPLY("vmmc", NULL);
@@ -1558,24 +1564,50 @@ static struct regulator_consumer_supply max77686_ldo25_consumer[] = {
 static struct regulator_consumer_supply __initdata max77686_ldo26_consumer =
 REGULATOR_SUPPLY("vdd_tsp", NULL);
 
+static struct regulator_consumer_supply __initdata max77686_32khcp_consumer =
+REGULATOR_SUPPLY("lpo", "bcm4334_bluetooth");
+
+static struct regulator_consumer_supply __initdata max77686_enp32khz_consumer =
+REGULATOR_SUPPLY("gps_32khz",NULL);
+
+#define REGULATOR_INIT(_ldo, _name, _min_uV, _max_uV, _always_on, _ops_mask, \
+		       _disabled)					\
+	static struct regulator_init_data _ldo##_init_data = {		\
+		.constraints = {					\
+			.name = _name,					\
+			.min_uV = _min_uV,				\
+			.max_uV = _max_uV,				\
+			.always_on	= _always_on,			\
+			.boot_on	= _always_on,			\
+			.apply_uV	= 1,				\
+			.valid_ops_mask = _ops_mask,			\
+			.state_mem = {					\
+				.disabled	= _disabled,		\
+				.enabled	= !(_disabled),		\
+			}						\
+		},							\
+		.num_consumer_supplies = ARRAY_SIZE(_ldo##_supply),	\
+		.consumer_supplies = &_ldo##_supply[0],			\
+	};
+
 static struct regulator_init_data max77686_buck1_data = {
 	.constraints = {
 		.name = "vdd_mif range",
-		.min_uV = 800000,
+		.min_uV = 850000,
 		.max_uV = 1100000,
 		.boot_on = 1,
 		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 	},
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &max77686_buck1,
+	.num_consumer_supplies = ARRAY_SIZE(max77686_buck1),
+	.consumer_supplies = max77686_buck1,
 };
 
 static struct regulator_init_data max77686_buck2_data = {
 	.constraints = {
 		.name = "vdd_arm range",
-		.min_uV = 800000,
+		.min_uV = 850000,
 		.max_uV = 1500000,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
@@ -1592,7 +1624,7 @@ static struct regulator_init_data max77686_buck2_data = {
 static struct regulator_init_data max77686_buck3_data = {
 	.constraints = {
 		.name = "vdd_int range",
-		.min_uV = 800000,
+		.min_uV = 850000,
 		.max_uV = 1150000,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
@@ -1602,8 +1634,8 @@ static struct regulator_init_data max77686_buck3_data = {
 			.disabled	= 1,
 		},
 	},
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &max77686_buck3,
+	.num_consumer_supplies = ARRAY_SIZE(max77686_buck3),
+	.consumer_supplies = max77686_buck3,
 };
 
 static struct regulator_init_data max77686_buck4_data = {
@@ -1615,8 +1647,8 @@ static struct regulator_init_data max77686_buck4_data = {
 				  REGULATOR_CHANGE_STATUS,
 
 	},
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &max77686_buck4,
+	.num_consumer_supplies = ARRAY_SIZE(max77686_buck4),
+	.consumer_supplies = max77686_buck4,
 };
 
 static struct regulator_init_data max77686_buck8_data = {
@@ -1629,6 +1661,7 @@ static struct regulator_init_data max77686_buck8_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
 		.state_mem = {
+			.disabled	= 0,
 			.enabled 	= 1,
 		},
 	},
@@ -1645,7 +1678,7 @@ static struct regulator_init_data __initdata max77686_ldo1_data = {
 		.always_on	= 1,
 		.boot_on 	= 1,
 		.state_mem	= {
-			.uV 		= 1000000,
+			.disabled	= 0,
 			.enabled	= 1,
 		},
 	},
@@ -1663,6 +1696,7 @@ static struct regulator_init_data __initdata max77686_ldo2_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1678,6 +1712,7 @@ static struct regulator_init_data __initdata max77686_ldo3_data = {
 		.always_on	= 1,
 		.boot_on 	= 1,
 		.state_mem	= {
+			.disabled	= 0,
 			.enabled	= 1,
 		},
 	},
@@ -1688,8 +1723,8 @@ static struct regulator_init_data __initdata max77686_ldo3_data = {
 static struct regulator_init_data __initdata max77686_ldo4_data = {
 	.constraints	= {
 		.name		= "vdd_sd range",
-		.min_uV		= 800000,
-		.max_uV		= 3950000,
+		.min_uV		= 1200000,
+		.max_uV		= 2800000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
@@ -1699,6 +1734,7 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 			.uV		= 2800000,
 			.mode		= REGULATOR_MODE_NORMAL,
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1714,6 +1750,7 @@ static struct regulator_init_data __initdata max77686_ldo5_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1730,6 +1767,7 @@ static struct regulator_init_data __initdata max77686_ldo6_data = {
 							REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1746,6 +1784,7 @@ static struct regulator_init_data __initdata max77686_ldo7_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled 	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1758,9 +1797,12 @@ static struct regulator_init_data __initdata max77686_ldo8_data = {
 		.min_uV		= 1000000,
 		.max_uV		= 1000000,
 		.apply_uV	= 1,
+		.always_on	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1776,6 +1818,7 @@ static struct regulator_init_data __initdata max77686_ldo9_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1788,9 +1831,12 @@ static struct regulator_init_data __initdata max77686_ldo10_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.always_on	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 1,
+			.disabled	= 0,
+			.enabled	= 1,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1800,13 +1846,15 @@ static struct regulator_init_data __initdata max77686_ldo10_data = {
 static struct regulator_init_data __initdata max77686_ldo11_data = {
 	.constraints	= {
 		.name		= "vdd_abb_1v8 range",
-		.min_uV		= 1800000,
-		.max_uV		= 1800000,
+		.min_uV		= 1950000,
+		.max_uV		= 1950000,
 		.apply_uV	= 1,
-		.boot_on 	= 1,
+		.always_on	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled = 1,
+			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1823,6 +1871,7 @@ static struct regulator_init_data __initdata max77686_ldo12_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1838,6 +1887,7 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1854,6 +1904,7 @@ static struct regulator_init_data __initdata max77686_ldo14_data = {
 		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
+			.disabled	= 0,
 			.enabled	= 1,
 		},
 	},
@@ -1871,6 +1922,7 @@ static struct regulator_init_data __initdata max77686_ldo15_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1886,6 +1938,7 @@ static struct regulator_init_data __initdata max77686_ldo16_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1901,6 +1954,7 @@ static struct regulator_init_data __initdata max77686_ldo17_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1916,6 +1970,7 @@ static struct regulator_init_data __initdata max77686_ldo18_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1925,13 +1980,14 @@ static struct regulator_init_data __initdata max77686_ldo18_data = {
 static struct regulator_init_data __initdata max77686_ldo19_data = {
 	.constraints	= {
 		.name		= "vdd_ldo19 range",
-		.min_uV		= 800000,
-		.max_uV		= 3950000,
+		.min_uV		= 850000,
+		.max_uV		= 3300000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 							REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1948,7 +2004,8 @@ static struct regulator_init_data __initdata max77686_ldo20_data = {
 		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 1,
+			.disabled	= 0,
+			.enabled	= 1,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1958,12 +2015,13 @@ static struct regulator_init_data __initdata max77686_ldo20_data = {
 static struct regulator_init_data __initdata max77686_ldo21_data = {
 	.constraints	= {
 		.name		= "vdd_ldo21 range",
-		.min_uV		= 800000,
-		.max_uV		= 3950000,
+		.min_uV		= 850000,
+		.max_uV		= 3300000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1980,7 +2038,8 @@ static struct regulator_init_data __initdata max77686_ldo22_data = {
 		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 1,
+			.disabled	= 0,
+			.enabled	= 1,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -1997,6 +2056,7 @@ static struct regulator_init_data __initdata max77686_ldo23_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -2012,6 +2072,7 @@ static struct regulator_init_data __initdata max77686_ldo24_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -2027,10 +2088,11 @@ static struct regulator_init_data __initdata max77686_ldo25_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(max77686_ldo25_consumer),
-	.consumer_supplies	= &max77686_ldo25_consumer,
+	.consumer_supplies	= max77686_ldo25_consumer,
 };
 
 static struct regulator_init_data __initdata max77686_ldo26_data = {
@@ -2042,10 +2104,39 @@ static struct regulator_init_data __initdata max77686_ldo26_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &max77686_ldo26_consumer,
+};
+
+static struct regulator_init_data max77686_enp32khz_data = {
+	.constraints = {
+		.name = "32KHZ_PMIC",
+		.always_on	= 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.enabled	= 1,
+			.disabled	= 0,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_enp32khz_consumer,
+};
+
+static struct regulator_init_data max77686_32khcp_data = {
+	.constraints = {
+		.name = "32KHCP_PMIC",
+		.always_on	= 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.enabled	= 1,
+			.disabled	= 0,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_32khcp_consumer,
 };
 
 static struct max77686_regulator_data max77686_regulators[] = {
@@ -2080,6 +2171,8 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO24, &max77686_ldo24_data,},
 	{MAX77686_LDO25, &max77686_ldo25_data,},
 	{MAX77686_LDO26, &max77686_ldo26_data,},
+	{MAX77686_EN32KHZ_CP, &max77686_32khcp_data,},
+	{MAX77686_P32KH, &max77686_enp32khz_data,},
 };
 
 struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
