@@ -494,6 +494,10 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_YAS_ORIENTATION
+        tristate "Yamaha Orientation Sensor"
+        depends on I2C
+
 config INPUT_YAS_ACCELEROMETER
          tristate "YAS Acceleration Sensor"
          depends on I2C
@@ -512,5 +516,45 @@ config INPUT_YAS_ACCELEROMETER_POSITION
               5: bottom, upper-right
               6: bottom, lower-right
               7: bottom, lower-left
+
+config INPUT_YAS_MAGNETOMETER
+        tristate "YAS Geomagnetic Sensor"
+        depends on I2C
+
+config INPUT_YAS_MAGNETOMETER_POSITION
+        int "YAS Geomagnetic Sensor Mounting Position on Board"
+        depends on INPUT_YAS_MAGNETOMETER
+        default "0"
+        help
+          Chip mounting position (pin 1).
+            0: top, upper-left
+            1: top, upper-right
+            2: top, lower-right
+            3: top, lower-left
+            4: bottom, upper-left
+            5: bottom, upper-right
+            6: bottom, lower-right
+            7: bottom, lower-left
+
+
+config INPUT_L3G4200D_GYR
+        tristate "ST L3G4200D Gyroscope Sensor"
+        depends on I2C
+
+config INPUT_L3G4200D_GYR_POSITION
+        int "L3G4200D_GYR Mounting Position on Board"
+        depends on INPUT_L3G4200D_GYR
+        default "0"
+        help
+          Chip mounting position (pin 1).
+            0: top, upper-left
+            1: top, upper-right
+            2: top, lower-right
+            3: top, lower-left
+            4: bottom, upper-left
+            5: bottom, upper-right
+            6: bottom, lower-right
+            7: bottom, lower-left
+
 
 endif

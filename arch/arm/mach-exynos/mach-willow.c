@@ -125,6 +125,9 @@
 #include <mach/tmu.h>
 #endif
 
+#ifdef CONFIG_INPUT_L3G4200D_GYR
+#include <linux/l3g4200d_gyr.h>
+#endif
 #include <mach/gpio-willow.h>
 
 /* wifi */
@@ -2242,11 +2245,36 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 static void sensor_gpio_init(void){
-#if 0
+#if 1 
     int err;
+#endif
+	// Magnetic Sensor
+	gpio_direction_input(EXYNOS4_GPX2(7));
+	s3c_gpio_setpull(EXYNOS4_GPX2(7), S3C_GPIO_PULL_NONE);
+
+    // GYRO_SENSOR_DRDY
+    err = gpio_request(EXYNOS4_GPX3(1), "gyro_dr");
+    if(err) {
+        printk(KERN_ERR "failed to request GYRO_SENSOR_DRDY\n");
+    }
+    gpio_direction_input(EXYNOS4_GPX3(1));
+    s3c_gpio_setpull(EXYNOS4_GPX3(1), S3C_GPIO_PULL_DOWN);
+    gpio_free(EXYNOS4_GPX3(1));
+
+    // GYRO_SENSOR_INT
+    err = gpio_request(EXYNOS4_GPX2(3), "GYRO_INT");
+    if(err) {
+        printk(KERN_ERR "failed to request GYRO_SENSOR_INT\n");
+    }
+    gpio_direction_input(EXYNOS4_GPX2(3));
+    s3c_gpio_setpull(EXYNOS4_GPX2(3), S3C_GPIO_PULL_DOWN);
+    gpio_free(EXYNOS4_GPX2(3));
+
+	// Accelerometer Sensor
+#if 0
 	err = gpio_request(EXYNOS4_GPX3(6), "ACC_INT");
     if(err) {
-      printk(KERN_ERR "failed to request ACC_INT\n");
+        printk(KERN_ERR "failed to request ACC_INT\n");
     }
 #endif 
     gpio_direction_input(EXYNOS4_GPX3(6));
@@ -2273,6 +2301,14 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 	},
 };
 
+static struct i2c_board_info i2c_devs4[] __initdata = {
+#ifdef CONFIG_INPUT_YAS_MAGNETOMETER
+	{
+        I2C_BOARD_INFO("geomagnetic", 0x2e),
+	},
+#endif
+};
+
 static struct i2c_board_info i2c_devs5[] __initdata = {
 	{
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
@@ -2280,6 +2316,24 @@ static struct i2c_board_info i2c_devs5[] __initdata = {
 #endif
 	},
 };
+
+#ifdef CONFIG_INPUT_L3G4200D_GYR
+static struct l3g4200d_gyr_platform_data l3g4200d_gyr_pdata = {
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+	.negate_x = 1,
+	.negate_y = 0,
+	.negate_z = 1,
+};
+
+static struct i2c_board_info i2c_devs6[] __initdata = {
+	{
+        I2C_BOARD_INFO("l3g4200d_gyr", 0x68),
+        .platform_data = &l3g4200d_gyr_pdata,
+	},
+};
+#endif
 
 static struct i2c_board_info i2c_devs7[] __initdata = {
 	{
@@ -2552,6 +2606,7 @@ static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_i2c3,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
+	&s3c_device_i2c6,
 	&s3c_device_i2c7,
 #ifdef CONFIG_HAPTIC_ISA1200
 	&s3c_device_timer[0],
@@ -3473,9 +3528,13 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
+	i2c_register_board_info(4, i2c_devs4, ARRAY_SIZE(i2c_devs4));
 
 	s3c_i2c5_set_platdata(NULL);
 	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
+
+	s3c_i2c6_set_platdata(NULL);
+	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
 
 	s3c_i2c7_set_platdata(NULL);
 	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);

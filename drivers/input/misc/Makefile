@@ -48,4 +48,7 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 
+obj-$(CONFIG_INPUT_YAS_ORIENTATION)             += yas_ori_kernel_driver.o
 obj-$(CONFIG_INPUT_YAS_ACCELEROMETER)           += yas_acc_kernel_driver.o
+obj-$(CONFIG_INPUT_YAS_MAGNETOMETER)            += yas_mag_kernel_driver.o
+obj-$(CONFIG_INPUT_L3G4200D_GYR)                += l3g4200d_gyr.o
