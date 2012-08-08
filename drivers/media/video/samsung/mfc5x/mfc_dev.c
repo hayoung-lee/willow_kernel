@@ -55,7 +55,7 @@
 #include "mfc_cmd.h"
 
 #ifdef SYSMMU_MFC_ON
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 #endif
 
 #define MFC_MINOR	252

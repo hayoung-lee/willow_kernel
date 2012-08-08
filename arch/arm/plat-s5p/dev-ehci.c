@@ -109,7 +109,7 @@ void __init s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd)
 }
 #endif
 
-#ifdef CONFIG_S5P_DEV_USB_SWITCH
+#if 0 //#ifdef CONFIG_S5P_DEV_USB_SWITCH
 /* USB Switch */
 static struct resource s5p_usbswitch_resource[] = {
 	[0] = {

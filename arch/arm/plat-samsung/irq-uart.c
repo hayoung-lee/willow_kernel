@@ -37,6 +37,9 @@ static void s3c_irq_demux_uart(unsigned int irq, struct irq_desc *desc)
 
 	chained_irq_enter(chip, desc);
 
+	if (!(pend & 0xf))
+		do_bad_IRQ(irq, desc);
+
 	if (pend & (1 << 0))
 		generic_handle_irq(base);
 	if (pend & (1 << 1))
@@ -71,6 +74,8 @@ static void __init s3c_init_uart_irq(struct s3c_uart_irq *uirq)
 	ct->chip.irq_ack = irq_gc_ack_set_bit;
 	ct->chip.irq_mask = irq_gc_mask_set_bit;
 	ct->chip.irq_unmask = irq_gc_mask_clr_bit;
+	ct->chip.irq_mask_ack = irq_gc_mask_and_ack_set;
+	ct->chip.irq_disable = irq_gc_mask_and_ack_set;
 	ct->regs.ack = S3C64XX_UINTP;
 	ct->regs.mask = S3C64XX_UINTM;
 	irq_setup_generic_chip(gc, IRQ_MSK(4), IRQ_GC_INIT_MASK_CACHE,

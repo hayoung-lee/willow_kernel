@@ -127,7 +127,7 @@ extern int s3c_gpio_cfgpin_range(unsigned int start, unsigned int nr,
  *
  * These values control the state of the weak pull-{up,down} resistors
  * available on most pins on the S3C series. Not all chips support both
- * up or down settings, and it may be dependent on the chip that is being
+ * up or down settings, and it may be dependant on the chip that is being
  * used to whether the particular mode is available.
  */
 #if defined(CONFIG_ARCH_S5PV310) || defined(CONFIG_ARCH_EXYNOS)

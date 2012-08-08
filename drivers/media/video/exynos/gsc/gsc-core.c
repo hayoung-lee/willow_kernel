@@ -26,7 +26,7 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <media/v4l2-ioctl.h>
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 
 #include "gsc-core.h"
 #define GSC_CLOCK_GATE_NAME		"gscl"

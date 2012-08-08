@@ -41,7 +41,7 @@
 #endif
 
 #if defined(CONFIG_S5P_SYSMMU_JPEG)
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 #endif
 
 #ifdef CONFIG_PM_RUNTIME

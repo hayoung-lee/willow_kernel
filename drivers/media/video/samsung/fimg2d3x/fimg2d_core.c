@@ -12,7 +12,7 @@
 
 #include <linux/kernel.h>
 #include <linux/clk.h>
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 #include <linux/sched.h>
 
 #if defined(CONFIG_S5P_MEM_CMA)

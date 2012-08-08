@@ -1224,7 +1224,7 @@ probe_err1:
 static int pl330_remove(struct platform_device *pdev)
 {
 	struct s3c_pl330_dmac *dmac, *d;
-	struct s3c_pl330_chan *ch;
+	struct s3c_pl330_chan *ch, *ch_tmp;
 	unsigned long flags;
 	int del, found;
 
@@ -1248,7 +1248,7 @@ static int pl330_remove(struct platform_device *pdev)
 	dmac = d;
 
 	/* Remove all Channels that are managed only by this DMAC */
-	list_for_each_entry(ch, &chan_list, node) {
+	list_for_each_entry_safe(ch, ch_tmp, &chan_list, node) {
 
 		/* Only channels that are handled by this DMAC */
 		if (iface_of_dmac(dmac, ch->id))

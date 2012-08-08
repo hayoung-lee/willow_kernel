@@ -15,7 +15,7 @@
 #include <linux/mm.h>
 
 #if defined(CONFIG_S5P_SYSMMU_TV)
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 #endif
 
 #include "s5p_tvout_common_lib.h"

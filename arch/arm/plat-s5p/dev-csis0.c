@@ -17,7 +17,7 @@
 static struct resource s5p_mipi_csis0_resource[] = {
 	[0] = {
 		.start = S5P_PA_MIPI_CSIS0,
-		.end   = S5P_PA_MIPI_CSIS0 + SZ_4K - 1,
+		.end   = S5P_PA_MIPI_CSIS0 + SZ_16K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {

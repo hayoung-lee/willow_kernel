@@ -3541,7 +3541,7 @@ static int get_samsung_board_rev(void)
 	if (unlikely(!adc_regs))
 		goto err_clk;
 
-	writel(S5PV210_ADCCON_SELMUX(3), adc_regs + S5PV210_ADCMUX);
+	writel(S5PV210_ADCCON_SELMUX(3), adc_regs + S5P_ADCMUX);
 
 	con = readl(adc_regs + S3C2410_ADCCON);
 	con &= ~S3C2410_ADCCON_MUXMASK;

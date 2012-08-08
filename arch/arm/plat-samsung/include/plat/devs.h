@@ -54,6 +54,8 @@ extern struct platform_device s3c_device_ts1;
 extern struct platform_device s3c_device_fb;
 extern struct platform_device s5p_device_fimd0;
 extern struct platform_device s5p_device_fimd1;
+extern struct platform_device s5p_device_mipi_dsim0;
+extern struct platform_device s5p_device_mipi_dsim1;
 extern struct platform_device s3c_device_ohci;
 extern struct platform_device s3c_device_lcd;
 extern struct platform_device s3c_device_wdt;
@@ -138,8 +140,14 @@ extern struct platform_device exynos4_device_pdma0;
 extern struct platform_device exynos4_device_pdma1;
 extern struct platform_device exynos4_device_mdma;
 extern struct platform_device exynos_device_dwmci;
+extern struct platform_device exynos_device_dwmci0;
+extern struct platform_device exynos_device_dwmci1;
+extern struct platform_device exynos_device_dwmci2;
+extern struct platform_device exynos_device_dwmci3;
 extern struct platform_device exynos_device_flite0;
 extern struct platform_device exynos_device_flite1;
+extern struct platform_device exynos4_device_c2c;
+extern struct platform_device exynos_device_flite2;
 extern struct platform_device exynos4_device_fimc_is;
 extern struct platform_device exynos5_device_fimc_is;
 extern struct platform_device exynos5_device_pd[];
@@ -199,6 +207,9 @@ extern struct platform_device exynos_device_rotator;
 
 extern struct platform_device s5p_device_ehci;
 extern struct platform_device s5p_device_ohci;
+#ifdef CONFIG_USB_HOST_NOTIFY
+extern struct platform_device host_notifier_device;
+#endif
 
 extern struct platform_device exynos_device_sysmmu[];
 
@@ -210,6 +221,14 @@ extern struct platform_device s5p_device_hdmi;
 extern struct platform_device s5p_device_mixer;
 extern struct platform_device s5p_device_sdo;
 
+
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+extern struct platform_device s5p_device_dsim;
+#endif
+
+#ifdef CONFIG_SENSORS_EXYNOS4_TMU
+extern struct platform_device exynos4_device_tmu;
+#endif
 /* s3c2440 specific devices */
 
 #ifdef CONFIG_CPU_S3C2440

@@ -20,7 +20,7 @@
 static struct resource s3c_csis0_resource[] = {
 	[0] = {
 		.start	= S5P_PA_MIPI_CSIS0,
-		.end	= S5P_PA_MIPI_CSIS0 + SZ_4K - 1,
+		.end	= S5P_PA_MIPI_CSIS0 + SZ_16K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -67,7 +67,7 @@ void __init s3c_csis0_set_platdata(struct s3c_platform_csis *pd)
 static struct resource s3c_csis1_resource[] = {
 	[0] = {
 		.start	= S5P_PA_MIPI_CSIS1,
-		.end	= S5P_PA_MIPI_CSIS1 + SZ_4K - 1,
+		.end	= S5P_PA_MIPI_CSIS1 + SZ_16K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {

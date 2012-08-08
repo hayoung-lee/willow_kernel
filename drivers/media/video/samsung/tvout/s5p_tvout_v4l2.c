@@ -22,7 +22,7 @@
 #include "s5p_tvout_v4l2.h"
 
 #if defined(CONFIG_S5P_SYSMMU_TV)
-#include <plat/sysmmu.h>
+#include <plat/s5p-sysmmu.h>
 #endif
 
 #ifdef CONFIG_UMP_VCM_ALLOC
