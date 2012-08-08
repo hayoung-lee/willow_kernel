@@ -2171,6 +2171,7 @@ static struct regulator_init_data __initdata max77686_ldo25_data = {
 		.min_uV		= 2900000,
 		.max_uV		= 2900000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
