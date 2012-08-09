@@ -527,12 +527,6 @@ static void __init set_volt_table(void)
 #elif defined(CONFIG_EXYNOS4X12_1400MHZ_SUPPORT)
 	for_1400 = true;
 	max_support_idx = L1;
-
-	/* It doesn't support 1400Mhz under EVT1 or when IDS >= 40 */
-	if (samsung_rev() < EXYNOS4412_REV_1_0 || exynos_result_of_asv > 9) {
-		for_1200 = true;
-		max_support_idx = L3;
-	}
 #else
 	max_support_idx = L5;
 #endif

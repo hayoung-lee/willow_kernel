@@ -62,8 +62,6 @@
 #include <asm/div64.h>
 #include "internal.h"
 
-#include <mach/sec_debug.h>
-
 #ifdef CONFIG_USE_PERCPU_NUMA_NODE_ID
 DEFINE_PER_CPU(int, numa_node);
 EXPORT_PER_CPU_SYMBOL(numa_node);
@@ -2156,13 +2154,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	unsigned long start_tick = jiffies;
 #endif
 
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	unsigned long long start_time;
-	unsigned int retry_cnt = 0;
-	unsigned int types;
-	static atomic_t dup = ATOMIC_INIT(0);
-#endif
-
 	/*
 	 * In the slowpath, we sanity check order to avoid ever trying to
 	 * reclaim >= MAX_ORDER areas which will never succeed. Callers may
@@ -2173,10 +2164,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 		WARN_ON_ONCE(!(gfp_mask & __GFP_NOWARN));
 		return NULL;
 	}
-
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	atomic_inc(&dup);
-#endif
 
 	if (gfp_mask & __GFP_WAIT)
 		down_read(&page_alloc_slow_rwsem);
@@ -2213,34 +2200,20 @@ restart:
 					&preferred_zone);
 
 rebalance:
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	retry_cnt++;
-#endif
 	/* This is the last chance, in general, before the goto nopage. */
 	page = get_page_from_freelist(gfp_mask, nodemask, order, zonelist,
 			high_zoneidx, alloc_flags & ~ALLOC_NO_WATERMARKS,
 			preferred_zone, migratetype);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 1;
-#endif
+	if (page)
 		goto got_pg;
-	}
 
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	start_time = cpu_clock(raw_smp_processor_id());
-#endif
 	/* Allocate without watermarks if the context allows */
 	if (alloc_flags & ALLOC_NO_WATERMARKS) {
 		page = __alloc_pages_high_priority(gfp_mask, order,
 				zonelist, high_zoneidx, nodemask,
 				preferred_zone, migratetype);
-		if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-			types = 2;
-#endif
+		if (page)
 			goto got_pg;
-		}
 	}
 
 	/* Atomic allocations - we can't balance anything */
@@ -2265,12 +2238,8 @@ rebalance:
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress,
 					sync_migration);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 3;
-#endif
+	if (page)
 		goto got_pg;
-	}
 	sync_migration = true;
 
 	/* Try direct reclaim and then allocating */
@@ -2279,12 +2248,8 @@ rebalance:
 					nodemask,
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress);
-	if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-		types = 4;
-#endif
+	if (page)
 		goto got_pg;
-	}
 
 	/*
 	 * If we failed to make any progress reclaiming, then we are
@@ -2309,12 +2274,8 @@ rebalance:
 					zonelist, high_zoneidx,
 					nodemask, preferred_zone,
 					migratetype);
-			if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-				types = 5;
-#endif
+			if (page)
 				goto got_pg;
-			}
 
 			if (!(gfp_mask & __GFP_NOFAIL)) {
 				/*
@@ -2364,33 +2325,20 @@ rebalance:
 					alloc_flags, preferred_zone,
 					migratetype, &did_some_progress,
 					sync_migration);
-		if (page) {
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-			types = 6;
-#endif
+		if (page)
 			goto got_pg;
-		}
 	}
 
 nopage:
 	warn_alloc_failed(gfp_mask, order, NULL);
 	if (gfp_mask & __GFP_WAIT)
 		up_read(&page_alloc_slow_rwsem);
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	sec_debug_alloc_profile(start_time, retry_cnt, types, dup, order);
-	atomic_dec(&dup);
-#endif
 	return page;
 got_pg:
 	if (kmemcheck_enabled)
 		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
 	if (gfp_mask & __GFP_WAIT)
 		up_read(&page_alloc_slow_rwsem);
-#ifdef CONFIG_SEC_DEBUG_ALLOC_PROFILE
-	if (types != 1)
-		sec_debug_alloc_profile(start_time, retry_cnt, types, dup, order);
-	atomic_dec(&dup);
-#endif
 	return page;
 
 }
