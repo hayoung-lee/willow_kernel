@@ -130,4 +130,9 @@ source "drivers/clocksource/Kconfig"
 
 source "drivers/devfreq/Kconfig"
 
+# Secure OS Mobicore
+source "drivers/gud/Kconfig"
+
+source "drivers/iommu/Kconfig"
+
 endmenu

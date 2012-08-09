@@ -132,8 +132,14 @@ config EXYNOS4_SETUP_DP
 	help
 	  Common setup code for DP.
 
+config EXYNOS_DEV_SYSMMU
+	bool
+	help
+	  Common setup code for SYSTEM MMU in EXYNOS
+
 config EXYNOS_DEV_PD
 	bool
+	select SAMSUNG_PD
 	help
 	  Compile in platform device definitions for Power Domain
 

@@ -125,3 +125,9 @@ obj-y				+= clk/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 
 obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
+
+# Secure OS Mobicore
+obj-$(CONFIG_MOBICORE_SUPPORT)	+= gud/
+
+obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/
+
