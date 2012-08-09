@@ -379,6 +379,10 @@ extern void ams369fg06_gpio_cfg(void);
 extern void lms501kf03_ldi_disable(void);
 #endif
 
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+extern void ltn101al03_lvds_on(int onoff);
+#endif
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void s3cfb_early_suspend(struct early_suspend *h)
 {
@@ -413,6 +417,15 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
 	pm_runtime_put_sync(&pdev->dev);
 #endif
+
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+	ltn101al03_lvds_on(0);
+
+	if (pdata->lcd_off)
+		pdata->lcd_off(pdev);
+#endif
+
+
 	return ;
 }
 
@@ -442,10 +455,10 @@ void s3cfb_late_resume(struct early_suspend *h)
 		fbdev[i] = fbfimd->fbdev[i];
 		if (pdata->cfg_gpio)
 			pdata->cfg_gpio(pdev);
-
+#if !defined(CONFIG_FB_S5P_LTN101AL03)
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
-
+#endif
 		if (pdata->lcd_on)
 			pdata->lcd_on(pdev);
 
@@ -579,6 +592,19 @@ int s3cfb_resume(struct platform_device *pdev)
 	return 0;
 }
 #endif
+#ifdef CONFIG_FB_S3C_LTN101AL03
+
+static int s3cfb_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct s3c_platform_fb *pdata = to_fb_plat(&pdev->dev);
+	pr_debug("s3cfb_suspend is called\n");
+		if (pdata->lcd_off)
+			pdata->lcd_off(pdev);
+	//ltn101al03_lcd_off();
+	return 0;
+}
+#endif
+
 #else
 #define s3cfb_suspend NULL
 #define s3cfb_resume NULL
@@ -607,6 +633,9 @@ static struct platform_driver s3cfb_driver = {
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= s3cfb_suspend,
 	.resume		= s3cfb_resume,
+#endif
+#ifdef CONFIG_FB_S3C_LTN101AL03
+	.suspend = s3cfb_suspend,
 #endif
 	.driver		= {
 		.name	= S3CFB_NAME,

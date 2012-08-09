@@ -24,14 +24,14 @@ static struct s3cfb_lcd ltn101al03 = {
 	.freq = 60,
 
 	.timing = {
-		.h_fp = 64,
-		.h_bp = 192,
-		.h_sw = 128,
-		.v_fp = 3,
+		.h_fp = 16,
+		.h_bp = 64,
+		.h_sw = 48,
+		.v_fp = 1,
 		.v_fpe = 1,
-		.v_bp = 20,
+		.v_bp = 12,
 		.v_bpe = 1,
-		.v_sw = 7,
+		.v_sw = 3,
 	},
 	.polarity = {
 		.rise_vclk = 0,

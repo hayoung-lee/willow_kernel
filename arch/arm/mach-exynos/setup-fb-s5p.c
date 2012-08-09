@@ -28,6 +28,7 @@
 #include <plat/clock.h>
 #include <plat/gpio-cfg.h>
 #include <plat/cpu.h>
+#include <linux/regulator/consumer.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -200,6 +201,33 @@ void s3cfb_get_clk_name(char *clk_name)
 #define EXYNOS4_GPD_0_2_TOUT_2  (0x2 << 8)
 #define EXYNOS4_GPD_0_3_TOUT_3  (0x2 << 12)
 #if defined(CONFIG_FB_S5P_LTN101AL03)
+
+void ltn101al03_lvds_on(int onoff)
+{
+	int err;
+	printk(" ltn101al03_lvds_on =%d \n",onoff);
+	if(onoff)
+	{
+		err = gpio_request_one(EXYNOS4212_GPM1(0), GPIOF_OUT_INIT_HIGH, "GPM1(0)");
+		mdelay(5);// T3
+	}
+	else
+	{
+		err = gpio_request_one(EXYNOS4212_GPM1(0), GPIOF_OUT_INIT_LOW, "GPM1(0)");
+		mdelay(100);
+
+	}
+	
+	if (err) {
+		printk(KERN_ERR "failed to request GPM1(0) for "
+			"lcd lvds control\n");
+		return err;
+	}
+
+	gpio_free(EXYNOS4_GPD0(1));
+}
+EXPORT_SYMBOL(ltn101al03_lvds_on);
+
 int s3cfb_backlight_on(struct platform_device *pdev)
 {
 #if !defined(CONFIG_BACKLIGHT_PWM)
@@ -234,11 +262,45 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 
 int s3cfb_lcd_on(struct platform_device *pdev)
 {
+	struct regulator *lcd_ldo = regulator_get(NULL, "vdd_lcd");  
+	int err=0;
+	printk(" s3cfb_lcd_on  \n");
+	
+	regulator_enable(lcd_ldo);
+
+	err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_LOW, "GPM0(3)");
+
+	if (err) {
+		printk(KERN_ERR "failed to request GPM0(3) for "
+			"lcd off charging control\n");
+		return err;
+	}
+	mdelay(100); //T1+T2
+
+	ltn101al03_lvds_on(1);
+
 	return 0;
 }
 
 int s3cfb_lcd_off(struct platform_device *pdev)
 {
+	struct regulator *lcd_ldo = regulator_get(NULL, "vdd_lcd");  
+	int err=0;
+
+	msleep(300);	
+
+	printk(" s3cfb_lcd_off  \n");
+	
+	if (regulator_is_enabled(lcd_ldo))
+		regulator_enable(lcd_ldo);
+
+	err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_HIGH, "GPM0(3)");
+
+	if (err) {
+		printk(KERN_ERR "failed to request GPM0(3) for "
+			"lcd off charging control\n");
+		return err;
+	}
 	return 0;
 }
 
@@ -274,6 +336,8 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 #endif
 	return 0;
 }
+
+
 
 int s3cfb_lcd_on(struct platform_device *pdev)
 {

@@ -820,14 +820,14 @@ static struct s3c_platform_camera mt9m113 = {
 	.srclk_name	= "xusbxti",
 
 	.clk_rate	= 24000000,
-	.line_length	= 1920,
-	.width		= 640,
-	.height		= 480,
+	.line_length	= 1280,
+	.width		= 1280,
+	.height		= 960,
 	.window		= {
 		.left	= 0,
 		.top	= 0,
-		.width	= 640,
-		.height	= 480,
+		.width	= 1280,
+		.height	= 960,
 	},
 
 	.mipi_lanes	= 0,
@@ -1194,8 +1194,17 @@ static struct spi_board_info spi2_board_info[] __initdata = {
 };
 #endif
 
-#ifdef CONFIG_FB_S3C
+#ifdef CONFIG_FB_S5P
 #ifdef CONFIG_LCD_LTN101AL03
+#if 1
+static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
+	.hw_ver = 0x70,
+	.clk_name = "sclk_lcd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+#else
 static void lcd_ltn101al03_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
@@ -1224,58 +1233,58 @@ static struct platform_device willow_lcd_ltn101al03 = {
 
 static struct s3c_fb_pd_win willow_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 64,
-		.right_margin	= 16,
-		.upper_margin	= 12,
-		.lower_margin	= 1,
+		.left_margin	= 16, //64,
+		.right_margin	= 64, //16,
+		.upper_margin	= 1, //12,
+		.lower_margin	= 12, // 1,
 		.hsync_len	= 48,
 		.vsync_len	= 3,
 		.xres		= 1280, /* real size : 1280 */
 		.yres		= 800,
 	},
 	.virtual_x		= 1280, /* real size : 1280 */
-	.virtual_y		= 800 * 2,
-	.width			= 223,	//?
-	.height			= 125,	//?
+	.virtual_y		= 800,//800 * 2,
+	.width			= 1280,// 223,	//?
+	.height			= 800, //125,	//?
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win willow_fb_win1 = {
 	.win_mode = {
-		.left_margin	= 64,
-		.right_margin	= 16,
-		.upper_margin	= 12,
-		.lower_margin	= 1,
-		.hsync_len		= 48,
-		.vsync_len		= 3,
-		.xres			= 1280, /* real size : 1280 */
-		.yres			= 800,
+		.left_margin	= 16, //64,
+		.right_margin	= 64, //16,
+		.upper_margin	= 1, //12,
+		.lower_margin	= 12, // 1,
+		.hsync_len	= 48,
+		.vsync_len	= 3,
+		.xres		= 1280, /* real size : 1280 */
+		.yres		= 800,
 	},
-	.virtual_x			= 1280, /* real size : 1280 */
-	.virtual_y			= 800 * 2,
-	.width				= 223,  //?
-	.height				= 125,	//?
-	.max_bpp			= 32,
+	.virtual_x		= 1280, /* real size : 1280 */
+	.virtual_y		= 800,//800 * 2,
+	.width			= 1280,// 223,	//?
+	.height			= 800, //125,	//?
+	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win willow_fb_win2 = {
 	.win_mode = {
-		.left_margin	= 64,
-		.right_margin	= 16,
-		.upper_margin	= 12,
-		.lower_margin	= 1,
-		.hsync_len		= 48,
-		.vsync_len		= 3,
-		.xres			= 1280, /* real size : 1280 */
-		.yres			= 800,
+		.left_margin	= 16, //64,
+		.right_margin	= 64, //16,
+		.upper_margin	= 1, //12,
+		.lower_margin	= 12, // 1,
+		.hsync_len	= 48,
+		.vsync_len	= 3,
+		.xres		= 1280, /* real size : 1280 */
+		.yres		= 800,
 	},
-	.virtual_x			= 1280, /* real size : 1280 */
-	.virtual_y			= 800 * 2,
-	.width				= 223,	//?
-	.height				= 125,	//?
-	.max_bpp			= 32,
+	.virtual_x		= 1280, /* real size : 1280 */
+	.virtual_y		= 800,//800 * 2,
+	.width			= 1280,// 223,	//?
+	.height			= 800, //125,	//?
+	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
 
@@ -1289,6 +1298,7 @@ static struct s3c_fb_platdata willow_lcd0_pdata __initdata = {
 			  VIDCON1_INV_VSYNC,
 	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
 };
+#endif
 #endif
 #endif
 
@@ -2776,7 +2786,7 @@ static struct platform_device *willow_devices[] __initdata = {
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd0,
 #ifdef defined(CONFIG_LCD_LTN101AL03)
-	&willow_lcd_ltn101al03,
+	//&willow_lcd_ltn101al03,
 #endif
 #endif
 #ifdef CONFIG_FB_S5P
@@ -3763,6 +3773,9 @@ static void __init willow_machine_init(void)
 #endif
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 	s5p_device_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
+#ifdef CONFIG_FB_S5P_LTN101AL03
+	s3cfb_set_platdata(&ltn101al03_fb_data);
 #endif
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
