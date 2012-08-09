@@ -306,7 +306,7 @@ static int bcm4334_bluetooth_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	rfkill_init_sw_state(bt_rfkill, 0);
+	rfkill_init_sw_state(bt_rfkill, true);
 
 	rc = rfkill_register(bt_rfkill);
 
