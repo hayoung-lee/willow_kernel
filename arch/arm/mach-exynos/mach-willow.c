@@ -2503,10 +2503,10 @@ static struct i2c_board_info i2c_devs5[] __initdata = {
 
 #ifdef CONFIG_INPUT_L3G4200D_GYR
 static struct l3g4200d_gyr_platform_data l3g4200d_gyr_pdata = {
-	.axis_map_x = 0,
-	.axis_map_y = 1,
+	.axis_map_x = 1,
+	.axis_map_y = 0,
 	.axis_map_z = 2,
-	.negate_x = 1,
+	.negate_x = 0,
 	.negate_y = 0,
 	.negate_z = 1,
 };
