@@ -347,7 +347,9 @@ void focaltech_touch_off(void)
    msleep(1);
 	focaltech_interrupt_low_gpio();
 #endif
-    regulator_disable(touch_ldo);
+
+	if (regulator_is_enabled(touch_ldo))
+		regulator_disable(touch_ldo);
     check_touch_emergency_off=1;
 }
 
