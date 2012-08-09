@@ -432,6 +432,21 @@ choice
 
 config STAND_ALONE_POLICY
 	bool "Stand alone policy CPU hotplug"
+	depends on EXYNOS_PM_HOTPLUG
+	help
+	  PM hotplug policy. This is for exynos4210
+	  Enable to use pm hotplug, then it uses stand-hotplug.c file.
+	  Avg-load is calculated with both cpu frequency aspect
+	  and run queue status.
+
+config LEGACY_HOTPLUG_POLICY
+	bool "Legacy policy CPU hotplug"
+	depends on EXYNOS_PM_HOTPLUG
+	help
+	  PM hotplug policy. This is for exynos4210
+	  Enable to use pm hotplug, then it uses pm-hotplug.c file.
+	  Avg-load is calculated with only cpu utilization of cpu
+	  frequency at that time.
 
 config WITH_DVFS_POLICY
 	depends on EXYNOS4_CPUFREQ
@@ -454,11 +469,109 @@ config BUSFREQ
 	bool "Busfreq with PPC/PPMU"
 	depends on EXYNOS4_CPUFREQ
 
+config BUSFREQ_QOS
+	bool "QoS with Busfreq"
+	depends on BUSFREQ
+	default n
+
 config BUSFREQ_OPP
 	bool "Busfreq with OPP"
 	depends on EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ
 
+config DEVFREQ_BUS
+	bool "Busfreq support with Devfreq framework & Simple-Ondemand"
+	depends on EXYNOS4_CPUFREQ
+	select PM_DEVFREQ
+	select ARM_EXYNOS4_BUS_DEVFREQ
+
+choice
+	prompt "QoS LEVEL By Resolution"
+	depends on BUSFREQ_QOS || BUSFREQ_OPP
+	default BUSFREQ_QOS_LEVEL_NONE
+
+config BUSFREQ_QOS_NONE
+	bool "QoS Setting is not required"
+
+config BUSFREQ_QOS_1024X600
+	bool "QoS for 1024x600 (like P2)"
+
+config BUSFREQ_QOS_1280X720
+	bool "QoS for 1280x720 (like M0/T0)"
+
+config BUSFREQ_QOS_1280X800
+	bool "QoS for 1280x800 or 800x1280 (like Q1/P8)"
+
+endchoice
+
 endmenu
+
+config BUSFREQ_DEBUG
+	bool "BUSFREQ sysfs support"
+	default n
+
+config GPIO_MIDAS_01_BD
+	bool "GPIO configuration for Midas 01 BD"
+	depends on MACH_SLP_MIDAS
+
+config GPIO_MIDAS_02_BD
+	bool "GPIO configuration for Midas 02 BD"
+	depends on MACH_SLP_MIDAS
+
+config BUSFREQ_L2_160M
+	bool "Busfreq L2 level use 160MHz"
+	default n
+	help
+	Busfreq uses 160MHz for L2, not 133MHz. Optimize busfreq
+	dvfs level transition for LCD high resolution.
+	This enable 160MHz of L2 level. Q1 has high LCD resolution,
+	so uses busfreq dvfs L2 as 160MHz.
+
+config SEC_THERMISTOR
+	bool "Use external thermistor with ADC"
+	depends on SAMSUNG_DEV_ADC
+	default n
+	help
+	 Use thermistor driver for U1 & U1 Premium.
+	 U1 has two thermistors. this device driver use one of those
+	 to check system temperature.
+
+config EXYNOS_SYSREG_PM
+	bool "PM Support for System Registers"
+	depends on CPU_EXYNOS4210 || CPU_EXYNOS4412 || CPU_EXYNOS4212
+	default n
+	help
+	  Use System Register save/restore for suspend-to-RAM
+	  Some boards have this code hard coded in device drivers(FB);
+	  however, this is better supported at SoC support code.
+	  Currently, SLP kernel depends on this.
+
+config ANDROID_WIP
+	bool "work in progress hacks for android"
+	default n
+	help
+	  This enables 'work in progress' hacks for android issues.
+	  Please remove it later.
+
+config COMPACTION_RETRY
+	bool "retry compaction once more after direct reclaim fails"
+	default n
+	depends on COMPACTION
+	help
+	  This enables compaction retry in android.
+	  If fails to get pages even with direct reclaim,
+	  we give one more try to allocate pages with forced compaction.
+	  This might avoid oom-killer invocation.
+	  with many free pages being already there.
+
+config COMPACTION_RETRY_DEBUG
+	bool "debug information for COMPACTION_RETRY"
+	default n
+	depends on COMPACTION_RETRY
+	help
+	  This enables debug feature for compaction retry.
+	  This shows us the buddy information
+	  before and after compation retrial.
+	  This should be turned off later.
 
 # machine support
 

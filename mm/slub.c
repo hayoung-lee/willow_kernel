@@ -601,10 +601,10 @@ static int check_bytes_and_report(struct kmem_cache *s, struct page *page,
 					fault, end - 1, fault[0], value);
 	print_trailer(s, page, object);
 
+	restore_bytes(s, what, value, fault, end);
+
 	if(slub_debug)
 		panic("SLUB ERROR: check_bytes_and_report. Can it be restored?");
-
-	restore_bytes(s, what, value, fault, end);
 
 	return 0;
 }
