@@ -2805,7 +2805,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     printk("[FTS] touch threshold is %d.\n", uc_reg_value * 4);
     printk("[FTS] ============== Touch Information End ================\n");
 
-#if 1
+#if 0
 #if CFG_SUPPORT_AUTO_UPG
 	set_touch_autoCal(1);
     msleep(50);  //clock change    
