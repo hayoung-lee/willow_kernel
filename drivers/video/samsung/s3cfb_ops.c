@@ -29,6 +29,7 @@
 #endif
 
 #include "s3cfb.h"
+#include "logo_rgb24.h"
 
 #define NOT_DEFAULT_WINDOW 99
 #define CMA_REGION_FIMD 	"fimd"
@@ -51,6 +52,34 @@ int s3cfb_draw_logo(struct fb_info *fb)
 #ifdef CONFIG_FB_S5P_SPLASH_SCREEN
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct fb_var_screeninfo *var = &fb->var;
+
+#if 1  //temp 
+	//Boot Logo Image
+	u32 line = fix->line_length;
+	u32 i, j;
+	int logosize = sizeof(BOOT_LOGO);
+	int curpos = 0, reverse_pos = 0;
+
+	/*image size : 232 x 108*/
+	//TODO ; reverse left/right
+	for (i = 0; i < var->yres; i++){
+		if(i >= 330 && i < (330+108)){
+			for (j = 0; j < var->xres; j++){
+				if(j >= 524 && j < (524+232)){
+					if(j==524)
+						reverse_pos = curpos + (232*3);//reverse left/right for bmp format
+
+					memset(fb->screen_base + i * line + j * 4 + 0, BOOT_LOGO[(logosize - reverse_pos)+0], 1);
+					memset(fb->screen_base + i * line + j * 4 + 1, BOOT_LOGO[(logosize - reverse_pos)+1], 1);
+					memset(fb->screen_base + i * line + j * 4 + 2, BOOT_LOGO[(logosize - reverse_pos)+2], 1);
+					reverse_pos -= 3;
+					curpos += 3;
+				}
+			}
+		}
+	}
+
+#else
 #if 0
 	struct s3c_platform_fb *pdata = to_fb_plat(fbdev->dev);
 	memcpy(fbdev->fb[pdata->default_win]->screen_base,
@@ -86,6 +115,7 @@ int s3cfb_draw_logo(struct fb_info *fb)
 			memset(fb->screen_base + i * line + j * 4 + 3, 0x00, 1);
 		}
 	}
+#endif
 #endif
 #endif
 
