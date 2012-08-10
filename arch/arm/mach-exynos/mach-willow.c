@@ -1634,10 +1634,10 @@ REGULATOR_SUPPLY("vdd_gps_2v8", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo19_consumer =
 REGULATOR_SUPPLY("vdd_ldo19", NULL);
-
+#if 0 // reset timming bug
 static struct regulator_consumer_supply __initdata max77686_ldo20_consumer =
 REGULATOR_SUPPLY("vdd_bt_wifi_io", NULL);
-
+#endif
 static struct regulator_consumer_supply __initdata max77686_ldo21_consumer =
 REGULATOR_SUPPLY("vdd_ldo21", NULL);
 
@@ -1753,12 +1753,11 @@ static struct regulator_init_data max77686_buck8_data = {
 		.min_uV = 2800000,
 		.max_uV = 2800000,
 		.boot_on = 1,
-		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.disabled	= 0,
-			.enabled 	= 1,
+			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = 1,
@@ -1988,17 +1987,16 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 };
 
 static struct regulator_init_data __initdata max77686_ldo14_data = {
-	.constraints	= { // temporarily always_on
+	.constraints	= {
 		.name		= "vdd_mmc_1v8 range",
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
 		.boot_on 	= 1,
-		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 0,
-			.enabled	= 1,
+			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -2087,6 +2085,7 @@ static struct regulator_init_data __initdata max77686_ldo19_data = {
 	.consumer_supplies	= &max77686_ldo19_consumer,
 };
 
+#if 0  //reset timming bug
 static struct regulator_init_data __initdata max77686_ldo20_data = {
 	.constraints	= {
 		.name		= "vdd_bt_wifi_io range",
@@ -2094,16 +2093,16 @@ static struct regulator_init_data __initdata max77686_ldo20_data = {
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
 		.boot_on 	= 1,
-		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 0,
-			.enabled	= 1,
+			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &max77686_ldo20_consumer,
 };
+#endif
 
 static struct regulator_init_data __initdata max77686_ldo21_data = {
 	.constraints	= {
@@ -2258,7 +2257,7 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO17, &max77686_ldo17_data,},
 	{MAX77686_LDO18, &max77686_ldo18_data,},
 	{MAX77686_LDO19, &max77686_ldo19_data,},
-	{MAX77686_LDO20, &max77686_ldo20_data,},
+//	{MAX77686_LDO20, &max77686_ldo20_data,},
 	{MAX77686_LDO21, &max77686_ldo21_data,},
 	{MAX77686_LDO22, &max77686_ldo22_data,},
 	{MAX77686_LDO23, &max77686_ldo23_data,},
@@ -2289,7 +2288,7 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_NORMAL},
 	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_NORMAL},
 	[MAX77686_LDO19] = {MAX77686_LDO19, MAX77686_OPMODE_LP},
-	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_NORMAL},
+//	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_NORMAL},
 	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
 	[MAX77686_LDO22] = {MAX77686_LDO22, MAX77686_OPMODE_NORMAL},
 	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_NORMAL},
@@ -2661,6 +2660,12 @@ static void wilow_gpio_key_cfg(void)
 	s3c_gpio_setpull(WILLOW_VOLUM_DOWN, S3C_GPIO_PULL_NONE);
 	s3c_gpio_cfgpin(WILLOW_VOLUM_UP, S3C_GPIO_SFN(0x0));
 	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_NONE);
+}
+
+static void wilow_gpio_pmint_cfg(void)
+{
+	s3c_gpio_cfgpin(GPIO_PMIC_IRQ, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_UP);
 }
 
 #ifdef CONFIG_WAKEUP_ASSIST
@@ -4096,6 +4101,7 @@ static void __init willow_machine_init(void)
 #endif
 
 	wilow_gpio_key_cfg();
+	wilow_gpio_pmint_cfg();
 
 	register_reboot_notifier(&exynos4_reboot_notifier);
 }
