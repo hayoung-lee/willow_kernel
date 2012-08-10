@@ -29,7 +29,7 @@
 #endif
 
 #include "s3cfb.h"
-#include "logo_rgb24.h"
+//#include "logo_rgb24.h"
 
 #define NOT_DEFAULT_WINDOW 99
 #define CMA_REGION_FIMD 	"fimd"
@@ -53,7 +53,7 @@ int s3cfb_draw_logo(struct fb_info *fb)
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct fb_var_screeninfo *var = &fb->var;
 
-#if 1  //temp 
+#if 0  //temp 
 	//Boot Logo Image
 	u32 line = fix->line_length;
 	u32 i, j;
