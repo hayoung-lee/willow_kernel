@@ -2662,6 +2662,12 @@ static void wilow_gpio_key_cfg(void)
 	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_NONE);
 }
 
+static void wilow_gpio_pmint_cfg(void)
+{
+	s3c_gpio_cfgpin(GPIO_PMIC_IRQ, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_UP);
+}
+
 #ifdef CONFIG_WAKEUP_ASSIST
 static struct platform_device wakeup_assist_device = {
 	.name   = "wakeup_assist",
@@ -4095,6 +4101,7 @@ static void __init willow_machine_init(void)
 #endif
 
 	wilow_gpio_key_cfg();
+	wilow_gpio_pmint_cfg();
 
 	register_reboot_notifier(&exynos4_reboot_notifier);
 }

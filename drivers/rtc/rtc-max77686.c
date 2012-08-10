@@ -632,6 +632,27 @@ static const struct rtc_class_ops max77686_rtc_ops = {
 	.alarm_irq_enable = max77686_rtc_alarm_irq_enable,
 };
 
+static void max77686_rtc_reg_dump(struct max77686_rtc_info *info, u8 reg)
+{
+	int ret;
+	u8 data=0;
+
+	max77686_rtc_update(info, MAX77686_RTC_READ);
+	ret = max77686_read_reg(info->rtc, reg, &data);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to read alarm reg(%d)\n", __func__, ret);
+	} else {
+		dev_info(info->dev, "ADDR(0x%02X) DATA(0x%08X)\n", reg, data);
+	}
+
+//		ret = max77686_read_reg(info->rtc, MAX77686_REG_INTSRC, &data);
+//		if (ret < 0) {
+//			dev_err(info->dev, "%s: fail to read alarm reg(%d)\n", __func__, ret);
+//		} else {
+//			dev_info(info->dev, "MAX77686_REG_INTSRC(0x%08X)\n", data);
+//		}
+}
+
 #ifdef MAX77686_RTC_WTSR_SMPL
 static void max77686_rtc_enable_wtsr(struct max77686_rtc_info *info, bool enable)
 {
@@ -847,6 +868,12 @@ static int __devinit max77686_rtc_probe(struct platform_device *pdev)
 			info->irq2, ret);
 		goto err_rtc;
 	}
+#endif
+
+#if 0
+	u8 reg = MAX77686_RTC_INT;
+	for ( reg = MAX77686_RTC_INT; reg <= MAX77686_ALARM2_DATE; reg++ )
+		max77686_rtc_reg_dump(info, reg);
 #endif
 
 	goto out;
