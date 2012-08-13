@@ -1692,9 +1692,12 @@ static struct regulator_init_data max77686_buck1_data = {
 		.min_uV = 850000,
 		.max_uV = 1100000,
 		.boot_on = 1,
-		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-				REGULATOR_CHANGE_STATUS,
+			REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.enabled 	= 0,
+			.disabled	= 1,
+		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck1),
 	.consumer_supplies = max77686_buck1,
@@ -1741,7 +1744,10 @@ static struct regulator_init_data max77686_buck4_data = {
 		.max_uV = 1100000,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
-
+		.state_mem = {
+			.enabled 	= 0,
+			.disabled	= 1,
+		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck4),
 	.consumer_supplies = max77686_buck4,
@@ -1824,7 +1830,6 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
 		.boot_on 	= 1,
-		.always_on	= 1,
 		.state_mem	= {
 			.uV		= 2800000,
 			.mode		= REGULATOR_MODE_NORMAL,
