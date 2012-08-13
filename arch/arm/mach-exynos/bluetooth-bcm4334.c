@@ -117,6 +117,10 @@ static int bcm4334_bt_rfkill_set_power(void *data, bool blocked)
 		bt_config_gpio_table(ARRAY_SIZE(bt_uart_on_table),
 					bt_uart_on_table);
 #endif
+		s3c_gpio_cfgpin(GPIO_BT_WAKE, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_BT_WAKE, S3C_GPIO_PULL_DOWN);
+		gpio_set_value(GPIO_BT_WAKE, 1);
+		msleep(10);
 		gpio_set_value(GPIO_BT_EN, 1);
 		bt_is_running = 1;
 		msleep(50);
@@ -124,6 +128,9 @@ static int bcm4334_bt_rfkill_set_power(void *data, bool blocked)
 		pr_info("[BT] Bluetooth Power Off.\n");
 		bt_is_running = 0;
 		gpio_set_value(GPIO_BT_EN, 0);
+		s3c_gpio_cfgpin(GPIO_BT_WAKE, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_BT_WAKE, S3C_GPIO_PULL_DOWN);
+		gpio_set_value(GPIO_BT_WAKE, 0);
 	}
 	return 0;
 }
