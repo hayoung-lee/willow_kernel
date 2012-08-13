@@ -32,14 +32,10 @@
 #include <asm/irq.h>
 #include <plat/regs-rtc.h>
 
-#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
-extern int max77686_rtc_set_time_hack(struct rtc_time *tm);
-extern int max77686_rtc_read_time_hack(struct rtc_time *tm);
-#endif
-
 enum s3c_cpu_type {
 	TYPE_S3C2410,
 	TYPE_S3C64XX,
+	TYPE_EXYNOS,
 };
 
 /* I have yet to find an S3C implementation with more than one
@@ -61,7 +57,7 @@ static irqreturn_t s3c_rtc_alarmirq(int irq, void *id)
 
 	rtc_update_irq(rdev, 1, RTC_AF | RTC_IRQF);
 
-	if (s3c_rtc_cpu_type == TYPE_S3C64XX)
+	if (s3c_rtc_cpu_type != TYPE_S3C2410)
 		writeb(S3C2410_INTP_ALM, s3c_rtc_base + S3C2410_INTP);
 
 	return IRQ_HANDLED;
@@ -96,7 +92,12 @@ static int s3c_rtc_gettime(struct device *dev, struct rtc_time *rtc_tm)
 	rtc_tm->tm_hour = readb(base + S3C2410_RTCHOUR);
 	rtc_tm->tm_mday = readb(base + S3C2410_RTCDATE);
 	rtc_tm->tm_mon  = readb(base + S3C2410_RTCMON);
-	rtc_tm->tm_year = readb(base + S3C2410_RTCYEAR);
+
+	if (s3c_rtc_cpu_type == TYPE_EXYNOS)
+		rtc_tm->tm_year = readw(base + S3C2410_RTCYEAR) & 0x0fff;
+	else
+		rtc_tm->tm_year = readb(base + S3C2410_RTCYEAR);
+
 	rtc_tm->tm_sec  = readb(base + S3C2410_RTCSEC);
 
 	/* the only way to work out wether the system was mid-update
@@ -114,7 +115,12 @@ static int s3c_rtc_gettime(struct device *dev, struct rtc_time *rtc_tm)
 	rtc_tm->tm_hour = bcd2bin(rtc_tm->tm_hour);
 	rtc_tm->tm_mday = bcd2bin(rtc_tm->tm_mday);
 	rtc_tm->tm_mon = bcd2bin(rtc_tm->tm_mon);
-	rtc_tm->tm_year = bcd2bin(rtc_tm->tm_year);
+
+	if (s3c_rtc_cpu_type == TYPE_EXYNOS)
+		rtc_tm->tm_year = bcd2bin(rtc_tm->tm_year)
+			+ (rtc_tm->tm_year >> 8) * 100;
+	else
+		rtc_tm->tm_year = bcd2bin(rtc_tm->tm_year);
 
 	rtc_tm->tm_year += 100;
 
@@ -136,23 +142,27 @@ static int s3c_rtc_settime(struct device *dev, struct rtc_time *tm)
 		 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 		 tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-	/* we get around y2k by simply not supporting it */
-
 	if (year < 0 || year >= 100) {
-		dev_err(dev, "rtc only supports 100 years\n");
-		return -EINVAL;
+		if (!(s3c_rtc_cpu_type == TYPE_EXYNOS
+					&& year >= 100 && year < 1000)) {
+			dev_err(dev, "rtc can't support %04d year\n",
+					year + 2000);
+			return -EINVAL;
+		}
 	}
-
-#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
-	max77686_rtc_set_time_hack(tm);
-#endif
 
 	writeb(bin2bcd(tm->tm_sec),  base + S3C2410_RTCSEC);
 	writeb(bin2bcd(tm->tm_min),  base + S3C2410_RTCMIN);
 	writeb(bin2bcd(tm->tm_hour), base + S3C2410_RTCHOUR);
 	writeb(bin2bcd(tm->tm_mday), base + S3C2410_RTCDATE);
 	writeb(bin2bcd(tm->tm_mon + 1), base + S3C2410_RTCMON);
-	writeb(bin2bcd(year), base + S3C2410_RTCYEAR);
+
+	if (s3c_rtc_cpu_type == TYPE_EXYNOS) {
+		year = (((year / 100) << 8) + (((year % 100) / 10) << 4) + year % 10);
+		writew(year, base + S3C2410_RTCYEAR);
+	} else {
+		writeb(bin2bcd(year), base + S3C2410_RTCYEAR);
+	}
 
 	return 0;
 }
@@ -168,7 +178,13 @@ static int s3c_rtc_getalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	alm_tm->tm_hour = readb(base + S3C2410_ALMHOUR);
 	alm_tm->tm_mon  = readb(base + S3C2410_ALMMON);
 	alm_tm->tm_mday = readb(base + S3C2410_ALMDATE);
-	alm_tm->tm_year = readb(base + S3C2410_ALMYEAR);
+
+	if (s3c_rtc_cpu_type == TYPE_EXYNOS)
+		alm_tm->tm_year = readw(base + S3C2410_ALMYEAR) & 0xfff;
+	else
+		alm_tm->tm_year = readb(base + S3C2410_ALMYEAR);
+
+	alm_tm->tm_year += 100;
 
 	alm_en = readb(base + S3C2410_RTCALM);
 
@@ -182,37 +198,27 @@ static int s3c_rtc_getalarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 	/* decode the alarm enable field */
 
-	if (alm_en & S3C2410_RTCALM_SECEN)
+	if (alrm->enabled) {
 		alm_tm->tm_sec = bcd2bin(alm_tm->tm_sec);
-	else
-		alm_tm->tm_sec = -1;
-
-	if (alm_en & S3C2410_RTCALM_MINEN)
 		alm_tm->tm_min = bcd2bin(alm_tm->tm_min);
-	else
-		alm_tm->tm_min = -1;
-
-	if (alm_en & S3C2410_RTCALM_HOUREN)
 		alm_tm->tm_hour = bcd2bin(alm_tm->tm_hour);
-	else
-		alm_tm->tm_hour = -1;
-
-	if (alm_en & S3C2410_RTCALM_DAYEN)
 		alm_tm->tm_mday = bcd2bin(alm_tm->tm_mday);
-	else
-		alm_tm->tm_mday = -1;
+		alm_tm->tm_mon = bcd2bin(alm_tm->tm_mon) - 1;
 
-	if (alm_en & S3C2410_RTCALM_MONEN) {
-		alm_tm->tm_mon = bcd2bin(alm_tm->tm_mon);
-		alm_tm->tm_mon -= 1;
+		if (s3c_rtc_cpu_type == TYPE_EXYNOS)
+			alm_tm->tm_year = bcd2bin(alm_tm->tm_year)
+				+ (alm_tm->tm_year >> 8) * 100;
+		else
+			alm_tm->tm_year = bcd2bin(alm_tm->tm_year);
+
 	} else {
+		alm_tm->tm_sec = -1;
+		alm_tm->tm_min = -1;
+		alm_tm->tm_hour = -1;
+		alm_tm->tm_mday = -1;
 		alm_tm->tm_mon = -1;
-	}
-
-	if (alm_en & S3C2410_RTCALM_YEAREN)
-		alm_tm->tm_year = bcd2bin(alm_tm->tm_year);
-	else
 		alm_tm->tm_year = -1;
+	}
 
 	return 0;
 }
@@ -222,29 +228,47 @@ static int s3c_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	struct rtc_time *tm = &alrm->time;
 	void __iomem *base = s3c_rtc_base;
 	unsigned int alrm_en;
+	int year = tm->tm_year - 100;
 
 	pr_debug("s3c_rtc_setalarm: %d, %04d.%02d.%02d %02d:%02d:%02d\n",
 		 alrm->enabled,
 		 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 		 tm->tm_hour, tm->tm_min, tm->tm_sec);
 
+	if (year < 0 || year >= 100) {
+		if (!(s3c_rtc_cpu_type == TYPE_EXYNOS
+					&& year >= 100 && year < 1000)) {
+			dev_err(dev, "rtc can't support %04d year\n",
+					2000 + year);
+			return -EINVAL;
+		}
+	}
+
 	alrm_en = readb(base + S3C2410_RTCALM) & S3C2410_RTCALM_ALMEN;
-	writeb(0x00, base + S3C2410_RTCALM);
 
-	alrm_en |= S3C2410_RTCALM_SECEN;
-	writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
+	if (alrm->enabled) {
+		writeb(~S3C2410_RTCALM_ALL, base + S3C2410_RTCALM);
 
-	alrm_en |= S3C2410_RTCALM_MINEN;
-	writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
+		writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
+		writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
+		writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
+		writeb(bin2bcd(tm->tm_mday), base + S3C2410_ALMDATE);
+		writeb(bin2bcd(tm->tm_mon + 1), base + S3C2410_ALMMON);
 
-	alrm_en |= S3C2410_RTCALM_HOUREN;
-	writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
+		if (s3c_rtc_cpu_type == TYPE_EXYNOS) {
+			year = (((year / 100) << 8) + (((year % 100) / 10) << 4) + year % 10);
+			writew(year, base + S3C2410_ALMYEAR);
+		} else {
+			writeb(bin2bcd(year), base + S3C2410_ALMYEAR);
+		}
 
-	pr_debug("setting S3C2410_RTCALM to %08x\n", alrm_en);
+		writeb(S3C2410_RTCALM_ALL, base + S3C2410_RTCALM);
 
-	writeb(alrm_en, base + S3C2410_RTCALM);
+		pr_debug("setting S3C2410_RTCALM to %08x\n", alrm_en);
+	}
 
-	s3c_rtc_setaie(dev, alrm->enabled);
+	if (alrm->enabled != alrm_en)
+		s3c_rtc_setaie(dev, alrm->enabled);
 
 	return 0;
 }
@@ -267,7 +291,7 @@ static void s3c_rtc_enable(struct platform_device *pdev, int en)
 
 	if (!en) {
 		tmp = readw(base + S3C2410_RTCCON);
-		if (s3c_rtc_cpu_type == TYPE_S3C64XX)
+		if (s3c_rtc_cpu_type != TYPE_S3C2410)
 			tmp &= ~S3C64XX_RTCCON_TICEN;
 		tmp &= ~S3C2410_RTCCON_RTCEN;
 		writew(tmp, base + S3C2410_RTCCON);
@@ -391,8 +415,9 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 
-#ifndef CONFIG_MACH_WILLOW
 	/* Check RTC Time */
+
+	s3c_rtc_cpu_type = platform_get_device_id(pdev)->driver_data;
 
 	s3c_rtc_gettime(NULL, &rtc_tm);
 
@@ -408,12 +433,6 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 		dev_warn(&pdev->dev, "warning: invalid RTC value so initializing it\n");
 	}
-#endif
-
-#if ( defined(CONFIG_MACH_WILLOW) /*&& defined(CONFIG_WILLOW_WS)*/ )
-	max77686_rtc_read_time_hack(&rtc_tm);
-	s3c_rtc_settime(&pdev->dev, &rtc_tm);
-#endif
 
 	/* register RTC and exit */
 
@@ -426,9 +445,7 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 		goto err_nortc;
 	}
 
-	s3c_rtc_cpu_type = platform_get_device_id(pdev)->driver_data;
-
-	if (s3c_rtc_cpu_type == TYPE_S3C64XX)
+	if (s3c_rtc_cpu_type != TYPE_S3C2410)
 		rtc->max_user_freq = 32768;
 	else
 		rtc->max_user_freq = 128;
@@ -504,6 +521,9 @@ static struct platform_device_id s3c_rtc_driver_ids[] = {
 	}, {
 		.name		= "s3c64xx-rtc",
 		.driver_data	= TYPE_S3C64XX,
+	}, {
+		.name		= "exynos-rtc",
+		.driver_data	= TYPE_EXYNOS,
 	},
 	{ }
 };

@@ -735,7 +735,27 @@ static int max77686_rtc_init_reg(struct max77686_rtc_info *info)
 		data_alm2[RTC_HOUR], data_alm2[RTC_MIN], data_alm2[RTC_SEC],
 		data_alm2[RTC_WEEKDAY]);
 #endif
+#if 0
+	max77686_rtc_update(info, MAX77686_RTC_READ);
+	/* RTC ALARM interrupts */
+	//ret = max77686_update_reg(info->rtc, MAX77686_RTC_INTM, ~(MAX77686_RTCA1M | MAX77686_RTCA2M), 0x1f);
+	ret = max77686_update_reg(info->rtc, MAX77686_RTC_INTM, 0x39 , 0x3f);
+	if (ret < 0){
+		dev_err(info->dev, "%s: MAX77686_RTC_INTM\n", __func__);
+		return ret;
+	}
+	max77686_rtc_update(info, MAX77686_RTC_WRITE);
 
+	max77686_rtc_update(info, MAX77686_RTC_READ);
+	ret = max77686_read_reg(info->rtc, MAX77686_RTC_INTM, &buf);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to read control reg(%d)\n",
+				__func__, ret);
+		return ret;
+	}
+	printk("%s MAX77686_RTC_INTM = 0x%x\n ",__func__,buf);
+	max77686_rtc_update(info, MAX77686_RTC_WRITE);
+#endif
 	max77686_rtc_update(info, MAX77686_RTC_READ);
 
 	ret = max77686_read_reg(info->rtc, MAX77686_RTC_CONTROL, &buf);
@@ -772,7 +792,6 @@ static int max77686_rtc_init_reg(struct max77686_rtc_info *info)
 				__func__, ret);
 		return ret;
 	}
-
 	max77686_rtc_update(info, MAX77686_RTC_WRITE);
 
 	/* If it's first boot, reset rtc to 1/1/2012 00:00:00(SUN) */
@@ -827,11 +846,8 @@ static int __devinit max77686_rtc_probe(struct platform_device *pdev)
 #ifdef MAX77686_RTC_WTSR_SMPL
 	if (max77686->wtsr_smpl & MAX77686_WTSR_ENABLE)
 		max77686_rtc_enable_wtsr(info, true);
-#if !defined(CONFIG_MACH_C1_KOR_SKT) && !defined(CONFIG_MACH_C1_KOR_KT) && \
-	!defined(CONFIG_MACH_C1_KOR_LGT) && !defined(CONFIG_MACH_M0_KOR_SKT)
 	if (max77686->wtsr_smpl & MAX77686_SMPL_ENABLE)
 		max77686_rtc_enable_smpl(info, true);
-#endif
 #endif
 
 	device_init_wakeup(&pdev->dev, 1);

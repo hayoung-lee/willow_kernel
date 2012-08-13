@@ -30,6 +30,14 @@
 
 #include <linux/regulator/consumer.h>
 
+/* RTCINTM */
+#define MAX77686_RTC60SM	(1 << 0)
+#define MAX77686_RTCA1M		(1 << 1)
+#define MAX77686_RTCA2M		(1 << 2)
+#define MAX77686_SMPLM		(1 << 3)
+#define MAX77686_RTC1SM		(1 << 4)
+#define MAX77686_WTSREVENTM	(1 << 5)
+
 #define MAX77686_SMPL_ENABLE			(0x1)
 #define MAX77686_WTSR_ENABLE			(0x2)
 

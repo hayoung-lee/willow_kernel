@@ -677,6 +677,10 @@ static struct clk exynos4_init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
+		.name		= "jpeg",
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
 		.name		= "rotator",
 		.devname	= "exynos-rot",
 		.enable		= exynos4_clk_ip_image_ctrl,
@@ -715,7 +719,6 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 16),
 	}, {
 		.name		= "rtc",
-		.devname	= "s3c64xx-rtc",
 		.enable		= exynos4_clk_ip_perir_ctrl,
 		.ctrlbit	= (1 << 15),
 	}, {
@@ -725,6 +728,10 @@ static struct clk exynos4_init_clocks_off[] = {
 	}, {
 		.name		= "hdmicec",
 		.enable		= exynos4_clk_ip_perir_ctrl,
+		.ctrlbit	= (1 << 11),
+	}, {
+		.name		= "sromc",
+		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "usbhost",

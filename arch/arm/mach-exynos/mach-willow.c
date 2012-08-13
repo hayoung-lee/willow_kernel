@@ -2349,7 +2349,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.regulators = max77686_regulators,
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
-	.wakeup		= 0,
+	.wakeup		= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
