@@ -198,6 +198,43 @@ static struct s3c2410_uartcfg willow_uartcfgs[] __initdata = {
 	},
 };
 
+void s3c_setup_uart_cfg_gpio(unsigned char port)
+{
+	switch (port) {
+	case 0:
+		s3c_gpio_cfgpin(GPIO_BT_RXD, S3C_GPIO_SFN(GPIO_BT_RXD_AF));
+		s3c_gpio_setpull(GPIO_BT_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_BT_TXD, S3C_GPIO_SFN(GPIO_BT_TXD_AF));
+		s3c_gpio_setpull(GPIO_BT_TXD, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_BT_CTS, S3C_GPIO_SFN(GPIO_BT_CTS_AF));
+		s3c_gpio_setpull(GPIO_BT_CTS, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_BT_RTS, S3C_GPIO_SFN(GPIO_BT_RTS_AF));
+		s3c_gpio_setpull(GPIO_BT_RTS, S3C_GPIO_PULL_NONE);
+		break;
+	case 1:
+		s3c_gpio_cfgpin(GPIO_GPS_RXD, S3C_GPIO_SFN(GPIO_GPS_RXD_AF));
+		s3c_gpio_setpull(GPIO_GPS_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_GPS_TXD, S3C_GPIO_SFN(GPIO_GPS_TXD_AF));
+		s3c_gpio_setpull(GPIO_GPS_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	case 2:
+		s3c_gpio_cfgpin(GPIO_AP_RXD, S3C_GPIO_SFN(GPIO_AP_RXD_AF));
+		s3c_gpio_setpull(GPIO_AP_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_AP_TXD, S3C_GPIO_SFN(GPIO_AP_TXD_AF));
+		s3c_gpio_setpull(GPIO_AP_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	case 3:
+		s3c_gpio_cfgpin(GPIO_TEST_RXD, S3C_GPIO_SFN(GPIO_TEST_RXD_AF));
+		s3c_gpio_setpull(GPIO_TEST_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_TEST_TXD, S3C_GPIO_SFN(GPIO_TEST_TXD_AF));
+		s3c_gpio_setpull(GPIO_TEST_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	default:
+		break;
+	}
+}
+EXPORT_SYMBOL(s3c_setup_uart_cfg_gpio);
+
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
 struct platform_device exynos_device_md0 = {
 	.name = "exynos-mdev",

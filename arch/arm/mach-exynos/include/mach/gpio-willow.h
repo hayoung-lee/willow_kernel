@@ -70,6 +70,22 @@
 #define GPIO_BT_RTS			EXYNOS4_GPA0(3)
 #define GPIO_BT_RTS_AF		2
 
+/* GPS */
+#define GPIO_GPS_RXD		EXYNOS4_GPA0(4)
+#define GPIO_GPS_RXD_AF		2
+#define GPIO_GPS_TXD		EXYNOS4_GPA0(5)
+#define GPIO_GPS_TXD_AF		2
+
+/* ETC UART */
+#define GPIO_AP_RXD			EXYNOS4_GPA1(0)
+#define GPIO_AP_RXD_AF		2
+#define GPIO_AP_TXD			EXYNOS4_GPA1(1)
+#define GPIO_AP_TXD_AF		2
+#define GPIO_TEST_RXD		EXYNOS4_GPA1(4)
+#define GPIO_TEST_RXD_AF	2
+#define GPIO_TEST_TXD		EXYNOS4_GPA1(5)
+#define GPIO_TEST_TXD_AF	2
+
 /* max17040, max8903 (charger/fuel) */
 #define nCHG_EN    EXYNOS4212_GPM0(2) //nCHG_EN   //CHGARGE_EN
 #define nCHARGING  EXYNOS4_GPX2(5)    //nCHARGING //CHG

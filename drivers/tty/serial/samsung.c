@@ -1125,6 +1125,7 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 
 	/* reset the fifos (and setup the uart) */
 	s3c24xx_serial_resetport(port, cfg);
+	s3c_setup_uart_cfg_gpio(cfg->hwport);
 	return 0;
 }
 
