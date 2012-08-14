@@ -1779,12 +1779,9 @@ static struct regulator_init_data max77686_buck4_data = {
 		.name = "vdd_g3d range",
 		.min_uV = 850000,
 		.max_uV = 1100000,
+		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
-		.state_mem = {
-			.enabled 	= 0,
-			.disabled	= 1,
-		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck4),
 	.consumer_supplies = max77686_buck4,
