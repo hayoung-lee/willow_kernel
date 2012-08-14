@@ -58,7 +58,7 @@ obj-$(CONFIG_MACH_UNIVERSAL_C210)	+= mach-universal_c210.o
 obj-$(CONFIG_MACH_NURI)			+= mach-nuri.o
 obj-$(CONFIG_MACH_SMDK4X12)		+= mach-smdk4x12.o
 obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
-obj-$(CONFIG_MACH_WILLOW)		+= mach-willow.o wlan-willow.o willow-gpio.o
+obj-$(CONFIG_MACH_WILLOW)		+= mach-willow.o willow-wlan.o willow-gpio.o
 
 # device support
 
