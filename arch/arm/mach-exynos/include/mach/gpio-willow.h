@@ -87,8 +87,8 @@
 #define GPIO_TEST_TXD_AF	2
 
 /* LCD */
-#define GPIO_LCD_OFF_CHG		EXYNOS4_GPM0(3)
-#define GPIO_nLVDS_PDN			EXYNOS4_GPM1(0)
+#define GPIO_LCD_OFF_CHG		EXYNOS4212_GPM0(3)
+#define GPIO_nLVDS_PDN			EXYNOS4212_GPM1(0)
 #define GPIO_LCD_BL_PWM			EXYNOS4_GPD0(1)
 
 /* max17040, max8903 (charger/fuel) */
