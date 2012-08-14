@@ -1245,61 +1245,18 @@ static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
 static void lcd_ltn101al03_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
-	struct regulator *reg;
-	int err;
-
-	reg = regulator_get(NULL, "vdd_lcd");
-
 	if (power) {
-		// LCD_ON
-		regulator_enable(reg);
-
-		//LVDS Power on
-		gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_HIGH, "nLVDS_PDN");
-		gpio_free(GPIO_nLVDS_PDN);
-		mdelay(300); //T3
-		//LCD PWM on
-		err = gpio_request(GPIO_LCD_BL_PWM, "LCD_BL_PWM");
-		if (err) {
-			printk(KERN_ERR "failed to request GPD0_1 for "
-				"lcd backlight control\n");
-			return err;
-		}
-		gpio_direction_output(GPIO_LCD_BL_PWM, 1);
-		s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));
-		gpio_free(GPIO_LCD_BL_PWM);
-
-		//LCD On Notify to Charger
-		gpio_request_one(GPIO_LCD_OFF_CHG, GPIOF_OUT_INIT_LOW, "LCD_OFF_CHG");
-		gpio_free(GPIO_LCD_OFF_CHG);
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
 	} else {
-		//LCD PWM off
-		err = gpio_request(GPIO_LCD_BL_PWM, "LCD_BL_PWM");
-		if (err) {
-			printk(KERN_ERR "failed to request GPD0_1 for "
-					"lcd backlight control\n");
-			return err;
-		}
-		gpio_direction_output(GPIO_LCD_BL_PWM, 0);
-		gpio_free(GPIO_LCD_BL_PWM);
 
-		mdelay(250); //T4
-
-		//LVDS Power off
-		gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_LOW, "nLVDS_PDN");
-		gpio_free(GPIO_nLVDS_PDN);
-		mdelay(100);
-
-		//LCD Power off
-		regulator_disable(reg);
-		mdelay(500);
-
-		//LCD Off Notify to Charger
-		gpio_request_one(GPIO_LCD_OFF_CHG, GPIOF_OUT_INIT_HIGH, "LCD_OFF_CHG");
-		gpio_free(GPIO_LCD_OFF_CHG);
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
 	}
-
-	regulator_put(reg);
 }
 
 static struct plat_lcd_data willow_lcd_ltn101al03_data = {
@@ -1776,8 +1733,8 @@ static struct regulator_init_data max77686_buck1_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 			REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.enabled 	= 0,
 			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck1),
@@ -1793,8 +1750,8 @@ static struct regulator_init_data max77686_buck2_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.enabled 	= 0,
 			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = 1,
@@ -1810,8 +1767,8 @@ static struct regulator_init_data max77686_buck3_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.enabled 	= 0,
 			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck3),
@@ -1905,12 +1862,11 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 		.min_uV		= 1200000,
 		.max_uV		= 2800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
-		.boot_on 	= 1,
 		.state_mem	= {
 			.uV		= 2800000,
-			.mode		= REGULATOR_MODE_NORMAL,
 			.disabled	= 1,
 			.enabled	= 0,
 		},
@@ -2008,7 +1964,6 @@ static struct regulator_init_data __initdata max77686_ldo10_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
-		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2227,11 +2182,9 @@ static struct regulator_init_data __initdata max77686_ldo23_data = {
 		.min_uV		= 3300000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
-		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
-			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,

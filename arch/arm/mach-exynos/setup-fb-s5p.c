@@ -268,6 +268,8 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	
 	regulator_enable(lcd_ldo);
 
+	regulator_put(lcd_ldo);
+
 	err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_LOW, "GPM0(3)");
 
 	if (err) {
@@ -291,8 +293,8 @@ int s3cfb_lcd_off(struct platform_device *pdev)
 
 	printk(" s3cfb_lcd_off  \n");
 	
-	if (regulator_is_enabled(lcd_ldo))
-		regulator_enable(lcd_ldo);
+	regulator_disable(lcd_ldo);
+	regulator_put(lcd_ldo);
 
 	err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_HIGH, "GPM0(3)");
 
