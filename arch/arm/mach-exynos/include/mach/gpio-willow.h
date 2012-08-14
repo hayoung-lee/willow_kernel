@@ -86,6 +86,11 @@
 #define GPIO_TEST_TXD		EXYNOS4_GPA1(5)
 #define GPIO_TEST_TXD_AF	2
 
+/* LCD */
+#define GPIO_LCD_OFF_CHG		EXYNOS4_GPM0(3)
+#define GPIO_nLVDS_PDN			EXYNOS4_GPM1(0)
+#define GPIO_LCD_BL_PWM			EXYNOS4_GPD0(1)
+
 /* max17040, max8903 (charger/fuel) */
 #define nCHG_EN    EXYNOS4212_GPM0(2) //nCHG_EN   //CHGARGE_EN
 #define nCHARGING  EXYNOS4_GPX2(5)    //nCHARGING //CHG
@@ -105,6 +110,9 @@ typedef enum
 } willow_hw_version_type;
 
 extern willow_hw_version_type WILLOW_get_hw_version( void );
+
+extern void willow_config_sleep_gpio_table(void);
+extern void willow_config_gpio_table(void);
 
 #endif /* __ASM_ARCH_GPIO_WILLOW_H */
 

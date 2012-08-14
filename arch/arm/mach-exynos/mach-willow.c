@@ -1245,17 +1245,61 @@ static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
 static void lcd_ltn101al03_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
+	struct regulator *reg;
+	int err;
+
+	reg = regulator_get(NULL, "vdd_lcd");
+
 	if (power) {
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
-#endif
+		// LCD_ON
+		regulator_enable(reg);
+
+		//LVDS Power on
+		gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_HIGH, "nLVDS_PDN");
+		gpio_free(GPIO_nLVDS_PDN);
+		mdelay(300); //T3
+		//LCD PWM on
+		err = gpio_request(GPIO_LCD_BL_PWM, "LCD_BL_PWM");
+		if (err) {
+			printk(KERN_ERR "failed to request GPD0_1 for "
+				"lcd backlight control\n");
+			return err;
+		}
+		gpio_direction_output(GPIO_LCD_BL_PWM, 1);
+		s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));
+		gpio_free(GPIO_LCD_BL_PWM);
+
+		//LCD On Notify to Charger
+		gpio_request_one(GPIO_LCD_OFF_CHG, GPIOF_OUT_INIT_LOW, "LCD_OFF_CHG");
+		gpio_free(GPIO_LCD_OFF_CHG);
 	} else {
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
-#endif
+		//LCD PWM off
+		err = gpio_request(GPIO_LCD_BL_PWM, "LCD_BL_PWM");
+		if (err) {
+			printk(KERN_ERR "failed to request GPD0_1 for "
+					"lcd backlight control\n");
+			return err;
+		}
+		gpio_direction_output(GPIO_LCD_BL_PWM, 0);
+		gpio_free(GPIO_LCD_BL_PWM);
+
+		mdelay(250); //T4
+
+		//LVDS Power off
+		gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_LOW, "nLVDS_PDN");
+		gpio_free(GPIO_nLVDS_PDN);
+		mdelay(100);
+
+		//LCD Power off
+		regulator_disable(reg);
+		mdelay(500);
+
+		//LCD Off Notify to Charger
+		gpio_request_one(GPIO_LCD_OFF_CHG, GPIOF_OUT_INIT_HIGH, "LCD_OFF_CHG");
+		gpio_free(GPIO_LCD_OFF_CHG);
 	}
+
+	regulator_put(reg);
 }
 
 static struct plat_lcd_data willow_lcd_ltn101al03_data = {
@@ -3726,6 +3770,9 @@ static void __init willow_machine_init(void)
 	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
 	samsung_board_rev = get_samsung_board_rev();
+
+	willow_config_sleep_gpio_table();
+
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
