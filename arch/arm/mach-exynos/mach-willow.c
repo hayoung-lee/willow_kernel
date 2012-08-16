@@ -810,10 +810,12 @@ static int mt9m113_power_en(int onoff)
 			regulator_disable(camera_vdd);
 		msleep(50);		
 		if (regulator_is_enabled(camera_vio))
-		regulator_disable(camera_vio);
+			regulator_disable(camera_vio);
 		msleep(50);
 		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
 	}
+	regulator_put(camera_vdd);
+	regulator_put(camera_vio);
 	gpio_free(EXYNOS4212_GPM1(4));
 	gpio_free(EXYNOS4212_GPM1(5));
 	msleep(10);
