@@ -1674,9 +1674,6 @@ REGULATOR_SUPPLY("vdd_cam", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo18_consumer =
 REGULATOR_SUPPLY("vdd_gps_2v8", NULL);
-
-static struct regulator_consumer_supply __initdata max77686_ldo19_consumer =
-REGULATOR_SUPPLY("vdd_ldo19", NULL);
 #if 0 // reset timming bug
 static struct regulator_consumer_supply __initdata max77686_ldo20_consumer =
 REGULATOR_SUPPLY("vdd_bt_wifi_io", NULL);
@@ -1917,6 +1914,7 @@ static struct regulator_init_data __initdata max77686_ldo6_data = {
 		.min_uV		= 800000,
 		.max_uV		= 2375000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 							REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -2034,6 +2032,7 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2084,6 +2083,7 @@ static struct regulator_init_data __initdata max77686_ldo16_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2124,23 +2124,6 @@ static struct regulator_init_data __initdata max77686_ldo18_data = {
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &max77686_ldo18_consumer,
-};
-
-static struct regulator_init_data __initdata max77686_ldo19_data = {
-	.constraints	= {
-		.name		= "vdd_ldo19 range",
-		.min_uV		= 850000,
-		.max_uV		= 3300000,
-		.apply_uV	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-							REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
-			.disabled	= 1,
-			.enabled	= 0,
-		},
-	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max77686_ldo19_consumer,
 };
 
 #if 0  //reset timming bug
@@ -2313,7 +2296,6 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO16, &max77686_ldo16_data,},
 	{MAX77686_LDO17, &max77686_ldo17_data,},
 	{MAX77686_LDO18, &max77686_ldo18_data,},
-	{MAX77686_LDO19, &max77686_ldo19_data,},
 //	{MAX77686_LDO20, &max77686_ldo20_data,},
 	{MAX77686_LDO21, &max77686_ldo21_data,},
 	{MAX77686_LDO22, &max77686_ldo22_data,},
@@ -2326,32 +2308,31 @@ static struct max77686_regulator_data max77686_regulators[] = {
 };
 
 struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
-	[MAX77686_LDO1] = {MAX77686_LDO1, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO1] = {MAX77686_LDO1, MAX77686_OPMODE_LP},
 	[MAX77686_LDO2] = {MAX77686_LDO2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO3] = {MAX77686_LDO3, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO4] = {MAX77686_LDO4, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO4] = {MAX77686_LDO4, MAX77686_OPMODE_LP},
 	[MAX77686_LDO5] = {MAX77686_LDO5, MAX77686_OPMODE_LP},
 	[MAX77686_LDO6] = {MAX77686_LDO6, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO7] = {MAX77686_LDO7, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO8] = {MAX77686_LDO8, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO9] = {MAX77686_LDO9, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO9] = {MAX77686_LDO9, MAX77686_OPMODE_LP},
 	[MAX77686_LDO10] = {MAX77686_LDO10, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO11] = {MAX77686_LDO11, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO12] = {MAX77686_LDO12, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO13] = {MAX77686_LDO13, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO13] = {MAX77686_LDO13, MAX77686_OPMODE_LP},
 	[MAX77686_LDO14] = {MAX77686_LDO14, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO15] = {MAX77686_LDO15, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO16] = {MAX77686_LDO16, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO19] = {MAX77686_LDO19, MAX77686_OPMODE_LP},
-//	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
+	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_LP},
+	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_LP},
+//	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_LP},
+//	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
 	[MAX77686_LDO22] = {MAX77686_LDO22, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO24] = {MAX77686_LDO24, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO25] = {MAX77686_LDO25, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO26] = {MAX77686_LDO26, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_LP},
+	[MAX77686_LDO24] = {MAX77686_LDO24, MAX77686_OPMODE_LP},
+	[MAX77686_LDO25] = {MAX77686_LDO25, MAX77686_OPMODE_LP},
+	[MAX77686_LDO26] = {MAX77686_LDO26, MAX77686_OPMODE_LP},
 	[MAX77686_BUCK1] = {MAX77686_BUCK1, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
@@ -2366,7 +2347,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
 	.wakeup		= 1,
-	.has_full_constraints	= 1,
+	//.has_full_constraints	= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
