@@ -1615,6 +1615,9 @@ static struct regulator_consumer_supply max77686_buck4[] = {
 		REGULATOR_SUPPLY("vdd_g3d", "mali_dev.0"),
 };
 
+static struct regulator_consumer_supply max77686_buck7 =
+REGULATOR_SUPPLY("vdd_in235", NULL);
+
 static struct regulator_consumer_supply max77686_buck8 =
 REGULATOR_SUPPLY("vmmc", NULL);
 
@@ -1788,6 +1791,21 @@ static struct regulator_init_data max77686_buck4_data = {
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck4),
 	.consumer_supplies = max77686_buck4,
+};
+
+static struct regulator_init_data max77686_buck7_data = {
+	.constraints = {
+		.name = "vdd_in235 range",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.boot_on = 1,
+		.state_mem = {
+			.disabled	= 1,
+			.enabled 	= 0,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck7,
 };
 
 static struct regulator_init_data max77686_buck8_data = {
@@ -2275,6 +2293,7 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_BUCK2, &max77686_buck2_data,},
 	{MAX77686_BUCK3, &max77686_buck3_data,},
 	{MAX77686_BUCK4, &max77686_buck4_data,},
+	{MAX77686_BUCK7, &max77686_buck7_data,},
 	{MAX77686_BUCK8, &max77686_buck8_data,},
 	{MAX77686_LDO1, &max77686_ldo1_data,},
 	{MAX77686_LDO2, &max77686_ldo2_data,},
@@ -2337,6 +2356,7 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK7] = {MAX77686_BUCK7, MAX77686_OPMODE_NORMAL},
 	[MAX77686_BUCK8] = {MAX77686_BUCK8, MAX77686_OPMODE_NORMAL},
 };
 
@@ -2346,6 +2366,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
 	.wakeup		= 1,
+	.has_full_constraints	= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
