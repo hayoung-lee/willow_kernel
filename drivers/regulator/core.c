@@ -2936,11 +2936,14 @@ static int __init regulator_init_complete(void)
 		if (has_full_constraints) {
 			/* We log since this may kill the system if it
 			 * goes wrong. */
-			rdev_info(rdev, "disabling\n");
-			ret = ops->disable(rdev);
-			if (ret != 0) {
-				rdev_err(rdev, "couldn't disable: %d\n", ret);
-			}
+			if(c->boot_on != 1){
+				rdev_info(rdev, "disabling\n");
+				ret = ops->disable(rdev);
+				if (ret != 0) {
+					rdev_err(rdev, "couldn't disable: %d\n", ret);
+				}
+			}else
+				rdev_info(rdev, "boot_on\n");
 		} else {
 			/* The intention is that in future we will
 			 * assume that full constraints are provided

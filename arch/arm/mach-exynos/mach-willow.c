@@ -198,6 +198,43 @@ static struct s3c2410_uartcfg willow_uartcfgs[] __initdata = {
 	},
 };
 
+void s3c_setup_uart_cfg_gpio(unsigned char port)
+{
+	switch (port) {
+	case 0:
+		s3c_gpio_cfgpin(GPIO_BT_RXD, S3C_GPIO_SFN(GPIO_BT_RXD_AF));
+		s3c_gpio_setpull(GPIO_BT_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_BT_TXD, S3C_GPIO_SFN(GPIO_BT_TXD_AF));
+		s3c_gpio_setpull(GPIO_BT_TXD, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_BT_CTS, S3C_GPIO_SFN(GPIO_BT_CTS_AF));
+		s3c_gpio_setpull(GPIO_BT_CTS, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_BT_RTS, S3C_GPIO_SFN(GPIO_BT_RTS_AF));
+		s3c_gpio_setpull(GPIO_BT_RTS, S3C_GPIO_PULL_NONE);
+		break;
+	case 1:
+		s3c_gpio_cfgpin(GPIO_GPS_RXD, S3C_GPIO_SFN(GPIO_GPS_RXD_AF));
+		s3c_gpio_setpull(GPIO_GPS_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_GPS_TXD, S3C_GPIO_SFN(GPIO_GPS_TXD_AF));
+		s3c_gpio_setpull(GPIO_GPS_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	case 2:
+		s3c_gpio_cfgpin(GPIO_AP_RXD, S3C_GPIO_SFN(GPIO_AP_RXD_AF));
+		s3c_gpio_setpull(GPIO_AP_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_AP_TXD, S3C_GPIO_SFN(GPIO_AP_TXD_AF));
+		s3c_gpio_setpull(GPIO_AP_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	case 3:
+		s3c_gpio_cfgpin(GPIO_TEST_RXD, S3C_GPIO_SFN(GPIO_TEST_RXD_AF));
+		s3c_gpio_setpull(GPIO_TEST_RXD, S3C_GPIO_PULL_UP);
+		s3c_gpio_cfgpin(GPIO_TEST_TXD, S3C_GPIO_SFN(GPIO_TEST_TXD_AF));
+		s3c_gpio_setpull(GPIO_TEST_TXD, S3C_GPIO_PULL_NONE);
+		break;
+	default:
+		break;
+	}
+}
+EXPORT_SYMBOL(s3c_setup_uart_cfg_gpio);
+
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
 struct platform_device exynos_device_md0 = {
 	.name = "exynos-mdev",
@@ -773,10 +810,12 @@ static int mt9m113_power_en(int onoff)
 			regulator_disable(camera_vdd);
 		msleep(50);		
 		if (regulator_is_enabled(camera_vio))
-		regulator_disable(camera_vio);
+			regulator_disable(camera_vio);
 		msleep(50);
 		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
 	}
+	regulator_put(camera_vdd);
+	regulator_put(camera_vio);
 	gpio_free(EXYNOS4212_GPM1(4));
 	gpio_free(EXYNOS4212_GPM1(5));
 	msleep(10);
@@ -1214,6 +1253,7 @@ static void lcd_ltn101al03_set_power(struct plat_lcd_data *pd,
 		gpio_free(EXYNOS4_GPD0(1));
 #endif
 	} else {
+
 #if !defined(CONFIG_BACKLIGHT_PWM)
 		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 		gpio_free(EXYNOS4_GPD0(1));
@@ -1575,6 +1615,9 @@ static struct regulator_consumer_supply max77686_buck4[] = {
 		REGULATOR_SUPPLY("vdd_g3d", "mali_dev.0"),
 };
 
+static struct regulator_consumer_supply max77686_buck7 =
+REGULATOR_SUPPLY("vdd_in235", NULL);
+
 static struct regulator_consumer_supply max77686_buck8 =
 REGULATOR_SUPPLY("vmmc", NULL);
 
@@ -1631,9 +1674,6 @@ REGULATOR_SUPPLY("vdd_cam", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo18_consumer =
 REGULATOR_SUPPLY("vdd_gps_2v8", NULL);
-
-static struct regulator_consumer_supply __initdata max77686_ldo19_consumer =
-REGULATOR_SUPPLY("vdd_ldo19", NULL);
 #if 0 // reset timming bug
 static struct regulator_consumer_supply __initdata max77686_ldo20_consumer =
 REGULATOR_SUPPLY("vdd_bt_wifi_io", NULL);
@@ -1692,9 +1732,12 @@ static struct regulator_init_data max77686_buck1_data = {
 		.min_uV = 850000,
 		.max_uV = 1100000,
 		.boot_on = 1,
-		.always_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-				REGULATOR_CHANGE_STATUS,
+			REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled	= 1,
+			.enabled 	= 0,
+		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck1),
 	.consumer_supplies = max77686_buck1,
@@ -1709,8 +1752,8 @@ static struct regulator_init_data max77686_buck2_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.enabled 	= 0,
 			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = 1,
@@ -1726,8 +1769,8 @@ static struct regulator_init_data max77686_buck3_data = {
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem = {
-			.enabled 	= 0,
 			.disabled	= 1,
+			.enabled 	= 0,
 		},
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck3),
@@ -1739,12 +1782,27 @@ static struct regulator_init_data max77686_buck4_data = {
 		.name = "vdd_g3d range",
 		.min_uV = 850000,
 		.max_uV = 1100000,
+		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
-
 	},
 	.num_consumer_supplies = ARRAY_SIZE(max77686_buck4),
 	.consumer_supplies = max77686_buck4,
+};
+
+static struct regulator_init_data max77686_buck7_data = {
+	.constraints = {
+		.name = "vdd_in235 range",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.boot_on = 1,
+		.state_mem = {
+			.disabled	= 1,
+			.enabled 	= 0,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck7,
 };
 
 static struct regulator_init_data max77686_buck8_data = {
@@ -1821,13 +1879,11 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 		.min_uV		= 1200000,
 		.max_uV		= 2800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 					  REGULATOR_CHANGE_STATUS,
-		.boot_on 	= 1,
-		.always_on	= 1,
 		.state_mem	= {
 			.uV		= 2800000,
-			.mode		= REGULATOR_MODE_NORMAL,
 			.disabled	= 1,
 			.enabled	= 0,
 		},
@@ -1858,6 +1914,7 @@ static struct regulator_init_data __initdata max77686_ldo6_data = {
 		.min_uV		= 800000,
 		.max_uV		= 2375000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
 							REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -1925,7 +1982,6 @@ static struct regulator_init_data __initdata max77686_ldo10_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
-		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1976,6 +2032,7 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2026,6 +2083,7 @@ static struct regulator_init_data __initdata max77686_ldo16_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2066,23 +2124,6 @@ static struct regulator_init_data __initdata max77686_ldo18_data = {
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &max77686_ldo18_consumer,
-};
-
-static struct regulator_init_data __initdata max77686_ldo19_data = {
-	.constraints	= {
-		.name		= "vdd_ldo19 range",
-		.min_uV		= 850000,
-		.max_uV		= 3300000,
-		.apply_uV	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-							REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
-			.disabled	= 1,
-			.enabled	= 0,
-		},
-	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max77686_ldo19_consumer,
 };
 
 #if 0  //reset timming bug
@@ -2144,11 +2185,9 @@ static struct regulator_init_data __initdata max77686_ldo23_data = {
 		.min_uV		= 3300000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
-		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
-			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
@@ -2237,6 +2276,7 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_BUCK2, &max77686_buck2_data,},
 	{MAX77686_BUCK3, &max77686_buck3_data,},
 	{MAX77686_BUCK4, &max77686_buck4_data,},
+	{MAX77686_BUCK7, &max77686_buck7_data,},
 	{MAX77686_BUCK8, &max77686_buck8_data,},
 	{MAX77686_LDO1, &max77686_ldo1_data,},
 	{MAX77686_LDO2, &max77686_ldo2_data,},
@@ -2256,7 +2296,6 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO16, &max77686_ldo16_data,},
 	{MAX77686_LDO17, &max77686_ldo17_data,},
 	{MAX77686_LDO18, &max77686_ldo18_data,},
-	{MAX77686_LDO19, &max77686_ldo19_data,},
 //	{MAX77686_LDO20, &max77686_ldo20_data,},
 	{MAX77686_LDO21, &max77686_ldo21_data,},
 	{MAX77686_LDO22, &max77686_ldo22_data,},
@@ -2269,36 +2308,36 @@ static struct max77686_regulator_data max77686_regulators[] = {
 };
 
 struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
-	[MAX77686_LDO1] = {MAX77686_LDO1, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO1] = {MAX77686_LDO1, MAX77686_OPMODE_LP},
 	[MAX77686_LDO2] = {MAX77686_LDO2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO3] = {MAX77686_LDO3, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO4] = {MAX77686_LDO4, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO4] = {MAX77686_LDO4, MAX77686_OPMODE_LP},
 	[MAX77686_LDO5] = {MAX77686_LDO5, MAX77686_OPMODE_LP},
 	[MAX77686_LDO6] = {MAX77686_LDO6, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO7] = {MAX77686_LDO7, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO8] = {MAX77686_LDO8, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO9] = {MAX77686_LDO9, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO9] = {MAX77686_LDO9, MAX77686_OPMODE_LP},
 	[MAX77686_LDO10] = {MAX77686_LDO10, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO11] = {MAX77686_LDO11, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO12] = {MAX77686_LDO12, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO13] = {MAX77686_LDO13, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO13] = {MAX77686_LDO13, MAX77686_OPMODE_LP},
 	[MAX77686_LDO14] = {MAX77686_LDO14, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO15] = {MAX77686_LDO15, MAX77686_OPMODE_STANDBY},
 	[MAX77686_LDO16] = {MAX77686_LDO16, MAX77686_OPMODE_STANDBY},
-	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO19] = {MAX77686_LDO19, MAX77686_OPMODE_LP},
-//	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
+	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_LP},
+	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_LP},
+//	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_LP},
+//	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
 	[MAX77686_LDO22] = {MAX77686_LDO22, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO24] = {MAX77686_LDO24, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO25] = {MAX77686_LDO25, MAX77686_OPMODE_NORMAL},
-	[MAX77686_LDO26] = {MAX77686_LDO26, MAX77686_OPMODE_NORMAL},
+	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_LP},
+	[MAX77686_LDO24] = {MAX77686_LDO24, MAX77686_OPMODE_LP},
+	[MAX77686_LDO25] = {MAX77686_LDO25, MAX77686_OPMODE_LP},
+	[MAX77686_LDO26] = {MAX77686_LDO26, MAX77686_OPMODE_LP},
 	[MAX77686_BUCK1] = {MAX77686_BUCK1, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK7] = {MAX77686_BUCK7, MAX77686_OPMODE_NORMAL},
 	[MAX77686_BUCK8] = {MAX77686_BUCK8, MAX77686_OPMODE_NORMAL},
 };
 
@@ -2308,6 +2347,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
 	.wakeup		= 1,
+	//.has_full_constraints	= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
@@ -3687,6 +3727,9 @@ static void __init willow_machine_init(void)
 	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
 	samsung_board_rev = get_samsung_board_rev();
+
+	willow_config_sleep_gpio_table();
+
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);

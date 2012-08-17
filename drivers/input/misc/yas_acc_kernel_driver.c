@@ -898,6 +898,7 @@ static int yas_acc_probe(struct i2c_client *client, const struct i2c_device_id *
 #ifdef WILLOW_SENSOR_REGULATOR_CONTROL
  regulator_err:
     regulator_disable(data->regulator);
+    regulator_put(data->regulator);
 #endif
  ERR2:
     kfree(data);
@@ -923,6 +924,11 @@ void yas_acc_early_suspend(struct early_suspend *h)
     }
     data->suspend = 1;
     mutex_unlock(&data->data_mutex);
+
+#ifdef WILLOW_SENSOR_REGULATOR_CONTROL
+    regulator_disable(data->regulator);
+#endif
+
 }
 
 void yas_acc_late_resume(struct early_suspend *h)
@@ -931,6 +937,10 @@ void yas_acc_late_resume(struct early_suspend *h)
         container_of(h, struct yas_acc_private_data, early_suspend);
     struct yas_acc_driver *driver = data->driver;
     int delay;
+
+#ifdef WILLOW_SENSOR_REGULATOR_CONTROL
+    regulator_enable(data->regulator);
+#endif
 
     mutex_lock(&data->data_mutex);
 
@@ -973,6 +983,10 @@ static int yas_acc_suspend(struct i2c_client *client, pm_message_t mesg)
 
     mutex_lock(&data->data_mutex);
 
+#ifdef WILLOW_SENSOR_REGULATOR_CONTROL
+    regulator_disable(data->regulator);
+#endif
+
     if (data->suspend == 0) {
         data->suspend_enable = yas_acc_get_enable(driver);
         if (data->suspend_enable) {
@@ -994,6 +1008,10 @@ static int yas_acc_resume(struct i2c_client *client)
     int delay;
 
     mutex_lock(&data->data_mutex);
+
+#ifdef WILLOW_SENSOR_REGULATOR_CONTROL
+    regulator_enable(data->regulator);
+#endif
 
     if (data->suspend == 1) {
         if (data->suspend_enable) {
