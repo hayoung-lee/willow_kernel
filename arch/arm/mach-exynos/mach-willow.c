@@ -1795,6 +1795,7 @@ static struct regulator_init_data max77686_buck7_data = {
 		.name = "vdd_in235 range",
 		.min_uV = 3300000,
 		.max_uV = 3300000,
+		.apply_uV	= 1,
 		.boot_on = 1,
 		.state_mem = {
 			.disabled	= 1,
@@ -2346,7 +2347,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.regulators = max77686_regulators,
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
-	.wakeup		= 1,
+	.wakeup		= 0,
 	//.has_full_constraints	= 1,
 
 	.opmode_data = max77686_opmode_data,
