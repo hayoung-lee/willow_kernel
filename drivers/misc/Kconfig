@@ -535,7 +535,12 @@ config HAPTIC_ISA1200
 	default n
 	help
 	  The ISA1200 is a high performance enhanced haptic driver.
-	  
+
+config GPS_G6010
+        bool "G6010 GPS"
+        help
+	  g6010 gps driver
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
