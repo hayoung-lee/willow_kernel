@@ -2366,7 +2366,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 			PMIC_DVS2,
 			PMIC_DVS3,
 		},
-#if 0
+#if 1
 	.buck2_voltage[0] = 1300000,	/* 1.3V */
 	.buck2_voltage[1] = 1000000,	/* 1.0V */
 	.buck2_voltage[2] = 950000,	/* 0.95V */
@@ -2649,6 +2649,9 @@ static void isa1200_init(void)
 	s3c_gpio_cfgpin(GPIO_VIB_PWM, (2));
 	gpio_free(GPIO_VIB_PWR_EN);
 
+	s3c_gpio_setpull(GPIO_VIB_PWM, S3C_GPIO_PULL_DOWN);
+	s3c_gpio_setpull(GPIO_VIB_PWR_EN, S3C_GPIO_PULL_DOWN);
+
 	return;
 }
 
@@ -2725,11 +2728,11 @@ static struct platform_device willow_gpio_keys = {
 static void wilow_gpio_key_cfg(void)
 {
 	s3c_gpio_cfgpin(WILLOW_POWER_KEY, S3C_GPIO_SFN(0x0));
-	s3c_gpio_setpull(WILLOW_POWER_KEY, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(WILLOW_POWER_KEY, S3C_GPIO_PULL_UP);
 	s3c_gpio_cfgpin(WILLOW_VOLUM_DOWN, S3C_GPIO_SFN(0x0));
-	s3c_gpio_setpull(WILLOW_VOLUM_DOWN, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(WILLOW_VOLUM_DOWN, S3C_GPIO_PULL_UP);
 	s3c_gpio_cfgpin(WILLOW_VOLUM_UP, S3C_GPIO_SFN(0x0));
-	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_UP);
 }
 
 static void wilow_gpio_pmint_cfg(void)
