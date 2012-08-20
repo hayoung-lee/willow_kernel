@@ -77,8 +77,8 @@ void dev_put(const char *name)
 	return;
 }
 
-int dev_lock(struct device *device, struct device *dev,
-		unsigned long freq)
+static int _dev_lock(struct device *device, struct device *dev,
+		unsigned long freq, bool fix)
 {
 	struct device_domain *domain;
 	struct domain_lock *lock;
@@ -113,8 +113,18 @@ int dev_lock(struct device *device, struct device *dev,
 
 out:
 	mutex_unlock(&domains_mutex);
-	exynos_request_apply(freq);
+	exynos_request_apply(freq, fix, false);
 	return ret;
+}
+
+int dev_lock(struct device *device, struct device *dev, unsigned long freq)
+{
+	return _dev_lock(device, dev, freq, false);
+}
+
+int dev_lock_fix(struct device *device, struct device *dev, unsigned long freq)
+{
+	return _dev_lock(device, dev, freq, true);
 }
 
 int dev_unlock(struct device *device, struct device *dev)
@@ -141,6 +151,12 @@ int dev_unlock(struct device *device, struct device *dev)
 	mutex_unlock(&domains_mutex);
 
 	return 0;
+}
+
+void dev_unlock_fix(struct device *device, struct device *dev)
+{
+	dev_unlock(device, dev);
+	exynos_request_apply(1, true, true);
 }
 
 unsigned long dev_max_freq(struct device *device)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,7 +21,7 @@
 #ifdef CONFIG_CPU_EXYNOS4210
 #define MALI_DVFS_STEPS 2
 #else
-#define MALI_DVFS_STEPS 4
+#define MALI_DVFS_STEPS 5
 #endif
 
 #if !USING_MALI_PMM

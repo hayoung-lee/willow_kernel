@@ -2366,6 +2366,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 			PMIC_DVS2,
 			PMIC_DVS3,
 		},
+#if 0
 	.buck2_voltage[0] = 1300000,	/* 1.3V */
 	.buck2_voltage[1] = 1000000,	/* 1.0V */
 	.buck2_voltage[2] = 950000,	/* 0.95V */
@@ -2392,6 +2393,34 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck4_voltage[5] = 1000000,	/* 1.0V */
 	.buck4_voltage[6] = 950000,	/* 0.95V */
 	.buck4_voltage[7] = 900000,	/* 0.9V */
+#else
+	.buck2_voltage[0] = 1300000,
+	.buck2_voltage[1] = 1287500,
+	.buck2_voltage[2] = 1250000,
+	.buck2_voltage[3] = 1187500,
+	.buck2_voltage[4] = 1087500,
+	.buck2_voltage[5] = 987500,
+	.buck2_voltage[6] = 937500,
+	.buck2_voltage[7] = 900000,
+
+	.buck3_voltage[0] = 1062500,
+	.buck3_voltage[1] = 1050000,
+	.buck3_voltage[2] = 1000000,
+	.buck3_voltage[3] = 925000,
+	.buck3_voltage[4] = 900000,
+	.buck3_voltage[5] = 875000,
+	.buck3_voltage[6] = 1037500,
+	.buck3_voltage[7] = 987500,
+
+	.buck4_voltage[0] = 875000,
+	.buck4_voltage[1] = 900000,
+	.buck4_voltage[2] = 950000,
+	.buck4_voltage[3] = 1025000,
+	.buck4_voltage[4] = 1100000,
+	.buck4_voltage[5] = 1000000,
+	.buck4_voltage[6] = 950000,
+	.buck4_voltage[7] = 900000,
+#endif
 };
 
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
