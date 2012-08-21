@@ -20,7 +20,7 @@
 static struct resource s3c_csis0_resource[] = {
 	[0] = {
 		.start	= S5P_PA_MIPI_CSIS0,
-		.end	= S5P_PA_MIPI_CSIS0 + SZ_16K - 1,
+		.end	= S5P_PA_MIPI_CSIS0 + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -43,12 +43,22 @@ static struct s3c_platform_csis default_csis0_data __initdata = {
 	.clk_rate	= 166000000,
 };
 
+static struct s3c_platform_csis default_csis0_data_rev2 __initdata = {
+	.srclk_name	= "mout_mpll",
+	.clk_name	= "sclk_csis",
+	.clk_rate	= 176000000,
+};
+
 void __init s3c_csis0_set_platdata(struct s3c_platform_csis *pd)
 {
 	struct s3c_platform_csis *npd;
 
-	if (!pd)
-		pd = &default_csis0_data;
+	if (!pd) {
+		if (samsung_rev() >= EXYNOS4412_REV_2_0)
+			pd = &default_csis0_data_rev2;
+		else
+			pd = &default_csis0_data;
+	}
 
 	npd = kmemdup(pd, sizeof(struct s3c_platform_csis), GFP_KERNEL);
 	if (!npd) {
@@ -67,7 +77,7 @@ void __init s3c_csis0_set_platdata(struct s3c_platform_csis *pd)
 static struct resource s3c_csis1_resource[] = {
 	[0] = {
 		.start	= S5P_PA_MIPI_CSIS1,
-		.end	= S5P_PA_MIPI_CSIS1 + SZ_16K - 1,
+		.end	= S5P_PA_MIPI_CSIS1 + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -90,12 +100,22 @@ static struct s3c_platform_csis default_csis1_data __initdata = {
 	.clk_rate	= 166000000,
 };
 
+static struct s3c_platform_csis default_csis1_data_rev2 __initdata = {
+	.srclk_name	= "mout_mpll",
+	.clk_name	= "sclk_csis",
+	.clk_rate	= 176000000,
+};
+
 void __init s3c_csis1_set_platdata(struct s3c_platform_csis *pd)
 {
 	struct s3c_platform_csis *npd;
 
-	if (!pd)
-		pd = &default_csis1_data;
+	if (!pd) {
+		if (samsung_rev() >= EXYNOS4412_REV_2_0)
+			pd = &default_csis1_data_rev2;
+		else
+			pd = &default_csis1_data;
+	}
 
 	npd = kmemdup(pd, sizeof(struct s3c_platform_csis), GFP_KERNEL);
 	if (!npd) {

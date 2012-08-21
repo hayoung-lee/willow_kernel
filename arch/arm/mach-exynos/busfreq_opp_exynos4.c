@@ -131,8 +131,8 @@ static unsigned int _target(struct busfreq_data *data, struct opp *new)
 		voltage = data->get_int_volt(index);
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
-		/*if (data->busfreq_prepare)
-			data->busfreq_prepare(index);*/
+		if (data->busfreq_prepare)
+			data->busfreq_prepare(index);
 	}
 	if (data->set_qos)
 		data->set_qos(index);
@@ -140,8 +140,8 @@ static unsigned int _target(struct busfreq_data *data, struct opp *new)
 	data->target(index);
 
 	if (newfreq < currfreq) {
-		/*if (data->busfreq_post)
-			data->busfreq_post(index);*/
+		if (data->busfreq_post)
+			data->busfreq_post(index);
 		regulator_set_voltage(data->vdd_mif, voltage,
 				voltage + 25000);
 		voltage = data->get_int_volt(index);
@@ -166,6 +166,9 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	ppmu_start(data->dev);
 
 	mutex_lock(&busfreq_lock);
+
+	if (data->force_opp)
+		opp = data->force_opp;
 
 	if (bus_ctrl.opp_lock)
 		opp = bus_ctrl.opp_lock;
@@ -479,7 +482,7 @@ static struct attribute *busfreq_attributes[] = {
 	NULL
 };
 
-void exynos_request_apply(unsigned long freq)
+void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 {
 	struct opp *opp;
 	unsigned int index;
@@ -491,12 +494,36 @@ void exynos_request_apply(unsigned long freq)
 
 	opp = bus_ctrl.data->curr_opp;
 
+	if (bus_ctrl.data->force_opp && fix && !disable) {
+		pr_debug("Fix lock already exist.\n");
+		goto out;
+	}
+
+	if (!bus_ctrl.data->force_opp && fix && disable) {
+		pr_debug("Fix lock doesn't exist.\n");
+		goto out;
+	}
+
+	if (fix) {
+		if (disable) {
+			bus_ctrl.data->force_opp = NULL;
+			bus_ctrl.data->curr_opp = bus_ctrl.data->max_opp;
+			opp = bus_ctrl.data->curr_opp;
+		} else {
+			opp = opp_find_freq_exact(bus_ctrl.data->dev, freq, true);
+			bus_ctrl.data->force_opp = opp;
+		}
+	} else {
 	opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
+	}
+
+	if (bus_ctrl.data->force_opp)
+		opp = bus_ctrl.data->force_opp;
 
 	if (bus_ctrl.opp_lock)
 		opp = bus_ctrl.opp_lock;
 
-	if (opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
+	if (!fix && opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
 		goto out;
 
 	index = _target(bus_ctrl.data, opp);
@@ -510,19 +537,22 @@ out:
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
-	unsigned int val = 0;
+	unsigned int val;
+	bool pop = true;
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + 0x4, &val);
 #else
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);
 #endif
+	printk("%s %d CONFIG_ARM_TRUSTZONE EXYNOS4_PA_DMC0_4212 != S5P_VA_DMC0 (base S5P_VA_DMC0)\n",__func__,__LINE__);
+	val = __raw_readl(S5P_VA_DMC0 + 0x4);
 	val = (val >> 8) & 0xf;
 
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
 	if (val != 0x05) {
 		pr_err("[ %x ] Memory Type Undertermined.\n", val);
-		return -ENODEV;
+		pop = false;
 	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
@@ -561,7 +591,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&data->worker, exynos_busfreq_timer);
 
-	if (data->init(&pdev->dev, data)) {
+	if (data->init(&pdev->dev, data, pop)) {
 		pr_err("Failed to init busfreq.\n");
 		goto err_busfreq;
 	}

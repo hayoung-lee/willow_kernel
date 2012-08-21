@@ -176,7 +176,8 @@ int s3cfb_set_clock(struct s3cfb_global *ctrl)
 			S3C_VIDCON0_VCLKEN_MASK |
 			S3C_VIDCON0_CLKDIR_MASK);
 		cfg |= (S3C_VIDCON0_CLKVALUP_ALWAYS |
-			S3C_VIDCON0_VCLKEN_NORMAL);
+			S3C_VIDCON0_VCLKEN_NORMAL |
+			S3C_VIDCON0_CLKDIR_DIVIDED);
 
 		if (strcmp(pdata->clk_name, "sclk_fimd") == 0) {
 			cfg |= S3C_VIDCON0_CLKSEL_SCLK;

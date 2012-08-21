@@ -82,6 +82,7 @@ static struct exynos4_pmu_conf exynos4210_pmu_config[] = {
 	{ S5P_PAD_RETENTION_EBIB_SYS,		{ 1, 0, 0 } },
 	{ S5P_PAD_ISOLATION_SYS,		{ 1, 0, 0 } },
 	{ S5P_PAD_ALV_SEL_SYS,			{ 1, 0, 0 } },
+	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
 	{ S5P_XXTI_SYS,				{ 1, 1, 0 } },
 	{ S5P_EXT_REGULATOR_SYS,		{ 1, 1, 0 } },
 	{ S5P_GPIO_MODE_SYS,			{ 1, 0, 0 } },
@@ -95,7 +96,7 @@ static struct exynos4_pmu_conf exynos4210_pmu_config[] = {
 	{ S5P_MAUDIO_SYS,			{ 7, 7, 0 } },
 	{ S5P_GPS_SYS,				{ 7, 0, 0 } },
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
-	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
+	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
 };
 
 static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
@@ -137,7 +138,6 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 0, 0, 0 } },
-
 	{ S5P_CMU_RESET_CAM_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_TV_SYS,			{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_MFC_SYS,		{ 1, 0, 0 } },
@@ -184,6 +184,7 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_PAD_ISOLATION_SYS,		{ 1, 0, 0 } },
 	{ S5P_PAD_ISOLATION_COREBLK_SYS,	{ 1, 0, 0 } },
 	{ S5P_PAD_ALV_SEL_SYS,			{ 1, 0, 0 } },
+	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
 	{ S5P_XXTI_SYS,				{ 1, 1, 0 } },
 	{ S5P_EXT_REGULATOR_SYS,		{ 1, 1, 0 } },
 	{ S5P_GPIO_MODE_SYS,			{ 1, 0, 0 } },
@@ -202,7 +203,6 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
 	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
-	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
 };
 
 static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
@@ -283,6 +283,7 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_PAD_ISOLATION_SYS,		{ 1, 0, 0 } },
 	{ S5P_PAD_ISOLATION_COREBLK_SYS,	{ 1, 0, 0 } },
 	{ S5P_PAD_ALV_SEL_SYS,			{ 1, 0, 0 } },
+	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
 	{ S5P_XXTI_SYS,				{ 1, 1, 0 } },
 	{ S5P_EXT_REGULATOR_SYS,		{ 1, 1, 0 } },
 	{ S5P_GPIO_MODE_SYS,			{ 1, 0, 0 } },
@@ -299,9 +300,8 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_MAUDIO_SYS,			{ 7, 7, 0 } },
 	{ S5P_GPS_SYS,				{ 7, 0, 0 } },
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
-	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
-	{ S5P_XUSBXTI_SYS,			{ 1, 1, 0 } },
 };
 
 static struct exynos4_pmu_conf exynos4x12_c2c_pmu_conf[] = {
@@ -325,9 +325,7 @@ static struct exynos4_c2c_pmu_conf exynos4_config_for_c2c[] = {
 	{ S5P_TOP_BUS_COREBLK_SYS,      0x0},
 	{ S5P_TOP_PWR_COREBLK_SYS,      0x0},
 	{ S5P_MPLL_SYSCLK_SYS,          0x0},
-#ifdef CONFIG_MACH_SMDK4212
 	{ S5P_XUSBXTI_SYS,              0x0},
-#endif
 };
 
 void exynos4_pmu_xclkout_set(unsigned int enable, enum xclkout_select source)
@@ -401,17 +399,13 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 			exynos4_config_for_c2c[2].val = 0x1;
 		else
 			exynos4_config_for_c2c[2].val = 0x0;
-#ifdef CONFIG_MACH_SMDK4212
 		exynos4_config_for_c2c[3].val = 0x0;
-#endif
 		break;
 	/* If C2C mode is Minimal or Short LATENCY */
 	default:
 		exynos4_config_for_c2c[1].val = 0x3;
 		exynos4_config_for_c2c[2].val = 0x1;
-#ifdef CONFIG_MACH_SMDK4212
 		exynos4_config_for_c2c[3].val = 0x1;
-#endif
 		break;
 	}
 }

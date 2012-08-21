@@ -37,9 +37,6 @@ static void s3c_irq_demux_uart(unsigned int irq, struct irq_desc *desc)
 
 	chained_irq_enter(chip, desc);
 
-	if (!(pend & 0xf))
-		do_bad_IRQ(irq, desc);
-
 	if (pend & (1 << 0))
 		generic_handle_irq(base);
 	if (pend & (1 << 1))

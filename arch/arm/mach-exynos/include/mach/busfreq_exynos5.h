@@ -61,7 +61,7 @@ struct busfreq_data {
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	void (*monitor) (struct busfreq_data *data, struct opp **mif_opp,
 			struct opp **int_opp);
-	void (*target)	(struct busfreq_data *data, enum ppmu_type type, int index);
+	void (*target)	(enum ppmu_type type, int index);
 	unsigned int (*get_int_volt) (unsigned long freq);
 	int (*get_table_index) (unsigned long freq, enum ppmu_type type);
 	void (*busfreq_prepare) (int index);
@@ -86,7 +86,7 @@ struct busfreq_table {
 	unsigned int clk_dmc1div;
 };
 
-void exynos_request_apply(unsigned long freq);
+void exynos_request_apply(unsigned long freq, bool fix, bool disable);
 unsigned long step_down(struct busfreq_data *data, enum ppmu_type type, int step);
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
