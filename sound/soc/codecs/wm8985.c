@@ -442,7 +442,6 @@ static int wm8985_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_va
 	struct wm8985_priv *wm8985 = snd_soc_codec_get_drvdata(codec);
 	struct soc_enum *mc = (struct soc_enum *)kcontrol->private_value;
 	int path_num = ucontrol->value.integer.value[0];
-
 	if (strcmp(mc->texts[path_num], playback_path[path_num])) {
 		printk(KERN_ERR "Unknown path %s\n", mc->texts[path_num]);
 		return -ENODEV;
@@ -528,8 +527,6 @@ static int factorytest_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_el
 	case FP_OFF:
 		wm8985_set_path_prev(0,0);
 		break;
-//TODO : impletent jack type
-/*
 	case FP_LEFT:
 		wm8985_set_path_prev(1,t10_jack_get_type());
 		break;
@@ -539,7 +536,6 @@ static int factorytest_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_el
 	case FP_BOTH:
 		wm8985_set_path_prev(3,t10_jack_get_type());
 		break;
-*/
 	default:
 		printk(KERN_ERR "factorytest path[%d] does not exists!!\n", path_num);
 		return -ENODEV;
@@ -874,8 +870,6 @@ void wm8985_set_path_prev(int mode, int jack_type)
 
 	DEBUG_MSG("[%s] # mode : %d, jack_type : %d\n", __func__, mode, jack_type);
 
-	//TODO : impletent jack type
-	/*
 	switch(jack_type){
 		case SEC_JACK_NO_DEVICE:
 			out_value = 0;
@@ -888,7 +882,6 @@ void wm8985_set_path_prev(int mode, int jack_type)
 		default:
 			break;
 	}
-	*/
 
 	//set value
 	maskval = 0;
