@@ -252,11 +252,10 @@ struct platform_device exynos_device_md0 = {
  * This function also called at fimc_init_camera()
  * Do optimization for cameras on your platform.
 */
-#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
-	|| defined(CONFIG_S5K3H2_CSI_C) || defined(CONFIG_S5K3H7_CSI_C) \
-	|| defined(CONFIG_S5K4E5_CSI_C) || defined(CONFIG_S5K6A3_CSI_C)
+#if defined(CONFIG_ITU_A) 
 static int smdk4x12_cam0_reset(int dummy)
 {
+#if  0
 	int err;
 	/* Camera A */
 	err = gpio_request(EXYNOS4_GPX1(2), "GPX1");
@@ -267,503 +266,15 @@ static int smdk4x12_cam0_reset(int dummy)
 	gpio_direction_output(EXYNOS4_GPX1(2), 0);
 	gpio_direction_output(EXYNOS4_GPX1(2), 1);
 	gpio_free(EXYNOS4_GPX1(2));
-
-	return 0;
-}
 #endif
-#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
-	|| defined(CONFIG_S5K3H2_CSI_D) || defined(CONFIG_S5K3H7_CSI_D) \
-	|| defined(CONFIG_S5K4E5_CSI_D) || defined(CONFIG_S5K6A3_CSI_D)
-static int smdk4x12_cam1_reset(int dummy)
-{
-	int err;
-
-	/* Camera B */
-	err = gpio_request(EXYNOS4_GPX1(0), "GPX1");
-	if (err)
-		printk(KERN_ERR "#### failed to request GPX1_0 ####\n");
-
-	s3c_gpio_setpull(EXYNOS4_GPX1(0), S3C_GPIO_PULL_NONE);
-	gpio_direction_output(EXYNOS4_GPX1(0), 0);
-	gpio_direction_output(EXYNOS4_GPX1(0), 1);
-	gpio_free(EXYNOS4_GPX1(0));
-
 	return 0;
 }
 #endif
 #endif
 
 #ifdef CONFIG_VIDEO_FIMC
-#ifdef CONFIG_VIDEO_S5K4BA
-static struct s5k4ba_platform_data s5k4ba_plat = {
-	.default_width = 800,
-	.default_height = 600,
-	.pixelformat = V4L2_PIX_FMT_YUYV,
-	.freq = 24000000,
-	.is_mipi = 0,
-};
 
-static struct i2c_board_info s5k4ba_i2c_info = {
-	I2C_BOARD_INFO("S5K4BA", 0x2d),
-	.platform_data = &s5k4ba_plat,
-};
-
-static struct s3c_platform_camera s5k4ba = {
-#ifdef CONFIG_ITU_A
-	.id		= CAMERA_PAR_A,
-	.clk_name	= "sclk_cam0",
-	.i2c_busnum	= 4,
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_ITU_B
-	.id		= CAMERA_PAR_B,
-	.clk_name	= "sclk_cam1",
-	.i2c_busnum	= 5,
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_ITU,
-	.fmt		= ITU_601_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_CBYCRY,
-	.info		= &s5k4ba_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_YUYV,
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.line_length	= 1920,
-	.width		= 1600,
-	.height		= 1200,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1600,
-		.height	= 1200,
-	},
-
-	/* Polarity */
-	.inv_pclk	= 0,
-	.inv_vsync	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-	.reset_camera	= 1,
-	.initialized	= 0,
-};
-#endif
-
-/* 2 MIPI Cameras */
-#ifdef CONFIG_VIDEO_S5K4EA
-static struct s5k4ea_platform_data s5k4ea_plat = {
-	.default_width = 1920,
-	.default_height = 1080,
-	.pixelformat = V4L2_PIX_FMT_UYVY,
-	.freq = 24000000,
-	.is_mipi = 1,
-};
-
-static struct i2c_board_info s5k4ea_i2c_info = {
-	I2C_BOARD_INFO("S5K4EA", 0x2d),
-	.platform_data = &s5k4ea_plat,
-};
-
-static struct s3c_platform_camera s5k4ea = {
-#ifdef CONFIG_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.i2c_busnum	= 4,
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.i2c_busnum	= 5,
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.info		= &s5k4ea_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-
-	.mipi_lanes	= 2,
-	.mipi_settle	= 12,
-	.mipi_align	= 32,
-
-	/* Polarity */
-	.inv_pclk	= 0,
-	.inv_vsync	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-
-	.initialized	= 0,
-};
-#endif
-
-#ifdef WRITEBACK_ENABLED
-static struct i2c_board_info writeback_i2c_info = {
-	I2C_BOARD_INFO("WriteBack", 0x0),
-};
-
-static struct s3c_platform_camera writeback = {
-	.id		= CAMERA_WB,
-	.fmt		= ITU_601_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_CBYCRY,
-	.i2c_busnum	= 0,
-	.info		= &writeback_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_YUV444,
-	.line_length	= 800,
-	.width		= 480,
-	.height		= 800,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 480,
-		.height	= 800,
-	},
-
-	.initialized	= 0,
-};
-#endif
-
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-#ifdef CONFIG_VIDEO_S5K3H2
-static struct i2c_board_info s5k3h2_sensor_info = {
-	.type = "S5K3H2",
-};
-
-static struct s3c_platform_camera s5k3h2 = {
-#ifdef CONFIG_S5K3H2_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k3h2_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 2,
-	.mipi_settle	= 12,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-#ifdef CONFIG_S5K3H2_CSI_C
-	.flite_id	= FLITE_IDX_A,
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-	.flite_id	= FLITE_IDX_B,
-#endif
-	.use_isp	= true,
-#ifdef CONFIG_S5K3H2_CSI_C
-	.sensor_index	= 1,
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-	.sensor_index	= 101,
-#endif
-};
-#endif
-
-#ifdef CONFIG_VIDEO_S5K3H7
-static struct i2c_board_info s5k3h7_sensor_info = {
-	.type = "S5K3H7",
-};
-
-static struct s3c_platform_camera s5k3h7 = {
-#ifdef CONFIG_S5K3H7_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k3h7_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 2,
-	.mipi_settle	= 12,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-#ifdef CONFIG_S5K3H7_CSI_C
-	.flite_id	= FLITE_IDX_A,
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-	.flite_id	= FLITE_IDX_B,
-#endif
-	.use_isp	= true,
-#ifdef CONFIG_S5K3H7_CSI_C
-	.sensor_index	= 4,
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-	.sensor_index	= 104,
-#endif
-};
-#endif
-
-#ifdef CONFIG_VIDEO_S5K4E5
-static struct i2c_board_info s5k4e5_sensor_info = {
-	.type = "S5K4E5",
-};
-
-static struct s3c_platform_camera s5k4e5 = {
-#ifdef CONFIG_S5K4E5_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k4e5_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 2,
-	.mipi_settle	= 12,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-#ifdef CONFIG_S5K4E5_CSI_C
-	.flite_id	= FLITE_IDX_A,
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-	.flite_id	= FLITE_IDX_B,
-#endif
-	.use_isp	= true,
-#ifdef CONFIG_S5K4E5_CSI_C
-	.sensor_index	= 3,
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-	.sensor_index	= 103,
-#endif
-};
-#endif
-
-
-#ifdef CONFIG_VIDEO_S5K6A3
-static struct i2c_board_info s5k6a3_sensor_info = {
-	.type = "S5K6A3",
-};
-
-static struct s3c_platform_camera s5k6a3 = {
-#ifdef CONFIG_S5K6A3_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k6a3_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 1,
-	.mipi_settle	= 18,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-#ifdef CONFIG_S5K6A3_CSI_C
-	.flite_id	= FLITE_IDX_A,
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-	.flite_id	= FLITE_IDX_B,
-#endif
-	.use_isp	= true,
-#ifdef CONFIG_S5K6A3_CSI_C
-	.sensor_index	= 2,
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-	.sensor_index	= 102,
-#endif
-};
-#endif
-
-#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
-static struct i2c_board_info s5k6a3_fd_sensor_info = {
-	.type = "S5K6A3_FD",
-};
-
-static struct s3c_platform_camera s5k6a3_fd = {
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k6a3_fd_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 1,
-	.mipi_settle	= 18,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-	.flite_id	= FLITE_IDX_B,
-	.use_isp	= true,
-	.sensor_index	= 200
-};
-#endif
-
-#endif
-
-/* legacy M5MOLS Camera driver configuration */
-#ifdef CONFIG_VIDEO_M5MO
-#define CAM_CHECK_ERR_RET(x, msg)	\
-	if (unlikely((x) < 0)) { \
-		printk(KERN_ERR "\nfail to %s: err = %d\n", msg, x); \
-		return x; \
-	}
-#define CAM_CHECK_ERR(x, msg)	\
-		if (unlikely((x) < 0)) { \
-			printk(KERN_ERR "\nfail to %s: err = %d\n", msg, x); \
-		}
-
-static int m5mo_config_isp_irq(void)
-{
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(3), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS4_GPX3(3), S3C_GPIO_PULL_NONE);
-	return 0;
-}
-
-static struct m5mo_platform_data m5mo_plat = {
-	.default_width = 640, /* 1920 */
-	.default_height = 480, /* 1080 */
-	.pixelformat = V4L2_PIX_FMT_UYVY,
-	.freq = 24000000,
-	.is_mipi = 1,
-	.config_isp_irq = m5mo_config_isp_irq,
-	.irq = IRQ_EINT(27),
-};
-
-static struct i2c_board_info m5mo_i2c_info = {
-	I2C_BOARD_INFO("M5MO", 0x1F),
-	.platform_data = &m5mo_plat,
-	.irq = IRQ_EINT(27),
-};
-
-static struct s3c_platform_camera m5mo = {
-#ifdef CONFIG_CSI_C
-	.id		= CAMERA_CSI_C,
-	.clk_name	= "sclk_cam0",
-	.i2c_busnum	= 4,
-	.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_CSI_D
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.i2c_busnum	= 5,
-	.cam_power	= smdk4x12_cam1_reset,
-#endif
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.info		= &m5mo_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.srclk_name	= "xusbxti", /* "mout_mpll" */
-	.clk_rate	= 24000000, /* 48000000 */
-	.line_length	= 1920,
-	.width		= 640,
-	.height		= 480,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 640,
-		.height	= 480,
-	},
-
-	.mipi_lanes	= 2,
-	.mipi_settle	= 12,
-	.mipi_align	= 32,
-
-	/* Polarity */
-	.inv_pclk	= 1,
-	.inv_vsync	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-	.reset_camera	= 0,
-	.initialized	= 0,
-};
-#endif
+/*  MT9M113 Camera driver configuration */
 
 #ifdef CONFIG_VIDEO_MT9M113
 static int mt9m113_power_en(int onoff)
@@ -882,6 +393,97 @@ static struct s3c_platform_camera mt9m113 = {
 	.initialized	= 0,
 };
 
+
+static struct i2c_gpio_platform_data i2c9_platdata = {
+	.sda_pin = EXYNOS4212_GPM4(1),
+	.scl_pin = EXYNOS4212_GPM4(0),
+	.udelay = 2,  //250Mhz
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
+};
+
+static struct platform_device s3c_device_i2c9= {
+	.name = "i2c-gpio",
+	.id = 9,
+	.dev.platform_data = &i2c9_platdata,
+};
+
+static struct i2c_board_info willow_i2c_devs9[] __initdata = {
+	{
+		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
+	},
+};
+
+#endif
+/* Interface setting */
+static struct s3c_platform_fimc fimc_plat = {
+#ifdef CONFIG_ITU_A
+	.default_cam	= CAMERA_PAR_A,
+#endif
+	.camera		= {
+#ifdef CONFIG_VIDEO_MT9M113	
+		&mt9m113,
+#endif	
+	},
+	.hw_ver		= 0x51,
+};
+#endif /* CONFIG_VIDEO_FIMC */
+
+#ifdef CONFIG_S3C64XX_DEV_SPI
+static struct s3c64xx_spi_csinfo spi0_csi[] = {
+	[0] = {
+		.line = EXYNOS4_GPB(1),
+		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
+	},
+};
+
+static struct spi_board_info spi0_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi0_csi[0],
+	}
+};
+
+static struct s3c64xx_spi_csinfo spi2_csi[] = {
+	[0] = {
+		.line = EXYNOS4_GPC1(2),
+		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
+	},
+};
+
+static struct spi_board_info spi2_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 2,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi2_csi[0],
+	}
+};
+#endif
+
+#ifdef CONFIG_FB_S5P
+#ifdef CONFIG_LCD_LTN101AL03
+static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
+	.hw_ver = 0x70,
+	.clk_name = "sclk_lcd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+#endif
+#endif
+
 #ifdef CONFIG_BATTERY_MAX17040_OLD
 static int max8903g_charger_enable(void)
 {
@@ -962,385 +564,6 @@ static struct max17040_platform_data max17040_platform_data = {
 	//.rcomp_value = 0xD700,
 };
 #endif //CONFIG_BATTERY_MAX17040_OLD
-
-static struct i2c_gpio_platform_data i2c9_platdata = {
-	.sda_pin = EXYNOS4212_GPM4(1),
-	.scl_pin = EXYNOS4212_GPM4(0),
-//	.udelay = 1,
-	.udelay = 2,  //250Mhz
-	.sda_is_open_drain = 0,
-	.scl_is_open_drain = 0,
-	.scl_is_output_only = 0,
-};
-
-static struct platform_device s3c_device_i2c9= {
-	.name = "i2c-gpio",
-	.id = 9,
-	.dev.platform_data = &i2c9_platdata,
-};
-
-static struct i2c_board_info willow_i2c_devs9[] __initdata = {
-	{
-		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
-	},
-};
-
-#endif
-/* Interface setting */
-static struct s3c_platform_fimc fimc_plat = {
-#ifdef CONFIG_ITU_A
-	.default_cam	= CAMERA_PAR_A,
-#endif
-#ifdef CONFIG_ITU_B
-	.default_cam	= CAMERA_PAR_B,
-#endif
-#ifdef CONFIG_CSI_C
-	.default_cam	= CAMERA_CSI_C,
-#endif
-#ifdef CONFIG_CSI_D
-	.default_cam	= CAMERA_CSI_D,
-#endif
-#ifdef WRITEBACK_ENABLED
-	.default_cam	= CAMERA_WB,
-#endif
-	.camera		= {
-#ifdef CONFIG_VIDEO_MT9M113	
-		&mt9m113,
-#endif	
-#ifdef CONFIG_VIDEO_S5K4BA
-		&s5k4ba,
-#endif
-#ifdef CONFIG_VIDEO_S5K4EA
-		&s5k4ea,
-#endif
-#ifdef CONFIG_VIDEO_M5MO
-		&m5mo,
-#endif
-#ifdef CONFIG_VIDEO_S5K3H2
-		&s5k3h2,
-#endif
-#ifdef CONFIG_VIDEO_S5K3H7
-		&s5k3h7,
-#endif
-#ifdef CONFIG_VIDEO_S5K4E5
-		&s5k4e5,
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-		&s5k6a3,
-#endif
-#ifdef WRITEBACK_ENABLED
-		&writeback,
-#endif
-#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
-		&s5k6a3_fd,
-#endif
-	},
-	.hw_ver		= 0x51,
-};
-#endif /* CONFIG_VIDEO_FIMC */
-
-/* for mainline fimc interface */
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-#ifdef WRITEBACK_ENABLED
-struct writeback_mbus_platform_data {
-	int id;
-	struct v4l2_mbus_framefmt fmt;
-};
-
-static struct i2c_board_info __initdata writeback_info = {
-	I2C_BOARD_INFO("writeback", 0x0),
-};
-#endif
-
-#ifdef CONFIG_VIDEO_S5K4BA
-static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
-	.id		= 0,
-	.fmt = {
-		.width	= 1600,
-		.height	= 1200,
-		/*.code	= V4L2_MBUS_FMT_UYVY8_2X8, */
-		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
-	},
-	.clk_rate	= 24000000UL,
-#ifdef CONFIG_ITU_A
-	.set_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_ITU_B
-	.set_power	= smdk4x12_cam1_reset,
-#endif
-};
-
-static struct i2c_board_info s5k4ba_info = {
-	I2C_BOARD_INFO("S5K4BA", 0x2d),
-	.platform_data = &s5k4ba_mbus_plat,
-};
-#endif
-
-/* 2 MIPI Cameras */
-#ifdef CONFIG_VIDEO_S5K4EA
-static struct s5k4ea_mbus_platform_data s5k4ea_mbus_plat = {
-#ifdef CONFIG_CSI_C
-	.id		= 0,
-	.set_power = smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_CSI_D
-	.id		= 1,
-	.set_power = smdk4x12_cam1_reset,
-#endif
-	.fmt = {
-		.width	= 1920,
-		.height	= 1080,
-		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
-	},
-	.clk_rate	= 24000000UL,
-};
-
-static struct i2c_board_info s5k4ea_info = {
-	I2C_BOARD_INFO("S5K4EA", 0x2d),
-	.platform_data = &s5k4ea_mbus_plat,
-};
-#endif
-
-#ifdef CONFIG_VIDEO_M5MOLS
-static struct m5mols_platform_data m5mols_platdata = {
-#ifdef CONFIG_CSI_C
-	.gpio_rst = EXYNOS4_GPX1(2), /* ISP_RESET */
-#endif
-#ifdef CONFIG_CSI_D
-	.gpio_rst = EXYNOS4_GPX1(0), /* ISP_RESET */
-#endif
-	.enable_rst = true, /* positive reset */
-	.irq = IRQ_EINT(27),
-};
-
-static struct i2c_board_info m5mols_board_info = {
-	I2C_BOARD_INFO("M5MOLS", 0x1F),
-	.platform_data = &m5mols_platdata,
-};
-
-#endif
-
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-#ifdef CONFIG_VIDEO_S5K3H2
-static struct i2c_board_info s5k3h2_sensor_info = {
-	.type = "S5K3H2",
-};
-#endif
-#ifdef CONFIG_VIDEO_S5K3H7
-static struct i2c_board_info s5k3h7_sensor_info = {
-	.type = "S5K3H7",
-};
-#endif
-#ifdef CONFIG_VIDEO_S5K4E5
-static struct i2c_board_info s5k4e5_sensor_info = {
-	.type = "S5K4E5",
-};
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-static struct i2c_board_info s5k6a3_sensor_info = {
-	.type = "S5K6A3",
-};
-#endif
-#endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-/* This is for platdata of fimc-lite */
-#ifdef CONFIG_VIDEO_S5K3H2
-static struct s3c_platform_camera s5k3h2 = {
-	.type  = CAM_TYPE_MIPI,
-	.use_isp = true,
-	.inv_pclk = 0,
-	.inv_vsync = 0,
-	.inv_href = 0,
-	.inv_hsync = 0,
-};
-#endif
-
-#ifdef CONFIG_VIDEO_S5K3H7
-static struct s3c_platform_camera s5k3h7 = {
-	.type  = CAM_TYPE_MIPI,
-	.use_isp = true,
-	.inv_pclk = 0,
-	.inv_vsync = 0,
-	.inv_href = 0,
-	.inv_hsync = 0,
-};
-#endif
-
-#ifdef CONFIG_VIDEO_S5K4E5
-static struct s3c_platform_camera s5k4e5 = {
-	.type  = CAM_TYPE_MIPI,
-	.use_isp = true,
-	.inv_pclk = 0,
-	.inv_vsync = 0,
-	.inv_href = 0,
-	.inv_hsync = 0,
-};
-#endif
-
-
-#ifdef CONFIG_VIDEO_S5K6A3
-static struct s3c_platform_camera s5k6a3 = {
-	.type  = CAM_TYPE_MIPI,
-	.use_isp = true,
-	.inv_pclk = 0,
-	.inv_vsync = 0,
-	.inv_href = 0,
-	.inv_hsync = 0,
-};
-#endif
-#endif
-#endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
-
-#ifdef CONFIG_S3C64XX_DEV_SPI
-static struct s3c64xx_spi_csinfo spi0_csi[] = {
-	[0] = {
-		.line = EXYNOS4_GPB(1),
-		.set_level = gpio_set_value,
-		.fb_delay = 0x2,
-	},
-};
-
-static struct spi_board_info spi0_board_info[] __initdata = {
-	{
-		.modalias = "spidev",
-		.platform_data = NULL,
-		.max_speed_hz = 10*1000*1000,
-		.bus_num = 0,
-		.chip_select = 0,
-		.mode = SPI_MODE_0,
-		.controller_data = &spi0_csi[0],
-	}
-};
-
-static struct s3c64xx_spi_csinfo spi2_csi[] = {
-	[0] = {
-		.line = EXYNOS4_GPC1(2),
-		.set_level = gpio_set_value,
-		.fb_delay = 0x2,
-	},
-};
-
-static struct spi_board_info spi2_board_info[] __initdata = {
-	{
-		.modalias = "spidev",
-		.platform_data = NULL,
-		.max_speed_hz = 10*1000*1000,
-		.bus_num = 2,
-		.chip_select = 0,
-		.mode = SPI_MODE_0,
-		.controller_data = &spi2_csi[0],
-	}
-};
-#endif
-
-#ifdef CONFIG_FB_S5P
-#ifdef CONFIG_LCD_LTN101AL03
-#if 1
-static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
-	.hw_ver = 0x70,
-	.clk_name = "sclk_lcd",
-	.nr_wins = 5,
-	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
-	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
-};
-#else
-static void lcd_ltn101al03_set_power(struct plat_lcd_data *pd,
-				   unsigned int power)
-{
-	if (power) {
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
-#endif
-	} else {
-
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
-#endif
-	}
-}
-
-static struct plat_lcd_data willow_lcd_ltn101al03_data = {
-	.set_power		= lcd_ltn101al03_set_power,
-};
-
-static struct platform_device willow_lcd_ltn101al03 = {
-	.name			= "platform-lcd",
-	.dev.parent		= &s5p_device_fimd0.dev,
-	.dev.platform_data      = &willow_lcd_ltn101al03_data,
-};
-
-static struct s3c_fb_pd_win willow_fb_win0 = {
-	.win_mode = {
-		.left_margin	= 16, //64,
-		.right_margin	= 64, //16,
-		.upper_margin	= 1, //12,
-		.lower_margin	= 12, // 1,
-		.hsync_len	= 48,
-		.vsync_len	= 3,
-		.xres		= 1280, /* real size : 1280 */
-		.yres		= 800,
-	},
-	.virtual_x		= 1280, /* real size : 1280 */
-	.virtual_y		= 800,//800 * 2,
-	.width			= 1280,// 223,	//?
-	.height			= 800, //125,	//?
-	.max_bpp		= 32,
-	.default_bpp		= 24,
-};
-
-static struct s3c_fb_pd_win willow_fb_win1 = {
-	.win_mode = {
-		.left_margin	= 16, //64,
-		.right_margin	= 64, //16,
-		.upper_margin	= 1, //12,
-		.lower_margin	= 12, // 1,
-		.hsync_len	= 48,
-		.vsync_len	= 3,
-		.xres		= 1280, /* real size : 1280 */
-		.yres		= 800,
-	},
-	.virtual_x		= 1280, /* real size : 1280 */
-	.virtual_y		= 800,//800 * 2,
-	.width			= 1280,// 223,	//?
-	.height			= 800, //125,	//?
-	.max_bpp		= 32,
-	.default_bpp		= 24,
-};
-
-static struct s3c_fb_pd_win willow_fb_win2 = {
-	.win_mode = {
-		.left_margin	= 16, //64,
-		.right_margin	= 64, //16,
-		.upper_margin	= 1, //12,
-		.lower_margin	= 12, // 1,
-		.hsync_len	= 48,
-		.vsync_len	= 3,
-		.xres		= 1280, /* real size : 1280 */
-		.yres		= 800,
-	},
-	.virtual_x		= 1280, /* real size : 1280 */
-	.virtual_y		= 800,//800 * 2,
-	.width			= 1280,// 223,	//?
-	.height			= 800, //125,	//?
-	.max_bpp		= 32,
-	.default_bpp		= 24,
-};
-
-static struct s3c_fb_platdata willow_lcd0_pdata __initdata = {
-	.win[0]		= &willow_fb_win0,
-	.win[1]		= &willow_fb_win1,
-	.win[2]		= &willow_fb_win2,
-	.default_win	= 2,
-	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
-	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_HSYNC |
-			  VIDCON1_INV_VSYNC,
-	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
-};
-#endif
-#endif
-#endif
 
 static void willow_power_off(void)
 {
@@ -3263,254 +2486,6 @@ static struct s5p_platform_cec hdmi_cec_data __initdata = {
 };
 #endif
 
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-static struct s5p_fimc_isp_info isp_info[] = {
-#if defined(CONFIG_VIDEO_S5K4BA)
-	{
-		.board_info	= &s5k4ba_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_ITU_601,
-#ifdef CONFIG_ITU_A
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-#endif
-#ifdef CONFIG_ITU_B
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-#endif
-		.flags		= FIMC_CLK_INV_VSYNC,
-	},
-#endif
-#if defined(CONFIG_VIDEO_S5K4EA)
-	{
-		.board_info	= &s5k4ea_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_CSI_C
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-#endif
-#ifdef CONFIG_CSI_D
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-#endif
-		.flags		= FIMC_CLK_INV_VSYNC,
-		.csi_data_align = 32,
-	},
-#endif
-#if defined(CONFIG_VIDEO_M5MOLS)
-	{
-		.board_info	= &m5mols_board_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_CSI_C
-		.i2c_bus_num	= 4,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-#endif
-#ifdef CONFIG_CSI_D
-		.i2c_bus_num	= 5,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-#endif
-		.flags		= FIMC_CLK_INV_PCLK | FIMC_CLK_INV_VSYNC,
-		.csi_data_align = 32,
-	},
-#endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-#if defined(CONFIG_VIDEO_S5K3H2)
-	{
-		.board_info	= &s5k3h2_sensor_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_S5K3H2_CSI_C
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_A,
-		.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_B,
-		.cam_power	= smdk4x12_cam1_reset,
-#endif
-		.flags		= 0,
-		.csi_data_align = 24,
-		.use_isp	= true,
-	},
-#endif
-#if defined(CONFIG_VIDEO_S5K3H7)
-	{
-		.board_info	= &s5k3h7_sensor_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_S5K3H7_CSI_C
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_A,
-		.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_B,
-		.cam_power	= smdk4x12_cam1_reset,
-#endif
-		.csi_data_align = 24,
-		.use_isp	= true,
-	},
-#endif
-#if defined(CONFIG_VIDEO_S5K4E5)
-	{
-		.board_info	= &s5k4e5_sensor_info,
-		.clk_frequency  = 24000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_S5K4E5_CSI_C
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_A,
-		.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_B,
-		.cam_power	= smdk4x12_cam1_reset,
-#endif
-		.csi_data_align = 24,
-		.use_isp	= true,
-	},
-#endif
-#if defined(CONFIG_VIDEO_S5K6A3)
-	{
-		.board_info	= &s5k6a3_sensor_info,
-		.clk_frequency  = 12000000UL,
-		.bus_type	= FIMC_MIPI_CSI2,
-#ifdef CONFIG_S5K6A3_CSI_C
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_A,
-		.cam_power	= smdk4x12_cam0_reset,
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-		.i2c_bus_num	= 1,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
-		.flite_id	= FLITE_IDX_B,
-		.cam_power	= smdk4x12_cam1_reset,
-#endif
-		.flags		= 0,
-		.csi_data_align = 12,
-		.use_isp	= true,
-	},
-#endif
-#endif
-#if defined(WRITEBACK_ENABLED)
-	{
-		.board_info	= &writeback_info,
-		.bus_type	= FIMC_LCD_WB,
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flags		= FIMC_CLK_INV_VSYNC,
-	},
-#endif
-};
-
-static void __init smdk4x12_subdev_config(void)
-{
-	s3c_fimc0_default_data.isp_info[0] = &isp_info[0];
-	s3c_fimc0_default_data.isp_info[0]->use_cam = true;
-	s3c_fimc0_default_data.isp_info[1] = &isp_info[1];
-	s3c_fimc0_default_data.isp_info[1]->use_cam = true;
-	/* support using two fimc as one sensore */
-	{
-		static struct s5p_fimc_isp_info camcording1;
-		static struct s5p_fimc_isp_info camcording2;
-		memcpy(&camcording1, &isp_info[0], sizeof(struct s5p_fimc_isp_info));
-		memcpy(&camcording2, &isp_info[1], sizeof(struct s5p_fimc_isp_info));
-		s3c_fimc1_default_data.isp_info[0] = &camcording1;
-		s3c_fimc1_default_data.isp_info[0]->use_cam = false;
-		s3c_fimc1_default_data.isp_info[1] = &camcording2;
-		s3c_fimc1_default_data.isp_info[1]->use_cam = false;
-	}
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-#ifdef CONFIG_VIDEO_S5K3H2
-#ifdef CONFIG_S5K3H2_CSI_C
-	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis0_default_data.lanes	= 2;
-	s5p_mipi_csis0_default_data.alignment	= 24;
-	s5p_mipi_csis0_default_data.hs_settle	= 12;
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis1_default_data.lanes	= 2;
-	s5p_mipi_csis1_default_data.alignment	= 24;
-	s5p_mipi_csis1_default_data.hs_settle	= 12;
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K3H7
-#ifdef CONFIG_S5K3H7_CSI_C
-	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis0_default_data.lanes	= 2;
-	s5p_mipi_csis0_default_data.alignment	= 24;
-	s5p_mipi_csis0_default_data.hs_settle	= 12;
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis1_default_data.lanes	= 2;
-	s5p_mipi_csis1_default_data.alignment	= 24;
-	s5p_mipi_csis1_default_data.hs_settle	= 12;
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K4E5
-#ifdef CONFIG_S5K4E5_CSI_C
-	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis0_default_data.lanes	= 2;
-	s5p_mipi_csis0_default_data.alignment	= 24;
-	s5p_mipi_csis0_default_data.hs_settle	= 12;
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis1_default_data.lanes	= 2;
-	s5p_mipi_csis1_default_data.alignment	= 24;
-	s5p_mipi_csis1_default_data.hs_settle	= 12;
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_S5K6A3_CSI_C
-	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis0_default_data.lanes 	= 1;
-	s5p_mipi_csis0_default_data.alignment	= 24;
-	s5p_mipi_csis0_default_data.hs_settle	= 12;
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
-	s5p_mipi_csis1_default_data.lanes 	= 1;
-	s5p_mipi_csis1_default_data.alignment	= 24;
-	s5p_mipi_csis1_default_data.hs_settle	= 12;
-#endif
-#endif
-#endif
-}
-static void __init smdk4x12_camera_config(void)
-{
-	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
-	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 4, S3C_GPIO_SFN(2));
-#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
-	/* CAM B port(b0011) : PCLK, DATA[0-6] */
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
-	/* CAM B port(b0011) : FIELD, DATA[7]*/
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM1(0), 2, S3C_GPIO_SFN(3));
-	/* CAM B port(b0011) : VSYNC, HREF, CLKOUT*/
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM2(0), 3, S3C_GPIO_SFN(3));
-#endif
-	/* note : driver strength to max is unnecessary */
-#ifdef CONFIG_VIDEO_M5MOLS
-	s3c_gpio_cfgpin(EXYNOS4_GPX2(6), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS4_GPX2(6), S3C_GPIO_PULL_NONE);
-#endif
-}
-#endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
 
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 static void __set_flite_camera_config(struct exynos_platform_flite *data,
@@ -3524,39 +2499,7 @@ static void __init smdk4x12_set_camera_flite_platdata(void)
 {
 	int flite0_cam_index = 0;
 	int flite1_cam_index = 0;
-#ifdef CONFIG_VIDEO_S5K3H2
-#ifdef CONFIG_S5K3H2_CSI_C
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k3h2;
-#endif
-#ifdef CONFIG_S5K3H2_CSI_D
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k3h2;
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K3H7
-#ifdef CONFIG_S5K3H7_CSI_C
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k3h7;
-#endif
-#ifdef CONFIG_S5K3H7_CSI_D
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k3h7;
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K4E5
-#ifdef CONFIG_S5K4E5_CSI_C
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k4e5;
-#endif
-#ifdef CONFIG_S5K4E5_CSI_D
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k4e5;
-#endif
-#endif
 
-#ifdef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_S5K6A3_CSI_C
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k6a3;
-#endif
-#ifdef CONFIG_S5K6A3_CSI_D
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k6a3;
-#endif
-#endif
 	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
 	__set_flite_camera_config(&exynos_flite1_default_data, 0, flite1_cam_index);
 }
