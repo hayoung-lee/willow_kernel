@@ -37,6 +37,10 @@
 #include <mach/smc.h>
 #include <mach/gpio.h>
 
+#ifdef CONFIG_MACH_WILLOW
+#include <mach/gpio-willow.h>
+#endif
+
 void (*exynos4_sleep_gpio_table_set)(void);
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_INFORM0            (S5P_VA_SYSRAM_NS + 0x8)
@@ -335,7 +339,9 @@ static void exynos4_cpu_prepare(void)
 {
 	if (exynos4_sleep_gpio_table_set)
 		exynos4_sleep_gpio_table_set();
-
+#ifdef CONFIG_MACH_WILLOW
+	willow_config_gpio_table();
+#endif
 	/* Set value of power down register for sleep mode */
 
 	exynos4_sys_powerdown_conf(SYS_SLEEP);
@@ -359,6 +365,27 @@ static int exynos4_pm_add(struct sys_device *sysdev)
 	pm_cpu_sleep = exynos4_cpu_suspend;
 
 	return 0;
+}
+
+/* This function copy from linux/arch/arm/kernel/smp_scu.c */
+
+void exynos4_scu_enable(void __iomem *scu_base)
+{
+	u32 scu_ctrl;
+
+	scu_ctrl = __raw_readl(scu_base);
+	/* already enabled? */
+	if (scu_ctrl & 1)
+		return;
+
+	scu_ctrl |= 1;
+	__raw_writel(scu_ctrl, scu_base);
+
+	/*
+	 * Ensure that the data accessed by CPU0 before the SCU was
+	 * initialised is visible to the other CPUs.
+	 */
+	flush_cache_all();
 }
 
 static struct sysdev_driver exynos4_pm_driver = {
@@ -463,6 +490,7 @@ static void exynos4_pm_resume(void)
 	else
 		s3c_pm_do_restore(exynos4x12_regs_save,
 					ARRAY_SIZE(exynos4x12_regs_save));
+
 	if (!exynos4_is_c2c_use())
 		s3c_pm_do_restore_core(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
 	else {
@@ -488,7 +516,7 @@ static void exynos4_pm_resume(void)
 		__raw_writel(0x00000001, S5P_ARM_CORE_OPTION(3));
 	}
 
-	scu_enable(S5P_VA_SCU);
+	exynos4_scu_enable(S5P_VA_SCU);
 
 #ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_ARM_TRUSTZONE

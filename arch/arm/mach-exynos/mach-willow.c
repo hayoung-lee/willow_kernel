@@ -2118,7 +2118,7 @@ static struct platform_device willow_gpio_keys = {
 	},
 };
 
-static void wilow_gpio_key_cfg(void)
+static void willow_gpio_key_cfg(void)
 {
 	s3c_gpio_cfgpin(WILLOW_POWER_KEY, S3C_GPIO_SFN(0x0));
 	s3c_gpio_setpull(WILLOW_POWER_KEY, S3C_GPIO_PULL_UP);
@@ -2128,10 +2128,18 @@ static void wilow_gpio_key_cfg(void)
 	s3c_gpio_setpull(WILLOW_VOLUM_UP, S3C_GPIO_PULL_UP);
 }
 
-static void wilow_gpio_pmint_cfg(void)
+static void willow_gpio_pmint_cfg(void)
 {
 	s3c_gpio_cfgpin(GPIO_PMIC_IRQ, S3C_GPIO_SFN(0xF));
 	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_UP);
+}
+
+static void willow_gpio_i2c_cfg(void)
+{
+	//GSENSOR
+	s3c_gpio_setpull(EXYNOS4_GPA0(6), S3C_GPIO_PULL_UP);
+	s3c_gpio_setpull(EXYNOS4_GPA0(7), S3C_GPIO_PULL_UP);
+
 }
 
 #ifdef CONFIG_WAKEUP_ASSIST
@@ -2880,7 +2888,7 @@ static void __init willow_machine_init(void)
 #endif
 	samsung_board_rev = get_samsung_board_rev();
 
-	willow_config_sleep_gpio_table();
+	willow_config_gpio_table();
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
@@ -3295,8 +3303,9 @@ static void __init willow_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
 #endif
 
-	wilow_gpio_key_cfg();
-	wilow_gpio_pmint_cfg();
+	willow_gpio_key_cfg();
+	willow_gpio_pmint_cfg();
+	willow_gpio_i2c_cfg();
 
 	register_reboot_notifier(&exynos4_reboot_notifier);
 }
