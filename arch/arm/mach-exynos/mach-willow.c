@@ -1596,6 +1596,7 @@ static void __init willow_usbgadget_init(void)
 }
 #endif
 
+#ifdef CONFIG_MFD_MAX77686
 /* max77686 */
 static struct regulator_consumer_supply max77686_buck1[] = {
 		REGULATOR_SUPPLY("vdd_mif", NULL),
@@ -2422,6 +2423,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck4_voltage[7] = 900000,
 #endif
 };
+#endif
 
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
@@ -2487,13 +2489,14 @@ static struct platform_device m5mols_fixed_voltage = {
 };
 #endif
 
-
+#ifdef CONFIG_MFD_MAX77686
 static struct i2c_board_info i2c_devs0[] __initdata = {
 	{
 		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
 		.platform_data	= &exynos4_max77686_info,
 	},
 };
+#endif
 
 static struct i2c_board_info i2c_devs1[] __initdata = {
 	{
@@ -2869,7 +2872,9 @@ static struct platform_device *willow_devices[] __initdata = {
 #endif
 	&s3c_device_wdt,
 	&s3c_device_rtc,
+#ifdef CONFIG_MFD_MAX77686
 	&s3c_device_i2c0,
+#endif
 	&s3c_device_i2c1,
 	&s3c_device_i2c2,
 	&s3c_device_i2c3,
@@ -3786,10 +3791,10 @@ static void __init willow_machine_init(void)
 	exynos_pd_enable(&exynos4_device_pd[PD_GPS_ALIVE].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
+#ifdef CONFIG_MFD_MAX77686
 	s3c_i2c0_set_platdata(NULL);
-
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
-
+#endif
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
