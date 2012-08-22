@@ -66,4 +66,4 @@ obj-$(CONFIG_SND_SOC_WILLOW_WM8985) += snd-soc-willow-wm8985.o
 
 obj-$(CONFIG_SND_SAMSUNG_RP)   += srp_ulp/
 obj-$(CONFIG_SND_SAMSUNG_ALP)   += srp_alp/
-
+obj-$(CONFIG_JACK_MGR) += jack_mgr.o

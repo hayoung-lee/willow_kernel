@@ -2503,6 +2503,173 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 		I2C_BOARD_INFO("wm8985", 0x1a),
 	},
 };
+
+#ifdef CONFIG_JACK_MGR
+#include <linux/sec_jack.h>
+
+static struct gpio_keys_button willow_jack_buttons[] = {
+  {
+    .code               = KEY_MEDIA,
+    .gpio               = GPIO_REMOTE_KEY_INT,
+    .active_low         = 1,
+    .desc               = "Earjack Remote",
+    .type               = EV_KEY,
+    .wakeup             = 0,
+    .debounce_interval  = 30
+  },
+};
+
+static struct gpio_keys_platform_data willow_jack_button_data = {
+  .buttons	= willow_jack_buttons,
+  .nbuttons	= ARRAY_SIZE(willow_jack_buttons),
+  .rep      = 0,
+};
+
+static struct platform_device willow_jack_button_device = {
+  .name           = "jack-keys",
+  .id             = -1,
+  .num_resources  = 0,
+  .dev            = {
+                      .platform_data	= &willow_jack_button_data,
+                    }
+};
+
+static struct sec_jack_zone sec_jack_zones[] = {
+  {
+    /* adc <= 2000, unstable zone, default to 3pole if it stays
+     * in this range for a half second (20ms delays, 25 samples)
+     */
+    .adc_high = 2000,
+    .delay_ms = 20,
+    .check_count = 25,
+    .jack_type = SEC_HEADSET_3POLE,
+  },
+  {
+    /* 2000 < adc <= 3300, 4 pole zone, default to 4pole if it
+     * stays in this range for 200ms (20ms delays, 10 samples)
+     */
+    .adc_high = 3300,
+    .delay_ms = 20,
+    .check_count = 10,
+    .jack_type = SEC_HEADSET_4POLE,
+  },
+  {
+    /* adc > 3300, unstable zone, default to 3pole if it stays
+     * in this range for a second (10ms delays, 100 samples)
+     */
+    .adc_high = 0x7fffffff,
+    .delay_ms = 10,
+    .check_count = 100,
+    .jack_type = SEC_HEADSET_3POLE,
+  },
+};
+
+static struct sec_jack_remote_key_zone sec_jack_remote_key_zones[] = {
+  {
+	/* adc <= 150 - Media Key */
+	.adc_high = 150,
+	.delay_ms = 10,
+	.check_count = 10,
+	.remote_key = KEY_MEDIA,
+  },
+  {
+    /* 150 < adc <= 400 - Volume Up Key */
+	.adc_high = 400,
+	.delay_ms = 10,
+	.check_count = 10,
+    .remote_key = KEY_VOLUMEUP,
+  },
+  {
+    /* 400 < adc <= 700 - Volume Down Key */
+	.adc_high = 700,
+	.delay_ms = 10,
+	.check_count = 10,
+    .remote_key = KEY_VOLUMEDOWN,
+  }
+};
+
+static int sec_jack_get_adc_value(void)
+{
+    return (0);
+    //not supported yet
+#if 0
+  /* WS ==> 3-pole only */
+  if( willow_get_hw_version() == T10_HW_VERSION_WS ){
+    return (0);
+ } else{
+    //TODO : other key adc value include remote key.
+    int adc = s3c_adc_get_adc_data(4);
+    return adc;
+ }
+#endif
+}
+
+extern int wm8985_micbias2_set_bias_ctrl(bool onoff);
+static void sec_jack_set_micbias_state(bool on, int jack_type)
+{
+    //TODO: micbias control if need.
+    //wm8985_micbias2_set_bias_ctrl(on);
+}
+
+struct sec_jack_platform_data willow_jack_pdata = {
+  .set_micbias_state = sec_jack_set_micbias_state,
+  .get_adc_value = sec_jack_get_adc_value,
+  .zones = sec_jack_zones,
+  .num_zones = ARRAY_SIZE(sec_jack_zones),
+  .det_gpio = GPIO_JACK_DET,
+  .send_end_gpio = GPIO_REMOTE_KEY_INT,
+  .det_active_high = 1,
+  .send_end_active_high = 0,
+  .remote_key_zones = sec_jack_remote_key_zones,
+  .num_remote_key_zones = ARRAY_SIZE(sec_jack_remote_key_zones),
+};
+
+static struct platform_device willow_device_jack = {
+  .name = "jack_mgr",
+  .id			  = 1, /* will be used also for gpio_event id */
+  .dev.platform_data	= &willow_jack_pdata,
+};
+
+#define MAX_ZONE_LIMIT		10
+static int willow_last_jack_remote_key = KEY_MAX;
+
+int willow_convert_jack_remote_key(int state)
+{
+	struct sec_jack_remote_key_zone *zones = willow_jack_pdata.remote_key_zones;
+	int size = willow_jack_pdata.num_remote_key_zones;
+	int count[MAX_ZONE_LIMIT] = {0};
+	int adc;
+	int i;
+	unsigned npolarity = !willow_jack_pdata.send_end_active_high;
+
+  if(state == 1)
+  {
+	while (gpio_get_value(willow_jack_pdata.send_end_gpio) ^ npolarity) {
+		adc = willow_jack_pdata.get_adc_value();
+		printk("%s: adc = %d\n", __func__, adc);
+
+		for (i = 0; i < size; i++) {
+			if (adc <= zones[i].adc_high) {
+				if (++count[i] > zones[i].check_count) {
+            willow_last_jack_remote_key = zones[i].remote_key;
+					return zones[i].remote_key;
+				}
+				msleep(zones[i].delay_ms);
+				break;
+			}
+		}
+	}
+
+    willow_last_jack_remote_key = KEY_MAX;
+    return KEY_MAX;
+  }
+  else
+  {
+    return willow_last_jack_remote_key;
+  }
+}
+#endif /* CONFIG_JACK_MGR */
+
 static void sensor_gpio_init(void){
 #if 1 
     int err;
@@ -3021,6 +3188,10 @@ static struct platform_device *willow_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
+#ifdef CONFIG_JACK_MGR
+	&willow_jack_button_device,
+	&willow_device_jack,
+#endif
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
