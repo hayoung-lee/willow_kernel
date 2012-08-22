@@ -39,6 +39,22 @@
 #include <linux/suspend.h>
 #endif
 
+#ifdef CONFIG_FB_S5P_LTN101AL03
+extern void LTN101AL03_lvds_on(int onoff);
+extern void LTN101AL03_backlight_onoff(int onoff);
+extern void LTN101AL03_lcd_onoff(int onoff);
+extern int lcd_off_charging_ctrl(int onoff);
+extern void LTN101AL03_backlight_crtl(int onoff);
+extern void set_backlight_ctrl(int ctrl_b);
+#endif
+
+//#define FEATURE_S3CFB_DEBUG
+#ifdef FEATURE_S3CFB_DEBUG
+#define s3c_log(fmt, arg...) 	printk(fmt, ##arg)
+#else
+#define s3c_log(fmt, arg...)
+#endif
+
 struct s3cfb_fimd_desc		*fbfimd;
 
 inline struct s3cfb_global *get_fimd_global(int id)
@@ -294,11 +310,16 @@ static int s3cfb_probe(struct platform_device *pdev)
 	}
 #ifdef CONFIG_FB_S5P_LCD_INIT
 	/* panel control */
-	if (pdata->backlight_on)
-		pdata->backlight_on(pdev);
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+		LTN101AL03_lcd_onoff(1);
+		LTN101AL03_lvds_on(1);
+#else
+		if (pdata->backlight_on)
+			pdata->backlight_on(pdev);
 
-	if (pdata->lcd_on)
-		pdata->lcd_on(pdev);
+		if (pdata->lcd_on)
+			pdata->lcd_on(pdev);
+#endif
 #endif
 
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
@@ -370,19 +391,6 @@ static int s3cfb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-#ifdef CONFIG_FB_S5P_AMS369FG06
-extern void ams369fg06_ldi_init(void);
-extern void ams369fg06_ldi_enable(void);
-extern void ams369fg06_ldi_disable(void);
-extern void ams369fg06_gpio_cfg(void);
-#elif defined(CONFIG_FB_S5P_LMS501KF03)
-extern void lms501kf03_ldi_disable(void);
-#endif
-
-#if defined(CONFIG_FB_S5P_LTN101AL03)
-extern void ltn101al03_lvds_on(int onoff);
-#endif
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void s3cfb_early_suspend(struct early_suspend *h)
 {
@@ -392,22 +400,22 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	struct s3cfb_global *fbdev[2];
 	int i;
 
-	printk("s3cfb_early_suspend is called\n");
-
+	s3c_log("s3cfb_early_suspend is called start ======>\n");
 	info->system_state = POWER_OFF;
+
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+	set_backlight_ctrl(0);
+#endif
 
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];
 
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+		//LTN101AL03_backlight_onoff(0);
+#else
 		if (pdata->backlight_off)
 			pdata->backlight_off(pdev);
-
-#ifdef CONFIG_FB_S5P_AMS369FG06
-		ams369fg06_ldi_disable();
-#elif defined(CONFIG_FB_S5P_LMS501KF03)
-		lms501kf03_ldi_disable();
 #endif
-
 		s3cfb_display_off(fbdev[i]);
 		if (pdata->clk_off)
 			pdata->clk_off(pdev, &fbdev[i]->clock);
@@ -419,15 +427,16 @@ void s3cfb_early_suspend(struct early_suspend *h)
 #endif
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-	ltn101al03_lvds_on(0);
-
-	if (pdata->lcd_off)
-		pdata->lcd_off(pdev);
+	LTN101AL03_lvds_on(0);
+	LTN101AL03_lcd_onoff(0);
 #endif
 
+	s3c_log("s3cfb_early_suspend is called end ======>\n");
 
 	return ;
 }
+
+extern void willow_backlight_on(void);
 
 void s3cfb_late_resume(struct early_suspend *h)
 {
@@ -439,8 +448,11 @@ void s3cfb_late_resume(struct early_suspend *h)
 	int i, j;
 	struct platform_device *pdev = to_platform_device(info->dev);
 
-	printk("s3cfb_late_resume is called\n");
+	s3c_log("s3cfb_late_resume is called start ============>\n");
 
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+	set_backlight_ctrl(1);
+#endif
 	dev_dbg(info->dev, "wake up from suspend\n");
 
 #ifdef CONFIG_EXYNOS_DEV_PD
@@ -455,12 +467,17 @@ void s3cfb_late_resume(struct early_suspend *h)
 		fbdev[i] = fbfimd->fbdev[i];
 		if (pdata->cfg_gpio)
 			pdata->cfg_gpio(pdev);
-#if !defined(CONFIG_FB_S5P_LTN101AL03)
+	
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+		LTN101AL03_lcd_onoff(1);
+		LTN101AL03_lvds_on(1);
+#else
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
-#endif
+
 		if (pdata->lcd_on)
 			pdata->lcd_on(pdev);
+#endif
 
 #if defined(CONFIG_FB_S5P_DUMMYLCD)
 		max8698_ldo_enable_direct(MAX8698_LDO4);
@@ -488,18 +505,18 @@ void s3cfb_late_resume(struct early_suspend *h)
 			}
 		}
 
-#ifdef CONFIG_FB_S5P_AMS369FG06
-		ams369fg06_gpio_cfg();
-		ams369fg06_ldi_init();
-		ams369fg06_ldi_enable();
-#endif
-
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+		LTN101AL03_backlight_onoff(1);
+		set_backlight_ctrl(0);
+		willow_backlight_on();		
+#else
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
+#endif		
 	}
 
 	info->system_state = POWER_ON;
-
+	s3c_log("s3cfb_late_resume is called end ============>\n");
 	return;
 }
 #else /* else !CONFIG_HAS_EARLYSUSPEND */
