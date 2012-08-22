@@ -32,7 +32,7 @@
 #include <linux/gpio.h>
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
-//#include <linux/sec_jack.h>
+#include <linux/sec_jack.h>
 #include <mach/gpio-willow.h>
 
 #include "wm8985.h"
@@ -47,7 +47,7 @@ struct snd_soc_codec *codecwrite;
 #define DEBUG_MSG(f, a...)
 //#define DEBUG_MSG(f, a...)  printk(f, ## a)
 
-extern int t10_jack_get_type(void);
+extern int willow_jack_get_type(void);
 void wm8985_set_path_prev(int mode, int jack_type);
 void wm8985_change_path(struct snd_soc_codec *codec, int lrmode, int pathmode);
 
@@ -528,13 +528,13 @@ static int factorytest_set_path(struct snd_kcontrol *kcontrol, struct snd_ctl_el
 		wm8985_set_path_prev(0,0);
 		break;
 	case FP_LEFT:
-		wm8985_set_path_prev(1,t10_jack_get_type());
+		wm8985_set_path_prev(1,willow_jack_get_type());
 		break;
 	case FP_RIGHT:
-		wm8985_set_path_prev(2,t10_jack_get_type());
+		wm8985_set_path_prev(2,willow_jack_get_type());
 		break;
 	case FP_BOTH:
-		wm8985_set_path_prev(3,t10_jack_get_type());
+		wm8985_set_path_prev(3,willow_jack_get_type());
 		break;
 	default:
 		printk(KERN_ERR "factorytest path[%d] does not exists!!\n", path_num);
