@@ -33,7 +33,7 @@
 #endif
 
 
-#define WILLOW_SENSOR_REGULATOR_CONTROL
+#undef WILLOW_SENSOR_REGULATOR_CONTROL
 #ifdef WILLOW_SENSOR_REGULATOR_CONTROL
 #include <linux/regulator/consumer.h>
 #endif 
