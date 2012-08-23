@@ -131,6 +131,8 @@
 
 #ifdef CONFIG_BATTERY_MAX17040_OLD
 #include <linux/max17040_battery.h>
+extern bool usb_is_connected;
+extern int dc_is_connected;
 #endif
 
 #include <mach/gpio-willow.h>
@@ -152,6 +154,65 @@ extern int brcm_wlan_init(void);
 #define CONFIG_ITU_A
 #undef  CAM_ITU_CH_B
 #endif
+
+#ifdef CONFIG_MACH_WILLOW
+#include <mach/willow_version.h>
+WILLOW_HW_VERSION g_willow_hw_version = WILLOW_HW_UNKNOWN;
+
+void willow_check_hw_version( void )
+{
+	int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
+	int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
+	int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2
+
+	char *str_version[] = {
+		"WILLOW_HW_WS",
+		"WILLOW_HW_ES1",
+		"WILLOW_HW_ES2",
+		"WILLOW_HW_RESERVED1",
+		"WILLOW_HW_PP",
+		"WILLOW_HW_RESERVED2",
+		"WILLOW_HW_RESERVED3",
+		"WILLOW_HW_RESERVED4",
+		"WILLOW_HW_UNKNOWN"
+	};
+
+	/* Set GPL2[0],[1],[2] Control Register to input */
+	s3c_gpio_cfgpin(GPIO_HW_VERSION_0, S3C_GPIO_SFN(0x0));
+	s3c_gpio_cfgpin(GPIO_HW_VERSION_1, S3C_GPIO_SFN(0x0));
+	s3c_gpio_cfgpin(GPIO_HW_VERSION_2, S3C_GPIO_SFN(0x0));
+
+	/* Disable Pullup/Pulldown */
+	s3c_gpio_setpull(GPIO_HW_VERSION_0, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(GPIO_HW_VERSION_1, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(GPIO_HW_VERSION_2, S3C_GPIO_PULL_NONE);
+
+	/* Read GPL2[0],[1],[2] Data Register
+	 * --------------------------------------------------
+	 * VER | ADC2_HW_VER0 | ADC1_HW_VER0 | ADC0_HW_VER0 |
+	 * --------------------------------------------------
+	 * WS1 |       0      |       0      |       0      | //0
+	 * --------------------------------------------------
+	 * ES1 |       0      |       0      |       1      | //1
+	 * --------------------------------------------------
+	 * ES2 |       0      |       1      |       0      | //2
+	 * --------------------------------------------------
+	 * PP  |       1      |       0      |       0      | //4
+	 * --------------------------------------------------
+	 */
+	ADC0_HW = gpio_get_value(GPIO_HW_VERSION_0) << 0; //bit0
+	printk("ADC0_HW[0x%01X]\n", ADC0_HW);
+	ADC1_HW = gpio_get_value(GPIO_HW_VERSION_1) << 1; //bit1
+	printk("ADC1_HW[0x%01X]\n", ADC1_HW);
+	ADC2_HW = gpio_get_value(GPIO_HW_VERSION_2) << 2; //bit2
+	printk("ADC2_HW[0x%01X]\n", ADC2_HW);
+
+	g_willow_hw_version = ADC2_HW | ADC1_HW | ADC0_HW;
+	printk("g_willow_hw_version[0x%01X]\n", g_willow_hw_version);
+
+	printk("WILLOW HW_VERSION: [%s]\n", str_version[g_willow_hw_version]);
+}
+#endif /* CONFIG_MACH_WILLOW */
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define WILLOW_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -567,16 +628,16 @@ static struct max17040_platform_data max17040_platform_data = {
 
 static void willow_power_off(void)
 {
-//	if (dc_is_connected ||usb_is_connected) {
+	if (dc_is_connected ||usb_is_connected) {
 		// reboot
-//		writel(2, S5P_INFORM6);
-//		arm_machine_restart('r', NULL);
-//	} else {
+		writel(2, S5P_INFORM6);
+		arm_machine_restart('r', NULL);
+	} else {
 		// shutdown
 		pr_info("%s: set PS_HOLD low\n", __func__);
 		writel(readl(S5P_PS_HOLD_CONTROL) & 0xFFFFFEFF, S5P_PS_HOLD_CONTROL);
 		while(1);
-//	}
+	}
 }
 
 static void willow_pm_restart(char mode, const char *cmd)
@@ -2891,6 +2952,7 @@ static void __init willow_machine_init(void)
 	samsung_board_rev = get_samsung_board_rev();
 
 	willow_config_gpio_table();
+	willow_check_hw_version();
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);

@@ -61,7 +61,6 @@
 #define SLOW_POLL			(10 * 60)
 
 #define MAX17040_T9_RCOMP 0x6c00//0xf700
-//#define DO_NOT_CHECK_HW_VER
 
 static int batt_debug_enable = 0;
 static struct wake_lock vbus_wake_lock;
@@ -248,8 +247,7 @@ struct max17040_chip {
 #endif
 #endif /* FEATURE_T9_BATT_THERM */
 };
-extern willow_hw_version_type WILLOW_get_hw_version(void);
-willow_hw_version_type willow_hw_version = WILLOW_HW_VERSION_WS;
+
 bool usb_is_connected = 0;
 int dc_is_connected = 0;
 
@@ -257,25 +255,12 @@ struct max17040_chip *chip = NULL;
 
 void isUSBconnected(bool usb_connect)
 {
-	if(willow_hw_version >= WILLOW_HW_VERSION_ES1)
-		return;
-
-	usb_is_connected = usb_connect;
-
-	if(!chip)
-		return;
-
-	chip->usb_online = usb_is_connected;
-
-	if (usb_connect) {
+	if ( usb_connect ) {
 		wake_lock(&vbus_wake_lock);
 	} else {
 		wake_unlock(&vbus_wake_lock);
 		wake_lock_timeout(&vbus_wake_lock, 2*HZ);
 	}
-		
-	power_supply_changed(&chip->usb);
-
 }
 EXPORT_SYMBOL(isUSBconnected);
 EXPORT_SYMBOL(dc_is_connected);
@@ -1017,49 +1002,24 @@ static void max17040_get_online(struct i2c_client *client)
 {
 	struct max17040_chip *chip = i2c_get_clientdata(client);
 
-	//	if(willow_hw_version >= WILLOW_HW_VERSION_ES1)
-	if(1)
-	{
-		if (chip->pdata->charger_online)
-		{
-			chip->online = chip->pdata->charger_online();          
-		}
+	if ( chip->pdata->charger_online ) {
+		chip->online = chip->pdata->charger_online();
+	}
 
-		if(chip->online)
-		{
-			if(willow_hw_version >= WILLOW_HW_VERSION_ES1){
-				usb_is_connected = gpio_get_value(nUSB_OK)?false:true; //ES1?�상?�서 ?�용
-				chip->usb_online = (int)usb_is_connected;
-			}
+	if ( chip->online ) {
+		usb_is_connected = gpio_get_value(nUSB_OK) ? false : true;
+		chip->usb_online = (int)usb_is_connected;
 
-
-			if(chip->usb_online)
-				chip->online = 0;
-		}else
-			chip->usb_online=0;
-
-		if(batt_debug_enable)
-			printk("[max17040_get_online] online=%d, usb_online=%d\n",chip->online, chip->usb_online);
-
-	}else{    
-		if(chip->usb_online)
-		{
-			if(batt_debug_enable)
-				printk("[max17040_get_online] usb_online !!\n");
-
+		if ( chip->usb_online )
 			chip->online = 0;
-		}
-		else if (chip->pdata->charger_online)
-		{
-			chip->online = chip->pdata->charger_online();    
-			if(batt_debug_enable)
-				printk("[max17040_get_online] online=%d\n",chip->online);    
-		}
-		else
-			chip->online = 0;
+	} else {
+		chip->usb_online = 0;
 	}
 
 	dc_is_connected = chip->online;
+
+	if ( batt_debug_enable )
+		printk("[max17040_get_online] online=%d, usb_online=%d\n",chip->online, chip->usb_online);
 }
 
 static void max17040_get_status(struct i2c_client *client)
@@ -1073,15 +1033,6 @@ static void max17040_get_status(struct i2c_client *client)
 		return;
 	}
 
-#ifdef DO_NOT_CHECK_HW_VER
-		if(0)
-#else
-		if(willow_hw_version < WILLOW_HW_VERSION_ES1)
-#endif
-		{
-			chip->usb_online = usb_is_connected;
-		}
-
 	if(batt_debug_enable)
 		printk("[max17040_get_status] usb_online(%d) online(%d)!\n", chip->usb_online, chip->online);
 
@@ -1089,21 +1040,7 @@ static void max17040_get_status(struct i2c_client *client)
 	{
 		if(chip->pdata->charger_done())
 		{
-#ifdef DO_NOT_CHECK_HW_VER
-			if(0)
-#else
-			if( willow_hw_version < WILLOW_HW_VERSION_ES1 )
-#endif
-			{
-				if(!chip->usb_online)
-				{
-				chip->pdata->charger_disable();
-				}
-			}
-			else
-			{
-				chip->pdata->charger_disable();
-			}
+			chip->pdata->charger_disable();
 			chip->status = POWER_SUPPLY_STATUS_FULL;
 			full_charged = 1;
 			if(!chip->level_test)
@@ -1121,22 +1058,7 @@ static void max17040_get_status(struct i2c_client *client)
 			//      if((chip->soc > MAX17040_BATTERY_SOC_FULL) && (chip->vcell > CHARGE_OFF_VOLTAGE))
 			if((chip->soc_real >= MAX17040_BATTERY_SOC_FULL_REAL) && (chip->vcell >= CHARGE_OFF_VOLTAGE))
 			{
-#ifdef DO_NOT_CHECK_HW_VER
-					if(0)
-#else
-					if( willow_hw_version < WILLOW_HW_VERSION_ES1 )
-#endif
-					{
-						if(!chip->usb_online)
-						{
-							chip->pdata->charger_disable();
-						}
-					}
-					else
-					{
-						chip->pdata->charger_disable();
-					}
-
+				chip->pdata->charger_disable();
 				chip->status = POWER_SUPPLY_STATUS_FULL;  
 				full_charged = 1;
 				if(!chip->level_test)
@@ -1174,21 +1096,7 @@ static void max17040_get_status(struct i2c_client *client)
 	{
 		if((chip->status == POWER_SUPPLY_STATUS_CHARGING)||(chip->status == POWER_SUPPLY_STATUS_FULL))
 		{
-#ifdef DO_NOT_CHECK_HW_VER
-				if(0)
-#else
-				if( willow_hw_version < WILLOW_HW_VERSION_ES1 )
-#endif
-				{
-					if(!chip->usb_online)
-					{
-						chip->pdata->charger_disable();
-					}
-				}
-				else
-				{
-					chip->pdata->charger_disable();
-				}
+			chip->pdata->charger_disable();
 		}
 		if(batt_debug_enable)
 			printk("CHARGER isn't Charing! not online!\n");
@@ -1402,7 +1310,7 @@ static irqreturn_t max8903_int_work_func(int irq, void *max8903_chg)
 		}
 	}
 
-	//cancel_delayed_work(&chg->work); //
+	cancel_delayed_work_sync(&chg->work);
 	schedule_delayed_work(&chg->work, msecs_to_jiffies(300));
 	return IRQ_HANDLED;
 }
@@ -1505,12 +1413,6 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	int ret, i=0, error;
 
-#ifdef DO_NOT_CHECK_HW_VER
-	willow_hw_version =  WILLOW_HW_VERSION_WS;
-#else
-	//willow_hw_version =  WILLOW_get_hw_version();
-	willow_hw_version =  WILLOW_HW_VERSION_WS;
-#endif
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
 		return -EIO;
 
@@ -1550,10 +1452,7 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	chip->level_test = 0;
 	chip->soc = 0;
 	chip->status = POWER_SUPPLY_STATUS_UNKNOWN;
-
-	if( willow_hw_version >= WILLOW_HW_VERSION_ES1 )
-		chip->usb_online = 0;  
-
+	chip->usb_online = 0;
 
 	ret = power_supply_register(&client->dev, &chip->battery);
 
@@ -1616,17 +1515,7 @@ static int __devinit max17040_probe(struct i2c_client *client,
 
 	if(chip->pdata->charger_disable)
 	{
-		if( willow_hw_version < WILLOW_HW_VERSION_ES1 )
-		{
-			if(!chip->usb_online)
-			{
-				chip->pdata->charger_disable();
-			}
-		}
-		else
-		{
-			chip->pdata->charger_disable();
-		}
+		chip->pdata->charger_disable();
 	}
 
 #ifdef USE_MAX17040_ALARM  

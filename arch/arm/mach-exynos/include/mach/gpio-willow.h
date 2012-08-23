@@ -105,19 +105,6 @@
 #define nUSB_OK    EXYNOS4_GPX2(6)    //nUSB_OK   //USB_OK
 #define nBAT_FLT   EXYNOS4_GPX3(0)    //nBAT_FLT  //FLT
 
-typedef enum
-{
-  WILLOW_HW_VERSION_NONE  = 0,
-  WILLOW_HW_VERSION_WS    = 1,
-  WILLOW_HW_VERSION_ES1   = 2,
-  WILLOW_HW_VERSION_ES2   = 3,
-  WILLOW_HW_VERSION_PP    = 4,
-  WILLOW_HW_VERSION_MP    = 5,
-  WILLOW_HW_VERSION_MAX   = 6
-} willow_hw_version_type;
-
-extern willow_hw_version_type WILLOW_get_hw_version( void );
-
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);
 
