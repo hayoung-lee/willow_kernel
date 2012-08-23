@@ -524,7 +524,9 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	if (get_mali_dvfs_control_status() != 0 || mali_gpu_clk >= mali_runtime_resume.clk)
 		mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
 	else {
+#ifdef CONFIG_REGULATOR
 		mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
+#endif
 		mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
 		set_mali_dvfs_current_step(MALI_DVFS_STEPS+1);
 	}
@@ -532,7 +534,9 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	if (mali_gpu_clk == 440)
 		err = cpufreq_lock_by_mali(1200);
 #else
+#ifdef CONFIG_REGULATOR
 	mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
+#endif
 	mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
 #endif
 #else
@@ -546,8 +550,10 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 	clk_disable(mali_clock);
 	MALI_DEBUG_PRINT(3,("disable_mali_clocks mali_clock %p \n", mali_clock));
 
+#if MALI_DVFS_ENABLED
 	/* lock/unlock CPU freq by Mali */
 	cpufreq_unlock_by_mali();
+#endif
 	MALI_SUCCESS;
 }
 
@@ -727,8 +733,10 @@ int mali_voltage_lock_push(int lock_vol)
 	}
 	if (prev_status == 0) {
 		mali_lock_vol = lock_vol;
+#ifdef CONFIG_REGULATOR
 		if (mali_gpu_vol < mali_lock_vol)
 			mali_regulator_set_voltage(mali_lock_vol, mali_lock_vol);
+#endif
 	} else {
 		MALI_PRINT(("gpu voltage lock status is already pushed, current lock voltage : %d\n", mali_lock_vol));
 		return -1;

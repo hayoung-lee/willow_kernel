@@ -803,7 +803,9 @@ int mali_dvfs_bottom_lock_push(int lock_step)
 	if (bottom_lock_step < lock_step) {
 		bottom_lock_step = lock_step;
 		if (get_mali_dvfs_status() < lock_step) {
+#ifdef CONFIG_REGULATOR
 			mali_regulator_set_voltage(mali_dvfs[lock_step].vol, mali_dvfs[lock_step].vol);
+#endif
 			mali_clk_set_rate(mali_dvfs[lock_step].clock, mali_dvfs[lock_step].freq);
 			set_mali_dvfs_current_step(lock_step);
 		}
