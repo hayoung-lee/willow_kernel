@@ -135,7 +135,12 @@ extern bool usb_is_connected;
 extern int dc_is_connected;
 #endif
 
+#ifdef CONFIG_ISL29023
+#include <linux/isl29023.h>
+#endif
+
 #include <mach/gpio-willow.h>
+
 
 /* wifi */
 extern int brcm_wlan_init(void);
@@ -2051,10 +2056,36 @@ static struct i2c_board_info i2c_devs6[] __initdata = {
 };
 #endif
 
+
+#ifdef CONFIG_ISL29023
+static struct i2c_gpio_platform_data i2c7_platdata = {
+	.sda_pin = EXYNOS4_GPD0(2),
+	.scl_pin = EXYNOS4_GPD0(3),
+	.udelay = 5, //100Khz
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
+};
+
+static struct platform_device s3c_device_i2c7 = {
+	.name = "i2c-gpio",
+	.id = 7,
+	.dev.platform_data = &i2c7_platdata,
+};
+
+static struct isl29023_i2c_platform_data isl29023_pdata = {
+	.irq_gpio = EXYNOS4_GPX2(2),
+};
+
 static struct i2c_board_info i2c_devs7[] __initdata = {
 	{
+		I2C_BOARD_INFO("isl29023", 0x44),
+		//.irq = IRQ_EINT_GROUP(19,4),
+		.platform_data = &isl29023_pdata,
 	},
 };
+#endif
+
 
 #ifdef CONFIG_HAPTIC_ISA1200
 static int isa1200_power(int vreg_on)
@@ -2342,7 +2373,9 @@ static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
 	&s3c_device_i2c6,
+#ifdef CONFIG_ISL29023
 	&s3c_device_i2c7,
+#endif
 #ifdef CONFIG_HAPTIC_ISA1200
 	&s3c_device_timer[0],
 	&s3c_device_i2c8,
@@ -2999,8 +3032,7 @@ static void __init willow_machine_init(void)
 	s3c_i2c6_set_platdata(NULL);
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
 
-	s3c_i2c7_set_platdata(NULL);
-	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
+	//i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
 #ifdef CONFIG_HAPTIC_ISA1200
