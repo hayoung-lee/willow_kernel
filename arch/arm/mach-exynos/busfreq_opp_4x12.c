@@ -505,6 +505,11 @@ void exynos4x12_target(int index)
 {
 	unsigned int tmp;
 
+#ifdef CONFIG_MACH_WILLOW
+	//printk("%s %d\n",__func__,index);
+	if(index > 4)
+		index = 4;
+#endif
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[index].clk_dmc0div;
 
