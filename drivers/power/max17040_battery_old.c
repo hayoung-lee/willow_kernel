@@ -255,6 +255,9 @@ struct max17040_chip *chip = NULL;
 
 void isUSBconnected(bool usb_connect)
 {
+	if ( !chip ) /* vbus_wake_lock not initialized. (wake_lock_init) */
+		return;
+
 	if ( usb_connect ) {
 		wake_lock(&vbus_wake_lock);
 	} else {
