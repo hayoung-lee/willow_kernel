@@ -633,16 +633,16 @@ static struct max17040_platform_data max17040_platform_data = {
 
 static void willow_power_off(void)
 {
-	if (dc_is_connected ||usb_is_connected) {
-		// reboot
-		writel(2, S5P_INFORM6);
-		arm_machine_restart('r', NULL);
-	} else {
+//	if (dc_is_connected ||usb_is_connected) {
+//		// reboot
+//		writel(2, S5P_INFORM6);
+//		arm_machine_restart('r', NULL);
+//	} else {
 		// shutdown
 		pr_info("%s: set PS_HOLD low\n", __func__);
 		writel(readl(S5P_PS_HOLD_CONTROL) & 0xFFFFFEFF, S5P_PS_HOLD_CONTROL);
 		while(1);
-	}
+//	}
 }
 
 static void willow_pm_restart(char mode, const char *cmd)
