@@ -46,6 +46,7 @@
 
 static struct rfkill *bt_rfkill;
 
+#ifdef BT_LPM_ENABLE
 struct bcm_bt_lpm {
 	int host_wake;
 
@@ -58,6 +59,7 @@ struct bcm_bt_lpm {
 	struct wake_lock bt_wake_lock;
 	char wake_lock_name[100];
 } bt_lpm;
+#endif
 
 #ifdef BT_UART_CFG
 int bt_is_running;
@@ -117,20 +119,14 @@ static int bcm4334_bt_rfkill_set_power(void *data, bool blocked)
 		bt_config_gpio_table(ARRAY_SIZE(bt_uart_on_table),
 					bt_uart_on_table);
 #endif
-		s3c_gpio_cfgpin(GPIO_BT_WAKE, S3C_GPIO_OUTPUT);
-		s3c_gpio_setpull(GPIO_BT_WAKE, S3C_GPIO_PULL_DOWN);
-		gpio_set_value(GPIO_BT_WAKE, 1);
-		msleep(10);
 		gpio_set_value(GPIO_BT_EN, 1);
+		gpio_set_value(GPIO_BT_WAKE, 0);
 		bt_is_running = 1;
 		msleep(50);
 	} else {
 		pr_info("[BT] Bluetooth Power Off.\n");
 		bt_is_running = 0;
 		gpio_set_value(GPIO_BT_EN, 0);
-		s3c_gpio_cfgpin(GPIO_BT_WAKE, S3C_GPIO_OUTPUT);
-		s3c_gpio_setpull(GPIO_BT_WAKE, S3C_GPIO_PULL_DOWN);
-		gpio_set_value(GPIO_BT_WAKE, 0);
 	}
 	return 0;
 }
@@ -277,7 +273,9 @@ static struct notifier_block bcm_bt_nblock = {
 static int bcm4334_bluetooth_probe(struct platform_device *pdev)
 {
 	int rc = 0;
+#ifdef BT_LPM_ENABLE
 	int ret;
+#endif
 
 	rc = gpio_request(GPIO_BT_EN, "bcm4334_bten_gpio");
 	if (unlikely(rc)) {
@@ -298,6 +296,7 @@ static int bcm4334_bluetooth_probe(struct platform_device *pdev)
 		return rc;
 	}
 	gpio_direction_input(GPIO_BT_HOST_WAKE);
+	s3c_gpio_setpull(GPIO_BT_HOST_WAKE, S3C_GPIO_PULL_UP);
 	gpio_direction_output(GPIO_BT_WAKE, 0);
 	gpio_direction_output(GPIO_BT_EN, 0);
 
@@ -313,7 +312,7 @@ static int bcm4334_bluetooth_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	rfkill_init_sw_state(bt_rfkill, true);
+	rfkill_init_sw_state(bt_rfkill, 0);
 
 	rc = rfkill_register(bt_rfkill);
 
@@ -353,10 +352,10 @@ static int bcm4334_bluetooth_remove(struct platform_device *pdev)
 	gpio_free(GPIO_BT_WAKE);
 	gpio_free(GPIO_BT_HOST_WAKE);
 
+#ifdef BT_LPM_ENABLE
 	wake_lock_destroy(&bt_lpm.host_wake_lock);
 	wake_lock_destroy(&bt_lpm.bt_wake_lock);
 
-#ifdef BT_LPM_ENABLE
 	hci_unregister_notifier(&bcm_bt_nblock);
 #endif
 	return 0;
