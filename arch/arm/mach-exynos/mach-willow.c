@@ -139,7 +139,7 @@ extern int dc_is_connected;
 #include <linux/isl29023.h>
 #endif
 
-#include <mach/gpio-willow.h>
+#include <mach/gpio.h>
 
 
 /* wifi */

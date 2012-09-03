@@ -16,7 +16,7 @@
 #include <plat/devs.h>
 #include <plat/gpio-cfg.h>
 #include <plat/regs-serial.h>
-#include <mach/gpio-willow.h>
+#include <mach/gpio.h>
 #include <plat/cpu.h>
 #include <mach/pmu.h>
 

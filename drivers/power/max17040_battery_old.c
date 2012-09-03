@@ -30,7 +30,6 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <asm/uaccess.h>
-#include <mach/gpio-willow.h>
 
 #include <linux/delay.h>
 #define MAX17040_VCELL_MSB	0x02

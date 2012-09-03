@@ -2,8 +2,6 @@
 #ifndef __ASM_ARCH_GPIO_WILLOW_H
 #define __ASM_ARCH_GPIO_WILLOW_H __FILE__
 
-#include "gpio.h"
-
 /* WILLOW KEY MAP */
 #define WILLOW_POWER_KEY		EXYNOS4_GPX1(3)
 #define WILLOW_VOLUM_UP			EXYNOS4_GPX3(4)

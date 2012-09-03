@@ -37,10 +37,6 @@
 #include <mach/smc.h>
 #include <mach/gpio.h>
 
-#ifdef CONFIG_MACH_WILLOW
-#include <mach/gpio-willow.h>
-#endif
-
 void (*exynos4_sleep_gpio_table_set)(void);
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_INFORM0            (S5P_VA_SYSRAM_NS + 0x8)

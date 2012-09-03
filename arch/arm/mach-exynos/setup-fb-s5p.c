@@ -29,7 +29,6 @@
 #include <plat/gpio-cfg.h>
 #include <plat/cpu.h>
 #include <linux/regulator/consumer.h>
-#include <mach/gpio-willow.h>
 
 struct platform_device; /* don't need the contents */
 

@@ -12,8 +12,6 @@
 #include <mach/regs-gpio.h>
 #include <mach/gpio.h>
 
-#include <mach/gpio-willow.h>
-
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 
 #define WLAN_STATIC_SCAN_BUF0		5

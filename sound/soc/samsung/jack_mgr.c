@@ -18,7 +18,7 @@
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/sec_jack.h>
-#include <mach/gpio-willow.h>
+#include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
 
 #define MAX_ZONE_LIMIT		10

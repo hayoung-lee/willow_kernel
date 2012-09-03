@@ -39,8 +39,6 @@
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
 
-#include <mach/gpio-willow.h>
-
 #define BT_UART_CFG
 #define BT_LPM_ENABLE
 

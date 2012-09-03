@@ -33,7 +33,6 @@
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
 #include <linux/sec_jack.h>
-#include <mach/gpio-willow.h>
 
 #include "wm8985.h"
 
