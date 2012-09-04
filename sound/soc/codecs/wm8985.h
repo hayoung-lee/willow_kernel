@@ -71,7 +71,7 @@
 
 #define WM8985_REGISTER_COUNT                   59
 #define WM8985_MAX_REGISTER                     0x3F
-#define WM8985_REGCACHENUM			WM8985_MAX_REGISTER + 1
+
 /*
  * Field Definitions.
  */
