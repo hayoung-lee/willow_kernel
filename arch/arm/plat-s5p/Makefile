@@ -50,7 +50,6 @@ obj-$(CONFIG_S5P_DEV_CSIS1)	+= dev-csis1.o
 obj-$(CONFIG_S5P_DEV_CSIS)	+= dev-csis-s5p.o
 obj-$(CONFIG_S5P_DEV_JPEG)	+= dev-jpeg.o
 obj-$(CONFIG_S5P_DEV_USB_EHCI)	+= dev-ehci.o
-obj-$(CONFIG_S5P_DEV_USB_SWITCH)	+= dev-usb-switch.o
 obj-$(CONFIG_S5P_DEV_USBGADGET)	+= dev-usbgadget.o
 obj-$(CONFIG_S5P_DEV_MIPI_DSI)	+= dev-dsim.o
 obj-$(CONFIG_S5P_DEV_DSIM02)	+= dev-dsim02.o

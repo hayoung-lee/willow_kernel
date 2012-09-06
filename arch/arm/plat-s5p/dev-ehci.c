@@ -109,17 +109,17 @@ void __init s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd)
 }
 #endif
 
-#if 0 //#ifdef CONFIG_S5P_DEV_USB_SWITCH
+#ifdef CONFIG_S5P_DEV_USB_SWITCH
 /* USB Switch */
 static struct resource s5p_usbswitch_resource[] = {
 	[0] = {
-		.start = IRQ_EINT(29),
-		.end   = IRQ_EINT(29),
+		.start = IRQ_EINT(15),
+		.end   = IRQ_EINT(15),
 		.flags = IORESOURCE_IRQ,
 	},
 	[1] = {
-		.start = IRQ_EINT(28),
-		.end   = IRQ_EINT(28),
+		.start = IRQ_EINT(22),
+		.end   = IRQ_EINT(22),
 		.flags = IORESOURCE_IRQ,
 	}
 };
