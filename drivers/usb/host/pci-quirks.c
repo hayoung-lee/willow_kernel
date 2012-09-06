@@ -465,6 +465,8 @@ static void __devinit quirk_usb_handoff_ohci(struct pci_dev *pdev)
 {
 	void __iomem *base;
 	u32 control;
+	u32 fminterval;
+	int cnt;
 
 	if (!mmio_resource_enabled(pdev, 0))
 		return;
@@ -497,41 +499,32 @@ static void __devinit quirk_usb_handoff_ohci(struct pci_dev *pdev)
 	}
 #endif
 
-	/* reset controller, preserving RWC (and possibly IR) */
-	writel(control & OHCI_CTRL_MASK, base + OHCI_CONTROL);
-	readl(base + OHCI_CONTROL);
+	/* disable interrupts */
+	writel((u32) ~0, base + OHCI_INTRDISABLE);
 
-	/* Some NVIDIA controllers stop working if kept in RESET for too long */
-	if (pdev->vendor == PCI_VENDOR_ID_NVIDIA) {
-		u32 fminterval;
-		int cnt;
+	/* Reset the USB bus, if the controller isn't already in RESET */
+	if (control & OHCI_HCFS) {
+		/* Go into RESET, preserving RWC (and possibly IR) */
+		writel(control & OHCI_CTRL_MASK, base + OHCI_CONTROL);
+		readl(base + OHCI_CONTROL);
 
-		/* drive reset for at least 50 ms (7.1.7.5) */
+		/* drive bus reset for at least 50 ms (7.1.7.5) */
 		msleep(50);
-
-		/* software reset of the controller, preserving HcFmInterval */
-		fminterval = readl(base + OHCI_FMINTERVAL);
-		writel(OHCI_HCR, base + OHCI_CMDSTATUS);
-
-		/* reset requires max 10 us delay */
-		for (cnt = 30; cnt > 0; --cnt) {	/* ... allow extra time */
-			if ((readl(base + OHCI_CMDSTATUS) & OHCI_HCR) == 0)
-				break;
-			udelay(1);
-		}
-		writel(fminterval, base + OHCI_FMINTERVAL);
-
-		/* Now we're in the SUSPEND state with all devices reset
-		 * and wakeups and interrupts disabled
-		 */
 	}
 
-	/*
-	 * disable interrupts
-	 */
-	writel(~(u32)0, base + OHCI_INTRDISABLE);
-	writel(~(u32)0, base + OHCI_INTRSTATUS);
+	/* software reset of the controller, preserving HcFmInterval */
+	fminterval = readl(base + OHCI_FMINTERVAL);
+	writel(OHCI_HCR, base + OHCI_CMDSTATUS);
 
+	/* reset requires max 10 us delay */
+	for (cnt = 30; cnt > 0; --cnt) {	/* ... allow extra time */
+		if ((readl(base + OHCI_CMDSTATUS) & OHCI_HCR) == 0)
+			break;
+		udelay(1);
+	}
+	writel(fminterval, base + OHCI_FMINTERVAL);
+
+	/* Now the controller is safely in SUSPEND and nothing can wake it up */
 	iounmap(base);
 }
 
