@@ -786,11 +786,13 @@ static void wdm_disconnect(struct usb_interface *intf)
 	/* to terminate pending flushes */
 	clear_bit(WDM_IN_USE, &desc->flags);
 	spin_unlock_irqrestore(&desc->iuspin, flags);
-	mutex_lock(&desc->lock);
+	wake_up_all(&desc->wait);
+	mutex_lock(&desc->rlock);
+	mutex_lock(&desc->wlock);
 	kill_urbs(desc);
 	cancel_work_sync(&desc->rxwork);
-	mutex_unlock(&desc->lock);
-	wake_up_all(&desc->wait);
+	mutex_unlock(&desc->wlock);
+	mutex_unlock(&desc->rlock);
 	if (!desc->count)
 		cleanup(desc);
 	mutex_unlock(&wdm_mutex);
