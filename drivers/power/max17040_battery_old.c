@@ -45,7 +45,7 @@
 #define MAX17040_CMD_MSB	0xFE
 #define MAX17040_CMD_LSB	0xFF
 
-#define MAX17040_DELAY			msecs_to_jiffies(1000 * 10)
+#define MAX17040_DELAY			msecs_to_jiffies(1000 * 1)
 //#define MAX17040_BATTERY_SOC_FULL	99//97.34
 #define MAX17040_BATTERY_SOC_FULL	  98//T10S ?‘ì˜?¬í•­: 98 ?´ìƒ????100 ?¼ë¡œ ?¤ì •
 #define MAX17040_BATTERY_SOC_FULL_REAL 100
@@ -1009,6 +1009,7 @@ static void max17040_get_online(struct i2c_client *client)
 	}
 
 	if ( chip->online ) {
+		mdelay(200);
 		usb_is_connected = gpio_get_value(nUSB_OK) ? false : true;
 		chip->usb_online = (int)usb_is_connected;
 
@@ -1045,8 +1046,6 @@ static void max17040_get_status(struct i2c_client *client)
 			chip->pdata->charger_disable();
 			chip->status = POWER_SUPPLY_STATUS_FULL;
 			full_charged = 1;
-			if(!chip->level_test)
-				chip->soc = 100;
 
 			if(batt_debug_enable) {
 				printk("CHARGER Done. soc_real(%d) vcell(%d) status(%d) nCHARGING(%d)\n", chip->soc_real, chip->vcell, chip->status, chip->pdata->charger_done());
@@ -1063,8 +1062,6 @@ static void max17040_get_status(struct i2c_client *client)
 				chip->pdata->charger_disable();
 				chip->status = POWER_SUPPLY_STATUS_FULL;  
 				full_charged = 1;
-				if(!chip->level_test)
-					chip->soc = 100;
 
 				if(batt_debug_enable)
 					printk("CHARGER is now Done.! CHARGER Disable!\n");
@@ -1288,32 +1285,53 @@ static struct {
 #endif
 static irqreturn_t max8903_int_work_func(int irq, void *max8903_chg)
 {
-	struct max17040_chip *chg = NULL;	
-	int i=0;
+	struct max17040_chip *chg = NULL;
+	static int old_online=-1, old_usb_online = -1;
+	int i = 0;
 
 	chg = max8903_chg;
 
-	if( batt_debug_enable )
-	{
-		for(i=0; i< chg->pdata->nOutputs;i++)
-		{
-			struct max8903_output_desc *output_desc = &chg->pdata->output_desc[i];
-
-			if(irq == gpio_to_irq(output_desc->gpio))
-			{
-				printk("[max8903_int_work_func] %s !!!\n",output_desc->desc);
-
-				if(strcmp(output_desc->desc, "vcharge_det_n") == 0)
-				{
-					printk("~~~~~~~~~ TA detect (%d)\n",gpio_get_value(nDC_OK));
-				}
+	//chk irq type
+	for ( i = 0; i < chg->pdata->nOutputs; i++ ) {
+		struct max8903_output_desc *output_desc = &chg->pdata->output_desc[i];
+		if ( irq == gpio_to_irq(output_desc->gpio) ) {
+			if ( batt_debug_enable )
+				printk("%s() irq=>[%s]", __FUNCTION__, output_desc->desc);
+			if ( strcmp(output_desc->desc, "vcharge_det_n") == 0 ) {
+				if ( batt_debug_enable )
+					printk(" nDC_OK(%s)\n", gpio_get_value(nDC_OK) ? "HIGH" : "LOW");
 				break;
 			}
+			if ( batt_debug_enable )
+				printk("\n");
 		}
 	}
 
-	cancel_delayed_work_sync(&chg->work);
-	schedule_delayed_work(&chg->work, msecs_to_jiffies(300));
+	if ( i != 0 ) { // != vcharge_det_n
+		return IRQ_HANDLED;
+	}
+
+	max17040_get_online(chg->client);
+
+	if ( batt_debug_enable )
+		printk("[BATTERY.INT] online=[%d->%d] usb_online=[%d->%d]\n", old_online, chg->online, old_usb_online, chg->usb_online);
+
+	if ( chg->usb_online ) {
+		chg->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+	}
+
+	if ( old_usb_online != chg->usb_online ) {
+		power_supply_changed(&chg->usb);
+	}
+
+	if ( old_online != chg->online ) {
+		power_supply_changed(&chg->ac);
+	}
+
+	power_supply_changed(&chg->battery);
+	old_online = chg->online;
+	old_usb_online = chg->usb_online;
+
 	return IRQ_HANDLED;
 }
 
