@@ -105,7 +105,7 @@ sha512_transform(u64 *state, const u8 *input)
 
 #define SHA512_16_79(i, a, b, c, d, e, f, g, h)			\
 	BLEND_OP(i, W);						\
-	t1 = h + e1(e) + Ch(e, f, g) + sha512_K[i] + W[(i)%16];	\
+	t1 = h + e1(e) + Ch(e, f, g) + sha512_K[i] + W[(i)&15];	\
 	t2 = e0(a) + Maj(a, b, c);				\
 	d += t1;						\
 	h = t1 + t2
