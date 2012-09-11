@@ -128,9 +128,9 @@
 #ifdef CONFIG_INPUT_L3G4200D_GYR
 #include <linux/l3g4200d_gyr.h>
 #endif
-
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#ifdef CONFIG_BATTERY_MAX17040
 #include <linux/max17040_battery.h>
+#include <linux/power/max8903_charger.h>
 extern bool usb_is_connected;
 extern int dc_is_connected;
 #endif
@@ -550,11 +550,34 @@ static struct s3c_platform_fb ltn101al03_fb_data __initdata = {
 #endif
 #endif
 
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#ifdef CONFIG_BATTERY_MAX17040
+void max8903_gpio_init(void)
+{
+	// nCHG_EN
+	s3c_gpio_cfgpin(nCHG_EN , S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(nCHG_EN, S3C_GPIO_PULL_NONE);
+
+	// nCHARGING
+	s3c_gpio_cfgpin(nCHARGING , S3C_GPIO_INPUT);
+	s3c_gpio_setpull(nCHARGING, S3C_GPIO_PULL_UP);
+
+	// nDC_OK
+	s3c_gpio_cfgpin(nDC_OK , S3C_GPIO_INPUT);
+	s3c_gpio_setpull(nDC_OK, S3C_GPIO_PULL_UP);
+
+	// nUSB_OK
+	s3c_gpio_cfgpin(nUSB_OK , S3C_GPIO_INPUT);
+	s3c_gpio_setpull(nUSB_OK, S3C_GPIO_PULL_NONE);
+
+	// nBAT_FLT
+	s3c_gpio_cfgpin(nBAT_FLT , S3C_GPIO_INPUT);
+	s3c_gpio_setpull(nBAT_FLT, S3C_GPIO_PULL_UP);
+}
+
 static int max8903g_charger_enable(void)
 {
 	gpio_set_value(nCHG_EN, 0);
-	return	gpio_get_value(nCHARGING) ? 0 : 1;
+	return gpio_get_value(nCHARGING) ? 0 : 1;
 }
 
 static void max8903g_charger_disable(void)
@@ -564,14 +587,13 @@ static void max8903g_charger_disable(void)
 
 static int max8903g_charger_done(void)
 {
-	return	gpio_get_value(nCHARGING) ? 1 : 0;
+	return gpio_get_value(nCHARGING) ? 1 : 0;
 }
 
 static int max8903g_charger_online(void)
 {
 	gpio_set_value(nCHG_EN, 0);
-
-	return	gpio_get_value(nDC_OK) ? 0 : 1;
+	return gpio_get_value(nDC_OK) ? 0 : 1;
 }
 
 static int max8903g_battery_online(void)
@@ -580,46 +602,28 @@ static int max8903g_battery_online(void)
 	return 1;
 }
 
-static struct max8903_output_desc max8903_output_descs[] = {
-	{
-		.gpio               = nDC_OK,
-		.active_low         = 1,
-		.desc               = "vcharge_det_n",
-		.wakeup             = 1,
-		.debounce_interval  = 30,
-		.enable_int         = 1,
+static struct max8903_pdata max8903_platform_data = {
+	.cen = nCHG_EN,	/* Charger Enable input */
+	.dok = nDC_OK,	/* DC(Adapter) Power OK output */
+	.uok = nUSB_OK,	/* USB Power OK output */
+	.chg = nCHARGING,	/* Charger status output */
+	.flt = nBAT_FLT,	/* Fault output */
+	//.dcm = 0,	/* Current-Limit Mode input (1: DC, 2: USB) */
+	//.usus = 0,	/* USB Suspend Input (1: suspended) */
+	.dc_valid = true,
+	.usb_valid = true,
+	.charger_online = NULL,
+};
+
+static struct platform_device willow_charger = {
+	.name = "max8903-charger",
+	.id = 1,
+	.dev = {
+		.platform_data = &max8903_platform_data,
 	},
-#if 0
-	{
-		.gpio               = nUSB_OK,
-		.active_low         = 1,
-		.desc               = "usb_det_n",
-		.wakeup             = 0,
-		.debounce_interval  = 30,
-		.enable_int         = 0,
-	},
-#endif
-	{
-		.gpio               = nCHARGING,
-		.active_low         = 1,
-		.desc               = "chg_stat_n",
-		.wakeup             = 0,
-		.debounce_interval  = 30,
-		.enable_int         = 1,
-	},
-	{
-		.gpio               = nBAT_FLT,
-		.active_low         = 1,
-		.desc               = "chg_fault_n",
-		.wakeup             = 0,
-		.debounce_interval  = 30,
-		.enable_int         = 0,
-	}
 };
 
 static struct max17040_platform_data max17040_platform_data = {
-	.output_desc = max8903_output_descs,
-	.nOutputs	= ARRAY_SIZE(max8903_output_descs),
 	.rep      = 0,
 	.chg_en_gpio = nCHG_EN,
 	.charger_enable = max8903g_charger_enable,
@@ -629,7 +633,7 @@ static struct max17040_platform_data max17040_platform_data = {
 	.charger_disable = max8903g_charger_disable,
 	//.rcomp_value = 0xD700,
 };
-#endif //CONFIG_BATTERY_MAX17040_OLD
+#endif
 
 static void willow_power_off(void)
 {
@@ -2015,7 +2019,7 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 
 static struct i2c_board_info i2c_devs3[] __initdata = {
 	{
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#if defined(CONFIG_BATTERY_MAX17040)
 		I2C_BOARD_INFO("max17040", (0x6D >> 1)),
 		.platform_data = &max17040_platform_data,
 #endif
@@ -2475,6 +2479,9 @@ static struct platform_device *willow_devices[] __initdata = {
 
 #if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
+#endif
+#ifdef CONFIG_BATTERY_MAX17040
+	&willow_charger,
 #endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	&SYSMMU_PLATDEV(g2d_acp),
@@ -2986,6 +2993,9 @@ static void __init willow_machine_init(void)
 
 	willow_config_gpio_table();
 	willow_check_hw_version();
+#ifdef CONFIG_BATTERY_MAX17040
+	max8903_gpio_init();
+#endif
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);

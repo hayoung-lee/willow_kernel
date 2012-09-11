@@ -214,26 +214,15 @@ static struct snd_soc_ops willow_ops = {
 	.hw_params = willow_hw_params,
 };
 
-/* WILLOW Playback widgets */
-static const struct snd_soc_dapm_widget wm8985_dapm_widgets_pbk[] = {
+/* WILLOW Widgets */
+static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("HP-L/R", NULL),
 	SND_SOC_DAPM_SPK("Speaker-L/R", NULL),
-};
-
-/* WILLOW Capture widgets */
-static const struct snd_soc_dapm_widget wm8985_dapm_widgets_cpt[] = {
 	SND_SOC_DAPM_MIC("MicIn", NULL),
 };
 
-/* WILLOW-PAIFTX connections */
-static const struct snd_soc_dapm_route audio_map_tx[] = {
-	/* MicIn feeds AINL */
-	{"RIN", NULL, "MicIn"},
-	{"LIN", NULL, "MicIn"},
-};
-
-/* WILLOW-PAIFRX connections */
-static const struct snd_soc_dapm_route audio_map_rx[] = {
+/* WILLOW-PAIF Connections */
+static const struct snd_soc_dapm_route audio_map[] = {
 	/* HP Left/Right */
 	{"HP-L/R", NULL, "HPL"},
 	{"HP-L/R", NULL, "HPR"},
@@ -241,68 +230,39 @@ static const struct snd_soc_dapm_route audio_map_rx[] = {
 	/* SPK Left/Right */
 	{"Speaker-L/R", NULL, "SPKL"},
 	{"Speaker-L/R", NULL, "SPKR"},
+
+	/* MicIn feeds AINL */
+	{"RIN", NULL, "MicIn"},
+	{"LIN", NULL, "MicIn"},
 };
 
-static int willow_wm8985_init_paiftx(struct snd_soc_pcm_runtime *rtd)
+static int willow_wm8985_init_paif(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
-	/* Add willow specific Capture widgets */
-	snd_soc_dapm_new_controls(dapm, wm8985_dapm_widgets_cpt,
-				  ARRAY_SIZE(wm8985_dapm_widgets_cpt));
+	/* Add willow specific widgets */
+	snd_soc_dapm_new_controls(dapm, wm8985_dapm_widgets,
+				  ARRAY_SIZE(wm8985_dapm_widgets));
 
-	/* Set up PAIFTX audio path */
-	snd_soc_dapm_add_routes(dapm, audio_map_tx, ARRAY_SIZE(audio_map_tx));
+	/* Set up PAIF audio path */
+	snd_soc_dapm_add_routes(dapm, audio_map, ARRAY_SIZE(audio_map));
 
 	/* signal a DAPM event */
 	snd_soc_dapm_sync(dapm);
 
 	return 0;
 }
-
-static int willow_wm8985_init_paifrx(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_codec *codec = rtd->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-
-	/* Add willow specific Playback widgets */
-	snd_soc_dapm_new_controls(dapm, wm8985_dapm_widgets_pbk,
-				  ARRAY_SIZE(wm8985_dapm_widgets_pbk));
-
-	/* Set up PAIFRX audio path */
-	snd_soc_dapm_add_routes(dapm, audio_map_rx, ARRAY_SIZE(audio_map_rx));
-
-	/* signal a DAPM event */
-	snd_soc_dapm_sync(dapm);
-
-	return 0;
-}
-
-enum {
-	PRI_PLAYBACK = 0,
-	PRI_CAPTURE,
-};
 
 static struct snd_soc_dai_link willow_dai[] = {
-	[PRI_PLAYBACK] = { /* Primary Playback i/f */
-		.name = "WM8985 PAIF RX",
-		.stream_name = "Playback",
+	{ /* Primary i/f */
+		.name = "WM8985 PAIF",
+		.stream_name = "Pri_Dai",
 		.cpu_dai_name = "samsung-i2s.0",
 		.codec_dai_name = "wm8985-hifi",
 		.platform_name = "samsung-audio",
 		.codec_name = "wm8985.1-001a",
-		.init = willow_wm8985_init_paifrx,
-		.ops = &willow_ops,
-	},
-	[PRI_CAPTURE] = { /* Primary Capture i/f */
-		.name = "WM8985 PAIF TX",
-		.stream_name = "Capture",
-		.cpu_dai_name = "samsung-i2s.0",
-		.codec_dai_name = "wm8985-hifi",
-		.platform_name = "samsung-audio",
-		.codec_name = "wm8985.1-001a",
-		.init = willow_wm8985_init_paiftx,
+		.init = willow_wm8985_init_paif,
 		.ops = &willow_ops,
 	},
 };
@@ -310,7 +270,7 @@ static struct snd_soc_dai_link willow_dai[] = {
 static struct snd_soc_card willow = {
 	.name = "willow",
 	.dai_link = willow_dai,
-	.num_links = 2,
+	.num_links = 1,
 };
 
 static struct platform_device *willow_snd_device;
