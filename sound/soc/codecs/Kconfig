@@ -386,3 +386,7 @@ config SND_SOC_WM2000
 
 config SND_SOC_WM9090
 	tristate
+
+# Bluetooth PCM Interface
+config SND_SOC_BCM4334
+    tristate

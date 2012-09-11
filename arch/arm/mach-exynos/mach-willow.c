@@ -2428,7 +2428,7 @@ static struct platform_device *willow_devices[] __initdata = {
 	&exynos_device_i2s0,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_PCM
-	&exynos_device_pcm0,
+	&exynos_device_pcm1,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	&exynos_device_spdif,
