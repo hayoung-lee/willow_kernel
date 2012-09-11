@@ -4508,7 +4508,6 @@ static int nfs4_proc_setlk(struct nfs4_state *state, int cmd, struct file_lock *
 {
 	struct nfs4_exception exception = {
 		.state = state,
-		.inode = state->inode,
 	};
 	int err;
 
