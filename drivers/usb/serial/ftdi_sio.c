@@ -536,6 +536,10 @@ static struct usb_device_id id_table_combined [] = {
 	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803_6_PID) },
 	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803_7_PID) },
 	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803_8_PID) },
+	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803R_1_PID) },
+	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803R_2_PID) },
+	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803R_3_PID) },
+	{ USB_DEVICE(SEALEVEL_VID, SEALEVEL_2803R_4_PID) },
 	{ USB_DEVICE(IDTECH_VID, IDTECH_IDT1221U_PID) },
 	{ USB_DEVICE(OCT_VID, OCT_US101_PID) },
 	{ USB_DEVICE(OCT_VID, OCT_DK201_PID) },
@@ -1464,6 +1468,7 @@ static void ftdi_determine_type(struct usb_serial_port *port)
 		/* Assume it's an FT-X series device */
 		priv->chip_type = FTX;
 	}
+
 	dev_info(&udev->dev, "Detected %s\n", ftdi_chip_name[priv->chip_type]);
 }
 
