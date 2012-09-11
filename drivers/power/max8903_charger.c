@@ -26,53 +26,162 @@
 #include <linux/power_supply.h>
 #include <linux/platform_device.h>
 #include <linux/power/max8903_charger.h>
+#include <linux/delay.h>
+#include <plat/gpio-cfg.h>
+
+//#define SUPPORT_USB_STATE
+#define FULL_VCELL 4250000
+#define FULL_SOC 100
+
+#ifdef CONFIG_BATTERY_MAX17040
+#define HAVE_FUEL_GAUGE
+#endif
+
+#ifdef HAVE_FUEL_GAUGE
+extern int fg_read_soc(void);
+extern int fg_read_vcell(void);
+#endif
 
 struct max8903_data {
 	struct max8903_pdata *pdata;
 	struct device *dev;
-	struct power_supply psy;
-	bool fault;
+
+	struct power_supply battery; // battery
+	struct power_supply usb; // usb charger
+	struct power_supply adapter; // dc adapter
+
+	struct delayed_work	work;
+
+	bool fault; // battery fault
 	bool usb_in;
 	bool ta_in;
 };
 
-static enum power_supply_property max8903_charger_props[] = {
+static enum power_supply_property battery_charger_props[] = {
 	POWER_SUPPLY_PROP_STATUS, /* Charger status output */
-	POWER_SUPPLY_PROP_ONLINE, /* External power source */
 	POWER_SUPPLY_PROP_HEALTH, /* Fault or OK */
+	POWER_SUPPLY_PROP_ONLINE,
+#ifdef HAVE_FUEL_GAUGE
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CAPACITY,
+#endif	
 };
 
-static int max8903_get_property(struct power_supply *psy,
+static enum power_supply_property usb_charger_props[] = {
+	POWER_SUPPLY_PROP_ONLINE, /* External power source */
+};
+
+static enum power_supply_property adapter_charger_props[] = {
+	POWER_SUPPLY_PROP_ONLINE, /* External power source */
+};
+
+
+static int battery_get_property(struct power_supply *battery,
 		enum power_supply_property psp,
 		union power_supply_propval *val)
 {
-	struct max8903_data *data = container_of(psy,
-			struct max8903_data, psy);
+	struct max8903_data *data = container_of(battery,
+			struct max8903_data, battery);
 
 	switch (psp) {
-	case POWER_SUPPLY_PROP_STATUS:
-		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		if (data->pdata->chg) {
-			if (gpio_get_value(data->pdata->chg) == 0)
-				val->intval = POWER_SUPPLY_STATUS_CHARGING;
-			else if (data->usb_in || data->ta_in)
-				val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
-			else
-				val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
-		}
-		break;
-	case POWER_SUPPLY_PROP_ONLINE:
-		val->intval = 0;
-		if (data->usb_in || data->ta_in)
-			val->intval = 1;
-		break;
-	case POWER_SUPPLY_PROP_HEALTH:
-		val->intval = POWER_SUPPLY_HEALTH_GOOD;
-		if (data->fault)
-			val->intval = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
-		break;
-	default:
-		return -EINVAL;
+		case POWER_SUPPLY_PROP_ONLINE:
+			val->intval = 1; //always
+			dev_dbg(data->dev, "%s: ONLINE=%d\n", __func__, val->intval);
+			break;
+		case POWER_SUPPLY_PROP_STATUS:
+			val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+			if (data->pdata->chg) {
+#ifdef SUPPORT_USB_STATE
+				if (gpio_get_value(data->pdata->chg) == 0) { // low is charging
+					if(fg_read_soc() >= FULL_SOC || fg_read_vcell() >= FULL_VCELL) {
+						val->intval = POWER_SUPPLY_STATUS_FULL;
+						gpio_set_value(data->pdata->cen, 1); // off
+					} else if(data->ta_in || data->usb_in) {
+						val->intval = POWER_SUPPLY_STATUS_CHARGING;
+					} else {
+						val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+					}
+				} else { // not charging
+					if(fg_read_soc() < FULL_SOC || fg_read_vcell() < FULL_VCELL) {
+						gpio_set_value(data->pdata->cen, 0); // on
+					}
+
+					if (data->usb_in || data->ta_in) 
+						val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+					else
+						val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+				}
+#else
+				if(gpio_get_value(data->pdata->chg) == 0) { // low is charging
+					if(fg_read_soc() >= FULL_SOC || fg_read_vcell() >= FULL_VCELL) {
+						val->intval = POWER_SUPPLY_STATUS_FULL;
+						gpio_set_value(data->pdata->cen, 1); // off
+					} else if(data->ta_in) {
+						if(data->usb_in) {
+							val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+						} else {
+							val->intval = POWER_SUPPLY_STATUS_CHARGING;
+						}
+					} else {
+						val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+					}
+
+				} else { // not charging
+					if(fg_read_soc() < FULL_SOC && fg_read_vcell() < FULL_VCELL) {
+						gpio_set_value(data->pdata->cen, 0); // on
+					}
+
+					if(data->ta_in || data->usb_in)
+						val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+					else
+						val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+				}
+#endif
+			}
+			break;
+		case POWER_SUPPLY_PROP_HEALTH:
+			val->intval = POWER_SUPPLY_HEALTH_GOOD;
+			if (data->fault)
+				val->intval = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
+			break;
+		case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+			val->intval = fg_read_vcell();
+			break;
+		case POWER_SUPPLY_PROP_CAPACITY:
+			val->intval = fg_read_soc();
+			break;
+		default:
+			return -EINVAL;
+	}
+	return 0;
+}
+
+static int usb_get_property(struct power_supply *usb, enum power_supply_property psp, union power_supply_propval *val)
+{
+	struct max8903_data *data = container_of(usb,
+			struct max8903_data, usb);
+
+	switch (psp) {
+		case POWER_SUPPLY_PROP_ONLINE:
+			val->intval = data->ta_in ? (data->usb_in ? 1 : 0) : 0;//JSK//data->usb_in ? 1 : 0;
+			break;
+		default:
+			return -EINVAL;
+	}
+	return 0;
+}
+
+static int adapter_get_property(struct power_supply *adapter, enum power_supply_property psp, union power_supply_propval *val)
+{
+	struct max8903_data *data = container_of(adapter,
+			struct max8903_data, adapter);
+
+	switch (psp) {
+		case POWER_SUPPLY_PROP_ONLINE:
+			val->intval = data->ta_in ? (data->usb_in ? 0 : 1) : 0;
+			break;
+		default:
+			return -EINVAL;
 	}
 	return 0;
 }
@@ -81,19 +190,34 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 {
 	struct max8903_data *data = _data;
 	struct max8903_pdata *pdata = data->pdata;
-	bool ta_in;
-	enum power_supply_type old_type;
+	struct power_supply *battery = &data->battery;
+	struct power_supply *usb = &data->usb;
+	struct power_supply *adapter = &data->adapter;
 
-	ta_in = gpio_get_value(pdata->dok) ? false : true;
+	/*-----------------------------------------
+	 *     | ta_in(nDC_OK) | usb_in(nUSB_OK)  |
+	 *-----------------------------------------
+	 * NC  | H(fals)       | L(true)          |
+	 * AC  | L(true)       | H(fals)          |
+	 * USB | L(true)       | L(true)          |
+	 *----------------------------------------*/
+	int ta_in, usb_in;
 
-	if (ta_in == data->ta_in)
+	ta_in = gpio_get_value(pdata->dok) ? 0 : 1;
+	mdelay(200);
+	usb_in = gpio_get_value(pdata->uok) ? 0 : 1;
+
+	if (ta_in == data->ta_in && usb_in == data->usb_in)
 		return IRQ_HANDLED;
 
 	data->ta_in = ta_in;
+	data->usb_in = usb_in;
 
 	/* Set Current-Limit-Mode 1:DC 0:USB */
+#ifdef CTRL_DCM
 	if (pdata->dcm)
 		gpio_set_value(pdata->dcm, ta_in ? 1 : 0);
+#endif
 
 	/* Charger Enable / Disable (cen is negated) */
 	if (pdata->cen)
@@ -103,6 +227,7 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 	dev_dbg(data->dev, "TA(DC-IN) Charger %s.\n", ta_in ?
 			"Connected" : "Disconnected");
 
+#if 0
 	old_type = data->psy.type;
 
 	if (data->ta_in)
@@ -114,18 +239,40 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 
 	if (old_type != data->psy.type)
 		power_supply_changed(&data->psy);
+#else
+#ifdef SUPPORT_USB_STATE
+	if(data->ta_in)
+		power_supply_changed(adapter);
+	else if(data->usb_in)
+		power_supply_changed(usb);
+	else
+		power_supply_changed(battery);
+#else
+	if(data->ta_in && data->usb_in)
+		power_supply_changed(usb);
+	else if(data->ta_in)
+		power_supply_changed(adapter);
+	else
+		power_supply_changed(battery);
+#endif
+#endif
 
 	return IRQ_HANDLED;
 }
 
+#ifdef SUPPORT_USB_STATE
 static irqreturn_t max8903_usbin(int irq, void *_data)
 {
 	struct max8903_data *data = _data;
 	struct max8903_pdata *pdata = data->pdata;
-	bool usb_in;
-	enum power_supply_type old_type;
+	struct power_supply *battery = &data->battery;
+	struct power_supply *usb = &data->usb;
+	struct power_supply *adapter = &data->adapter;
 
-	usb_in = gpio_get_value(pdata->uok) ? false : true;
+	bool usb_in;
+	//	enum power_supply_type old_type;
+
+	usb_in = gpio_get_value(pdata->uok) ? 0 : 1;
 
 	if (usb_in == data->usb_in)
 		return IRQ_HANDLED;
@@ -142,6 +289,7 @@ static irqreturn_t max8903_usbin(int irq, void *_data)
 	dev_dbg(data->dev, "USB Charger %s.\n", usb_in ?
 			"Connected" : "Disconnected");
 
+#if 0
 	old_type = data->psy.type;
 
 	if (data->ta_in)
@@ -153,9 +301,51 @@ static irqreturn_t max8903_usbin(int irq, void *_data)
 
 	if (old_type != data->psy.type)
 		power_supply_changed(&data->psy);
+#else
+	if(data->ta_in)
+		power_supply_changed(adapter);
+	else if(data->usb_in)
+		power_supply_changed(usb);
+	else
+		power_supply_changed(battery);
+#endif
 
 	return IRQ_HANDLED;
 }
+#else
+void usb_connection_report(bool connected)
+{
+	struct max8903_data *data;
+	struct power_supply *battery;
+	struct power_supply *usb;
+	struct power_supply *adapter;
+
+	usb = power_supply_get_by_name(CHARGER_USB_NAME);
+
+	if(usb) {
+		data = container_of(usb, struct max8903_data, usb);
+
+		if(data) {
+			if(data->usb_in == connected) 
+				return;
+
+			battery = &data->battery;
+			adapter = &data->adapter;
+
+			data->usb_in = connected;
+
+			if(data->ta_in && data->usb_in)
+				power_supply_changed(usb);
+			else if(data->ta_in)
+				power_supply_changed(adapter);
+			else
+				power_supply_changed(battery);
+		}
+	}
+}
+
+EXPORT_SYMBOL(usb_connection_report);
+#endif
 
 static irqreturn_t max8903_fault(int irq, void *_data)
 {
@@ -178,9 +368,101 @@ static irqreturn_t max8903_fault(int irq, void *_data)
 	return IRQ_HANDLED;
 }
 
+static bool charger_online(void)
+{
+	struct max8903_data *data;
+	struct power_supply *usb;
+
+	usb = power_supply_get_by_name(CHARGER_USB_NAME);
+
+	if(usb) {
+		data = container_of(usb, struct max8903_data, usb);
+
+		if(data) {
+			return data->ta_in || data->usb_in;
+		}
+	}
+
+	return false;
+}
+
+static void max8903_work(struct delayed_work *work)
+{
+	struct max8903_data* data;
+	static int msg_update_cnt =0;
+
+	data = container_of(work, struct max8903_data, work);
+
+#ifdef SUPPORT_USB_STATE
+	if(!data->usb_in && !data->ta_in)
+		power_supply_changed(&data->battery);
+	else if(data->ta_in)
+		power_supply_changed(&data->adapter);
+	else if(data->usb_in)
+		power_supply_changed(&data->usb);
+#else
+	if(data->ta_in && data->usb_in)
+		power_supply_changed(&data->usb);
+	else if(data->ta_in)
+		power_supply_changed(&data->adapter);
+	else
+		power_supply_changed(&data->battery);
+#endif
+
+	if ( data->ta_in || data->usb_in ) {
+		if ( msg_update_cnt > 58 ) {
+			printk("[BATTERY] soc=%d\%, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+			msg_update_cnt = 0;
+		} else {
+			msg_update_cnt++;
+		}
+	} else {
+		if ( msg_update_cnt ) {
+			msg_update_cnt = 0;
+		}
+	}
+
+	schedule_delayed_work(&data->work, 1000);
+}
+
+static int max8903_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct max8903_data *data = platform_get_drvdata(pdev);
+	struct max8903_pdata *pdata = data->pdata;
+
+	cancel_delayed_work(&data->work);
+
+	if(pdata->dok) {
+		int irq = gpio_to_irq(pdata->dok);
+		enable_irq_wake(irq);
+	}
+ 
+	return 0;
+}
+
+static int max8903_resume(struct platform_device* pdev)
+{
+	struct max8903_data *data = platform_get_drvdata(pdev);
+	struct max8903_pdata *pdata = data->pdata;
+  
+	schedule_delayed_work(&data->work, 1000);
+
+	if(pdata->dok) {
+		int irq = gpio_to_irq(pdata->dok);
+		disable_irq_wake(irq);
+	}
+
+	max8903_work(&data->work);
+
+	return 0;
+}
+
 static __devinit int max8903_probe(struct platform_device *pdev)
 {
 	struct max8903_data *data;
+	struct power_supply *battery;
+	struct power_supply *usb;
+	struct power_supply *adapter;
 	struct device *dev = &pdev->dev;
 	struct max8903_pdata *pdata = pdev->dev.platform_data;
 	int ret = 0;
@@ -193,6 +475,13 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 		dev_err(dev, "Cannot allocate memory.\n");
 		return -ENOMEM;
 	}
+
+	battery = &data->battery;
+	usb = &data->usb;
+	adapter = &data->adapter;
+
+	pdata->charger_online = charger_online;
+
 	data->pdata = pdata;
 	data->dev = dev;
 	platform_set_drvdata(pdev, data);
@@ -204,6 +493,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 	}
 
 	if (pdata->dc_valid) {
+#ifdef CTRL_DCM
 		if (pdata->dok && gpio_is_valid(pdata->dok) &&
 				pdata->dcm && gpio_is_valid(pdata->dcm)) {
 			gpio = pdata->dok; /* PULL_UPed Interrupt */
@@ -227,6 +517,10 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 				goto err;
 			}
 		}
+#else
+		gpio = pdata->dok; /* PULL_UPed Interrupt */
+		ta_in = gpio_get_value(gpio) ? 0 : 1;
+#endif
 	}
 
 	if (pdata->usb_valid) {
@@ -240,6 +534,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 			goto err;
 		}
 	}
+	//printk("%s() ta_in[%s] usb_in[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
 
 	if (pdata->cen) {
 		if (gpio_is_valid(pdata->cen)) {
@@ -267,6 +562,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CTRL_USUS
 	if (pdata->usus) {
 		if (!gpio_is_valid(pdata->usus)) {
 			dev_err(dev, "Invalid pin: usus.\n");
@@ -274,22 +570,45 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 			goto err;
 		}
 	}
+#endif
 
 	data->fault = false;
 	data->ta_in = ta_in;
 	data->usb_in = usb_in;
 
-	data->psy.name = "max8903_charger";
-	data->psy.type = (ta_in) ? POWER_SUPPLY_TYPE_MAINS :
-			((usb_in) ? POWER_SUPPLY_TYPE_USB :
-			 POWER_SUPPLY_TYPE_BATTERY);
-	data->psy.get_property = max8903_get_property;
-	data->psy.properties = max8903_charger_props;
-	data->psy.num_properties = ARRAY_SIZE(max8903_charger_props);
+	battery->name = CHARGER_BATTERY_NAME;//"charger-battery";
+	battery->type = POWER_SUPPLY_TYPE_BATTERY;
+	battery->get_property = battery_get_property;
+	battery->properties = battery_charger_props;
+	battery->num_properties = ARRAY_SIZE(battery_charger_props);
 
-	ret = power_supply_register(dev, &data->psy);
+	usb->name = CHARGER_USB_NAME;//"charger-usb";
+	usb->type = POWER_SUPPLY_TYPE_USB;
+	usb->get_property = usb_get_property;
+	usb->properties = usb_charger_props;
+	usb->num_properties = ARRAY_SIZE(usb_charger_props);
+
+	adapter->name = CHARGER_ADAPTER_NAME;//"charger-adapter";
+	adapter->type = POWER_SUPPLY_TYPE_MAINS;
+	adapter->get_property = adapter_get_property;
+	adapter->properties = adapter_charger_props;
+	adapter->num_properties = ARRAY_SIZE(adapter_charger_props);
+
+	ret = power_supply_register(dev, battery);
 	if (ret) {
-		dev_err(dev, "failed: power supply register.\n");
+		dev_err(dev, "failed: power supply register (battery).\n");
+		goto err;
+	}
+
+	ret = power_supply_register(dev, usb);
+	if (ret) {
+		dev_err(dev, "failed: power supply register (usb).\n");
+		goto err;
+	}
+
+	ret = power_supply_register(dev, adapter);
+	if (ret) {
+		dev_err(dev, "failed: power supply register (adapter).\n");
 		goto err;
 	}
 
@@ -305,6 +624,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef SUPPORT_USB_STATE
 	if (pdata->usb_valid) {
 		ret = request_threaded_irq(gpio_to_irq(pdata->uok),
 				NULL, max8903_usbin,
@@ -316,6 +636,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 			goto err_dc_irq;
 		}
 	}
+#endif
 
 	if (pdata->flt) {
 		ret = request_threaded_irq(gpio_to_irq(pdata->flt),
@@ -329,16 +650,24 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 		}
 	}
 
+	INIT_DELAYED_WORK_DEFERRABLE(&data->work, max8903_work);
+
+	schedule_delayed_work(&data->work, 1000);
+
 	return 0;
 
 err_usb_irq:
+#ifdef SUPPORT_USB_STATE
 	if (pdata->usb_valid)
 		free_irq(gpio_to_irq(pdata->uok), data);
 err_dc_irq:
 	if (pdata->dc_valid)
 		free_irq(gpio_to_irq(pdata->dok), data);
+#endif
 err_psy:
-	power_supply_unregister(&data->psy);
+	power_supply_unregister(battery);
+	power_supply_unregister(usb);
+	power_supply_unregister(adapter);
 err:
 	kfree(data);
 	return ret;
@@ -353,11 +682,17 @@ static __devexit int max8903_remove(struct platform_device *pdev)
 
 		if (pdata->flt)
 			free_irq(gpio_to_irq(pdata->flt), data);
+#ifdef SUPPORT_USB_STATE
 		if (pdata->usb_valid)
 			free_irq(gpio_to_irq(pdata->uok), data);
+#endif
 		if (pdata->dc_valid)
 			free_irq(gpio_to_irq(pdata->dok), data);
-		power_supply_unregister(&data->psy);
+
+		power_supply_unregister(&data->battery);
+		power_supply_unregister(&data->usb);
+		power_supply_unregister(&data->adapter);
+
 		kfree(data);
 	}
 
@@ -367,6 +702,8 @@ static __devexit int max8903_remove(struct platform_device *pdev)
 static struct platform_driver max8903_driver = {
 	.probe	= max8903_probe,
 	.remove	= __devexit_p(max8903_remove),
+	.suspend = max8903_suspend,
+	.resume = max8903_resume,
 	.driver = {
 		.name	= "max8903-charger",
 		.owner	= THIS_MODULE,

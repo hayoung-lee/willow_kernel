@@ -10,26 +10,6 @@
 #ifndef __MAX17040_BATTERY_H_
 #define __MAX17040_BATTERY_H_
 
-#ifdef CONFIG_BATTERY_MAX17040_OLD
-
-#define FEATURE_T10S_MAX17040
-//#define FEATURE_T9_BATT_THERM
-
-#ifdef FEATURE_T9_BATT_THERM
-#define ADC_TOTAL_COUNT    10
-#define ADC_DATA_ARR_SIZE  6
-#define HIGH_BLOCK_TEMP    500
-#define HIGH_RECOVER_TEMP  420
-#define LOW_BLOCK_TEMP     0
-#define LOW_RECOVER_TEMP   20
-
-enum batt_adc_channel_type{
-  ADC_BATT_TH1 = 1,
-  ADC_BATT_TH2 = 2,
-	ENDOFADC
-};
-#endif /* FEATURE_T9_BATT_THERM */
-
 /*
  * TODO: the parts below should be cleared and modified properly with
  * a precise h/w naming scheme.
@@ -85,15 +65,5 @@ struct max17040_platform_data {
    */
 
 };
-
-#else //CONFIG_BATTERY_MAX17040_OLD
-
-struct max17040_platform_data {
-	int (*battery_online)(void);
-	int (*charger_online)(void);
-	int (*charger_enable)(void);
-};
-
-#endif //CONFIG_BATTERY_MAX17040_OLD
 
 #endif

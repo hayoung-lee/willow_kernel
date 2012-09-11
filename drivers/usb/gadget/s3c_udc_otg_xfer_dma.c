@@ -49,14 +49,14 @@ static u8 test_pkt[TEST_PKT_SIZE] __attribute__((aligned(8))) = {
 
 static void s3c_udc_ep_set_stall(struct s3c_ep *ep);
 
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#if defined(CONFIG_BATTERY_MAX17040)
 extern void isUSBconnected(bool usb_connect);
 #endif
 
-#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040_OLD)
+#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040)
 void s3c_udc_cable_connect(struct s3c_udc *dev)
 {
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#if defined(CONFIG_BATTERY_MAX17040)
 	isUSBconnected(1);
 #else
 	samsung_cable_check_status(1);
@@ -65,7 +65,7 @@ void s3c_udc_cable_connect(struct s3c_udc *dev)
 
 void s3c_udc_cable_disconnect(struct s3c_udc *dev)
 {
-#ifdef CONFIG_BATTERY_MAX17040_OLD
+#if defined(CONFIG_BATTERY_MAX17040)
 	isUSBconnected(0);
 #else
 	samsung_cable_check_status(0);
@@ -534,7 +534,7 @@ static irqreturn_t s3c_udc_irq(int irq, void *_dev)
 				spin_lock(&dev->lock);
 			}
 
-#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040_OLD)
+#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040)
 			s3c_udc_cable_disconnect(dev);
 #endif
 		}
@@ -1313,7 +1313,7 @@ static void s3c_ep0_setup(struct s3c_udc *dev)
 			reset_available = 1;
 			dev->req_config = 1;
 		}
-#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040_OLD)
+#if defined(CONFIG_BATTERY_SAMSUNG) || defined(CONFIG_BATTERY_MAX17040)
 		s3c_udc_cable_connect(dev);
 #endif
 		break;
