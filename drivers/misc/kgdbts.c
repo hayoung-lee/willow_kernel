@@ -141,7 +141,9 @@ static int arch_needs_sstep_emulation = 1;
 #else
 static int arch_needs_sstep_emulation;
 #endif
+static unsigned long cont_addr;
 static unsigned long sstep_addr;
+static int restart_from_top_after_write;
 static int sstep_state;
 
 /* Storage for the registers, in GDB format. */
@@ -189,7 +191,8 @@ static int kgdbts_unreg_thread(void *ptr)
 	 */
 	while (!final_ack)
 		msleep_interruptible(1500);
-
+	/* Pause for any other threads to exit after final ack. */
+	msleep_interruptible(1000);
 	if (configured)
 		kgdb_unregister_io_module(&kgdbts_io_ops);
 	configured = 0;
@@ -311,13 +314,21 @@ static int check_and_rewind_pc(char *put_str, char *arg)
 	if (addr + BREAK_INSTR_SIZE == ip)
 		offset = -BREAK_INSTR_SIZE;
 #endif
-	if (strcmp(arg, "silent") && ip + offset != addr) {
+
+	if (arch_needs_sstep_emulation && sstep_addr &&
+	    ip + offset == sstep_addr &&
+	    ((!strcmp(arg, "sys_open") || !strcmp(arg, "do_fork")))) {
+		/* This is special case for emulated single step */
+		v2printk("Emul: rewind hit single step bp\n");
+		restart_from_top_after_write = 1;
+	} else if (strcmp(arg, "silent") && ip + offset != addr) {
 		eprintk("kgdbts: BP mismatch %lx expected %lx\n",
 			   ip + offset, addr);
 		return 1;
 	}
 	/* Readjust the instruction pointer if needed */
 	ip += offset;
+	cont_addr = ip;
 #ifdef GDB_ADJUSTS_BREAK_OFFSET
 	instruction_pointer_set(&kgdbts_regs, ip);
 #endif
@@ -327,6 +338,8 @@ static int check_and_rewind_pc(char *put_str, char *arg)
 static int check_single_step(char *put_str, char *arg)
 {
 	unsigned long addr = lookup_addr(arg);
+	static int matched_id;
+
 	/*
 	 * From an arch indepent point of view the instruction pointer
 	 * should be on a different instruction
@@ -400,6 +413,31 @@ static int got_break(char *put_str, char *arg)
 	return 1;
 }
 
+static void get_cont_catch(char *arg)
+{
+	/* Always send detach because the test is completed at this point */
+	fill_get_buf("D");
+}
+
+static int put_cont_catch(char *put_str, char *arg)
+{
+	/* This is at the end of the test and we catch any and all input */
+	v2printk("kgdbts: cleanup task: %lx\n", sstep_thread_id);
+	ts.idx--;
+	return 0;
+}
+
+static int emul_reset(char *put_str, char *arg)
+{
+	if (strncmp(put_str, "$OK", 3))
+		return 1;
+	if (restart_from_top_after_write) {
+		restart_from_top_after_write = 0;
+		ts.idx = -1;
+	}
+	return 0;
+}
+
 static void emul_sstep_get(char *arg)
 {
 	if (!arch_needs_sstep_emulation) {
@@ -453,8 +491,7 @@ static int emul_sstep_put(char *put_str, char *arg)
 		v2printk("Stopped at IP: %lx\n",
 			 instruction_pointer(&kgdbts_regs));
 		/* Want to stop at IP + break instruction size by default */
-		sstep_addr = instruction_pointer(&kgdbts_regs) +
-			BREAK_INSTR_SIZE;
+		sstep_addr = cont_addr + BREAK_INSTR_SIZE;
 		break;
 	case 2:
 		if (strncmp(put_str, "$OK", 3)) {
@@ -466,6 +503,9 @@ static int emul_sstep_put(char *put_str, char *arg)
 		if (strncmp(put_str, "$T0", 3)) {
 			eprintk("kgdbts: failed continue sstep\n");
 			return 1;
+		} else {
+			char *ptr = &put_str[11];
+			kgdb_hex2long(&ptr, &sstep_thread_id);
 		}
 		break;
 	case 4:
@@ -735,8 +775,8 @@ static int run_simple_test(int is_get_char, int chr)
 	/* This callback is a put char which is when kgdb sends data to
 	 * this I/O module.
 	 */
-	if (ts.tst[ts.idx].get[0] == '\0' &&
-		ts.tst[ts.idx].put[0] == '\0') {
+	if (ts.tst[ts.idx].get[0] == '\0' && ts.tst[ts.idx].put[0] == '\0' &&
+	    !ts.tst[ts.idx].get_handler) {
 		eprintk("kgdbts: ERROR: beyond end of test on"
 			   " '%s' line %i\n", ts.name, ts.idx);
 		return 0;
