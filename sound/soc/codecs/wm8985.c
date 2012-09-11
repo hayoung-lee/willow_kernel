@@ -45,7 +45,7 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R1  - Power management 1 */
 	0x0000,     /* R2  - Power management 2 */
 	0x0000,     /* R3  - Power management 3 */
-	0x0050,     /* R4  - Audio Interface */
+	0x0052,     /* R4  - Audio Interface, ADC data appears in right phase of LRC */
 	0x0000,     /* R5  - Companding control */
 	0x0140,     /* R6  - Clock Gen control */
 	0x0000,     /* R7  - Additional control */
@@ -1088,7 +1088,7 @@ static struct snd_soc_dai_driver wm8985_dai = {
 	},
 	.capture = {
 		.stream_name = "Capture",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = WM8985_FORMATS,
