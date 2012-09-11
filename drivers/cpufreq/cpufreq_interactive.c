@@ -103,6 +103,12 @@ struct cpufreq_interactive_inputopen {
 
 static struct cpufreq_interactive_inputopen inputopen;
 
+/*
+ * Non-zero means longer-term speed boost active.
+ */
+
+static int boost_val;
+
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		unsigned int event);
 
@@ -744,6 +750,35 @@ static ssize_t store_input_boost(struct kobject *kobj, struct attribute *attr,
 
 define_one_global_rw(input_boost);
 
+static ssize_t show_boost(struct kobject *kobj, struct attribute *attr,
+			  char *buf)
+{
+	return sprintf(buf, "%d\n", boost_val);
+}
+
+static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
+			   const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+
+	boost_val = val;
+
+	if (boost_val) {
+		trace_cpufreq_interactive_boost("on");
+		cpufreq_interactive_boost();
+	} else {
+		trace_cpufreq_interactive_unboost("off");
+	}
+
+	return count;
+}
+
+define_one_global_rw(boost);
 static struct attribute *interactive_attributes[] = {
 	&hispeed_freq_attr.attr,
 	&go_hispeed_load_attr.attr,
@@ -751,6 +786,7 @@ static struct attribute *interactive_attributes[] = {
 	&min_sample_time_attr.attr,
 	&timer_rate_attr.attr,
 	&input_boost.attr,
+	&boost.attr,
 	NULL,
 };
 
