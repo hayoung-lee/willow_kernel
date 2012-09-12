@@ -85,6 +85,41 @@
  */
 #define ACCESSORY_REGISTER_HID         54
 
+/* Control request for unregistering a HID device.
+ *
+ *	requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *	request:        ACCESSORY_REGISTER_HID
+ *	value:          Accessory assigned ID for the HID device
+ *	index:          0
+ *	data            none
+ */
+#define ACCESSORY_UNREGISTER_HID         55
+
+/* Control request for sending the HID report descriptor.
+ * If the HID descriptor is longer than the endpoint zero max packet size,
+ * the descriptor will be sent in multiple ACCESSORY_SET_HID_REPORT_DESC
+ * commands. The data for the descriptor must be sent sequentially
+ * if multiple packets are needed.
+ *
+ *	requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *	request:        ACCESSORY_SET_HID_REPORT_DESC
+ *	value:          Accessory assigned ID for the HID device
+ *	index:          offset of data in descriptor
+ *                      (needed when HID descriptor is too big for one packet)
+ *	data            the HID report descriptor
+ */
+#define ACCESSORY_SET_HID_REPORT_DESC         56
+
+/* Control request for sending HID events.
+ *
+ *	requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *	request:        ACCESSORY_SEND_HID_EVENT
+ *	value:          Accessory assigned ID for the HID device
+ *	index:          0
+ *	data            the HID report for the event
+ */
+#define ACCESSORY_SEND_HID_EVENT         57
+
 /* ioctls for retrieving strings set by the host */
 #define ACCESSORY_GET_STRING_MANUFACTURER   _IOW('M', 1, char[256])
 #define ACCESSORY_GET_STRING_MODEL          _IOW('M', 2, char[256])
