@@ -120,6 +120,17 @@
  */
 #define ACCESSORY_SEND_HID_EVENT         57
 
+/* Control request for setting the audio mode.
+ *
+ *	requestType:	USB_DIR_OUT | USB_TYPE_VENDOR
+ *	request:        ACCESSORY_SET_AUDIO_MODE
+ *	value:          0 - no audio
+ *                     1 - device to host, 44100 16-bit stereo PCM
+ *	index:          0
+ *	data            none
+ */
+#define ACCESSORY_SET_AUDIO_MODE         58
+
 /* ioctls for retrieving strings set by the host */
 #define ACCESSORY_GET_STRING_MANUFACTURER   _IOW('M', 1, char[256])
 #define ACCESSORY_GET_STRING_MODEL          _IOW('M', 2, char[256])
