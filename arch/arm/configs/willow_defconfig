@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 3.0.29 Kernel Configuration
+# Linux/arm 3.0.31 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -2095,6 +2095,7 @@ CONFIG_SND_SOC_WM8985=y
 CONFIG_HID_SUPPORT=y
 CONFIG_HID=y
 # CONFIG_HIDRAW is not set
+CONFIG_UHID=y
 
 #
 # USB Input Devices
