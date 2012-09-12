@@ -489,9 +489,6 @@ static void cpufreq_interactive_freq_down(struct work_struct *work)
 						CPUFREQ_RELATION_H);
 
 		mutex_unlock(&set_speed_lock);
-		pcpu->freq_change_time_in_idle =
-			get_cpu_idle_time_us(cpu,
-					     &pcpu->freq_change_time);
 		trace_cpufreq_interactive_down(cpu, pcpu->target_freq,
 					       pcpu->policy->cur);
 	}
