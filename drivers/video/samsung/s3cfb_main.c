@@ -398,6 +398,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	struct s3c_platform_fb *pdata = to_fb_plat(info->dev);
 	struct platform_device *pdev = to_platform_device(info->dev);
 	struct s3cfb_global *fbdev[2];
+	struct fb_info *fb;
 	int i;
 
 	s3c_log("s3cfb_early_suspend is called start ======>\n");
@@ -416,10 +417,19 @@ void s3cfb_early_suspend(struct early_suspend *h)
 		if (pdata->backlight_off)
 			pdata->backlight_off(pdev);
 #endif
+		// clear fb
+		fb=fbdev[i]->fb[pdata->default_win];
+		memset(fb->screen_base, 0x0,fb->var.yres * fb->fix.line_length * 2);
+
 		s3cfb_display_off(fbdev[i]);
 		if (pdata->clk_off)
 			pdata->clk_off(pdev, &fbdev[i]->clock);
 	}
+
+	// clear fb
+	fb=fbdev[0]->fb[pdata->default_win];
+	memset(fb->screen_base, 0x0,fb->var.yres * fb->fix.line_length * 2);
+
 #ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
