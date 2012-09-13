@@ -37,10 +37,10 @@ struct exynos_gpio_cfg {
 static int exynos_cfg_i2s_gpio(struct platform_device *pdev)
 {
 	/* configure GPIO for i2s port */
-	struct exynos_gpio_cfg exynos4_cfg[1] = {
+	struct exynos_gpio_cfg exynos4_cfg[3] = {
 				{ EXYNOS4_GPZ(0),  7, S3C_GPIO_SFN(2) },
-				//{ EXYNOS4_GPC0(0), 5, S3C_GPIO_SFN(2) },
-				//{ EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(2) }
+				{ EXYNOS4_GPC0(0), 5, S3C_GPIO_SFN(2) },
+				{ EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(2) }
 	};
 	struct exynos_gpio_cfg exynos5_cfg[3] = {
 				{ EXYNOS5_GPZ(0),  7, S3C_GPIO_SFN(2) },
@@ -189,10 +189,10 @@ struct platform_device exynos_device_i2s2 = {
 static int exynos_pcm_cfg_gpio(struct platform_device *pdev)
 {
 	/* configure GPIO for pcm port */
-	struct exynos_gpio_cfg exynos4_cfg[1] = {
-				//{ EXYNOS4_GPZ(0),  5, S3C_GPIO_SFN(3) },
+	struct exynos_gpio_cfg exynos4_cfg[3] = {
+				{ EXYNOS4_GPZ(0),  5, S3C_GPIO_SFN(3) },
 				{ EXYNOS4_GPC0(0), 5, S3C_GPIO_SFN(3) },
-				//{ EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(3) }
+				{ EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(3) }
 	};
 	struct exynos_gpio_cfg exynos5_cfg[3] = {
 				{ EXYNOS5_GPZ(0),  5, S3C_GPIO_SFN(3) },
