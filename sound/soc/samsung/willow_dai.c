@@ -1,5 +1,5 @@
 /*
- *  willow_wm8985.c
+ *  willow_dai.c
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -24,7 +24,6 @@
 
 #define WILLOW_WM8985_FREQ 16934000
 
-#ifdef CONFIG_SND_SAMSUNG_I2S_MASTER
 static int set_epll_rate(unsigned long rate)
 {
 	struct clk *fout_epll;
@@ -44,10 +43,8 @@ out:
 
 	return 0;
 }
-#endif /* CONFIG_SND_SAMSUNG_I2S_MASTER */
 
-#ifndef CONFIG_SND_SAMSUNG_I2S_MASTER
-static int willow_hw_params(struct snd_pcm_substream *substream,
+static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -62,11 +59,13 @@ static int willow_hw_params(struct snd_pcm_substream *substream,
 	else
 		pll_out = params_rate(params) * 256;
 
+/*
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S
 					 | SND_SOC_DAIFMT_NB_NF
 					 | SND_SOC_DAIFMT_CBM_CFM);
 	if (ret < 0)
 		return ret;
+*/
 
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S
 					 | SND_SOC_DAIFMT_NB_NF
@@ -74,6 +73,7 @@ static int willow_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
+/*
 	ret = snd_soc_dai_set_pll(codec_dai, 0, 0,
 					WILLOW_WM8985_FREQ, pll_out);
 	if (ret < 0)
@@ -83,6 +83,7 @@ static int willow_hw_params(struct snd_pcm_substream *substream,
 					pll_out, SND_SOC_CLOCK_IN);
 	if (ret < 0)
 		return ret;
+*/
 
 	ret = snd_soc_dai_set_sysclk(cpu_dai, SAMSUNG_I2S_OPCLK,
 					0, MOD_OPCLK_PCLK);
@@ -91,8 +92,8 @@ static int willow_hw_params(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-#else /* CONFIG_SND_SAMSUNG_I2S_MASTER */
-static int willow_hw_params(struct snd_pcm_substream *substream,
+
+static int willow_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -205,13 +206,16 @@ static int willow_hw_params(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-#endif /* CONFIG_SND_SAMSUNG_I2S_MASTER */
 
 /*
  * WILLOW WM8985 DAI operations.
  */
-static struct snd_soc_ops willow_ops = {
-	.hw_params = willow_hw_params,
+static struct snd_soc_ops willow_i2s_ops = {
+	.hw_params = willow_i2s_hw_params,
+};
+
+static struct snd_soc_ops willow_pcm_ops = {
+	.hw_params = willow_pcm_hw_params,
 };
 
 /* WILLOW Widgets */
@@ -263,14 +267,23 @@ static struct snd_soc_dai_link willow_dai[] = {
 		.platform_name = "samsung-audio",
 		.codec_name = "wm8985.1-001a",
 		.init = willow_wm8985_init_paif,
-		.ops = &willow_ops,
+		.ops = &willow_i2s_ops,
+	},
+	{ /* Secondary i/f */
+		.name = "BCM4334 PAIF",
+		.stream_name = "Sec_Dai",
+		.cpu_dai_name = "samsung-pcm.1",
+		.codec_dai_name = "bcm4334-pcm",
+		.platform_name = "samsung-audio",
+		.codec_name = "bcm4334-pcm",
+		.ops = &willow_pcm_ops,
 	},
 };
 
 static struct snd_soc_card willow = {
 	.name = "willow",
 	.dai_link = willow_dai,
-	.num_links = 1,
+	.num_links = ARRAY_SIZE(willow_dai),
 };
 
 static struct platform_device *willow_snd_device;
@@ -299,5 +312,5 @@ static void __exit willow_audio_exit(void)
 }
 module_exit(willow_audio_exit);
 
-MODULE_DESCRIPTION("ALSA SoC WILLOW WM8985");
+MODULE_DESCRIPTION("ALSA SoC WILLOW DAI");
 MODULE_LICENSE("GPL");
