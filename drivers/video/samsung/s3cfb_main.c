@@ -426,10 +426,6 @@ void s3cfb_early_suspend(struct early_suspend *h)
 			pdata->clk_off(pdev, &fbdev[i]->clock);
 	}
 
-	// clear fb
-	fb=fbdev[0]->fb[pdata->default_win];
-	memset(fb->screen_base, 0x0,fb->var.yres * fb->fix.line_length * 2);
-
 #ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
