@@ -19,10 +19,9 @@
 #include <mach/regs-clock.h>
 
 #include "i2s.h"
+#include "pcm.h"
 #include "s3c-i2s-v2.h"
 #include "../codecs/wm8985.h"
-
-#define WILLOW_WM8985_FREQ 16934000
 
 static int set_epll_rate(unsigned long rate)
 {
@@ -50,43 +49,116 @@ static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	unsigned int pll_out;
-	int ret;
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
+	unsigned long epll_out_rate;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+	int rfs, ret;
 
-	/* If you won't mclk, use this code. But this code is not tested */
-	if (params_rate(params) == 8000 || params_rate(params) == 11025)
-		pll_out = params_rate(params) * 512;
-	else
-		pll_out = params_rate(params) * 256;
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
+	switch (params_rate(params)) {
+	case 8000:
+	case 12000:
+	case 16000:
+	case 24000:
+	case 32000:
+	case 48000:
+	case 64000:
+	case 96000:
+		epll_out_rate = 49152000;
+		break;
+	case 11025:
+	case 22050:
+	case 44100:
+	case 88200:
+		epll_out_rate = 67737600;
+		break;
+	default:
+		printk(KERN_ERR "%s:%d Sampling Rate %u not supported!\n",
+			__func__, __LINE__, params_rate(params));
+		return -EINVAL;
+	}
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
-/*
-	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S
-					 | SND_SOC_DAIFMT_NB_NF
-					 | SND_SOC_DAIFMT_CBM_CFM);
+	switch (params_rate(params)) {
+	case 16000:
+	case 22050:
+	case 22025:
+	case 32000:
+	case 44100:
+	case 48000:
+	case 96000:
+	case 24000:
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
+			rfs = 256;
+#else /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+			rfs = 384;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+		break;
+	case 64000:
+		rfs = 384;
+		break;
+	case 8000:
+	case 11025:
+	case 12000:
+			rfs = 512;
+		break;
+	case 88200:
+		rfs = 128;
+		break;
+	default:
+		printk(KERN_ERR "%s:%d Sampling Rate %u not supported!\n",
+			__func__, __LINE__, params_rate(params));
+		return -EINVAL;
+	}
+
+#if !defined(CONFIG_SND_SOC_BCM4334)
+	/* Set the codec DAI configuration,
+	 * BCM4334 PCM codec DAI is a virtual interface.
+	 */
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_B
+				| SND_SOC_DAIFMT_IB_NF
+				| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
-*/
+#endif
 
-	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S
-					 | SND_SOC_DAIFMT_NB_NF
-					 | SND_SOC_DAIFMT_CBM_CFM);
+	/* Set the cpu DAI configuration */
+	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_DSP_B
+				| SND_SOC_DAIFMT_IB_NF
+				| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
-/*
-	ret = snd_soc_dai_set_pll(codec_dai, 0, 0,
-					WILLOW_WM8985_FREQ, pll_out);
-	if (ret < 0)
-		return ret;
-
+#if defined(CONFIG_SND_SAMSUNG_PCM_USE_EPLL) && !defined(CONFIG_SND_SOC_BCM4334)
+	/*
+	 * Samsung SoCs PCM has no MCLK(rclk) output support, so codec
+	 * should have to make its own MCLK with FLL(or PLL) from other
+	 * clock source.
+	 * Example for WM8994
+	 */
 	ret = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL1,
-					pll_out, SND_SOC_CLOCK_IN);
+				params_rate(params)*rfs,
+				SND_SOC_CLOCK_IN);
 	if (ret < 0)
 		return ret;
-*/
 
-	ret = snd_soc_dai_set_sysclk(cpu_dai, SAMSUNG_I2S_OPCLK,
-					0, MOD_OPCLK_PCLK);
+	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1,
+				WM8994_FLL_SRC_BCLK,
+				params_rate(params)*rfs,
+				params_rate(params)*rfs);
+	if (ret < 0)
+		return ret;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
+	/* Set EPLL clock rate */
+	ret = set_epll_rate(epll_out_rate);
+	if (ret < 0)
+		return ret;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+
+	/* Set SCLK_DIV for making bclk */
+	ret = snd_soc_dai_set_clkdiv(cpu_dai, S3C_PCM_SCLK_PER_FS, rfs);
 	if (ret < 0)
 		return ret;
 
@@ -208,7 +280,7 @@ static int willow_i2s_hw_params(struct snd_pcm_substream *substream,
 }
 
 /*
- * WILLOW WM8985 DAI operations.
+ * WILLOW DAI operations.
  */
 static struct snd_soc_ops willow_i2s_ops = {
 	.hw_params = willow_i2s_hw_params,
@@ -259,6 +331,7 @@ static int willow_wm8985_init_paif(struct snd_soc_pcm_runtime *rtd)
 }
 
 static struct snd_soc_dai_link willow_dai[] = {
+#if defined(CONFIG_SND_SOC_WM8985) && defined(CONFIG_SND_SAMSUNG_I2S)
 	{ /* Primary i/f */
 		.name = "WM8985 PAIF",
 		.stream_name = "Pri_Dai",
@@ -269,6 +342,8 @@ static struct snd_soc_dai_link willow_dai[] = {
 		.init = willow_wm8985_init_paif,
 		.ops = &willow_i2s_ops,
 	},
+#endif
+#if defined(CONFIG_SND_SOC_BCM4334) && defined(CONFIG_SND_SAMSUNG_PCM)
 	{ /* Secondary i/f */
 		.name = "BCM4334 PAIF",
 		.stream_name = "Sec_Dai",
@@ -278,6 +353,7 @@ static struct snd_soc_dai_link willow_dai[] = {
 		.codec_name = "bcm4334-pcm",
 		.ops = &willow_pcm_ops,
 	},
+#endif
 };
 
 static struct snd_soc_card willow = {
