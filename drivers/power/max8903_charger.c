@@ -204,8 +204,9 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 	int ta_in, usb_in;
 
 	ta_in = gpio_get_value(pdata->dok) ? 0 : 1;
-	mdelay(200);
+	mdelay(250);
 	usb_in = gpio_get_value(pdata->uok) ? 0 : 1;
+	//printk("%s() [BATTERY] dc=[%s], usb=[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
 
 	if (ta_in == data->ta_in && usb_in == data->usb_in)
 		return IRQ_HANDLED;
