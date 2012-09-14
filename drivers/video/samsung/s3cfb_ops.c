@@ -88,7 +88,7 @@ int s3cfb_draw_logo(struct fb_info *fb)
 	u32 height = var->yres / 3;
 	u32 line = fix->line_length;
 	u32 i, j;
-
+	printk(" ===================== kimsh line=%d var->yres=%d var->xres=%d \n", line,var->yres,var->xres);
 	for (i = 0; i < height; i++) {
 		for (j = 0; j < var->xres; j++) {
 			memset(fb->screen_base + i * line + j * 4 + 0, 0x00, 1);

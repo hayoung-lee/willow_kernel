@@ -40,6 +40,13 @@
 #define DEFAUT_FPS_INDEX	MT9M113_15FPS
 #define DEFAULT_FMT		V4L2_PIX_FMT_UYVY	/* YUV422 */
 
+#define MT9M113_JPEG_MAXSIZE	0x3A0000
+#define MT9M113_THUMB_MAXSIZE	0xFC00
+#define MT9M113_POST_MAXSIZE	0xBB800
+
+extern int mt9m113_stanby(void);
+extern int willow_capture_status;
+
 /*
  * Specification
  * Parallel : ITU-R. 656/601 YUV422, RGB565, RGB888 (Up to VGA), RAW10
@@ -70,7 +77,11 @@ struct mt9m113_userset {
 struct mt9m113_state {
 	struct mt9m113_mbus_platform_data *pdata;
 	struct v4l2_subdev sd;
+	enum mt9m113_runmode runmode;
 	struct v4l2_mbus_framefmt 	fmt;
+	struct v4l2_pix_format req_fmt;
+	struct v4l2_pix_format set_fmt;
+
 	struct v4l2_fract 		timeperframe;
 	struct mt9m113_userset 		userset;
 	int 				freq;	/* MCLK in KHz */
@@ -81,8 +92,8 @@ struct mt9m113_state {
 	int 				fmt_index;
 	unsigned short 			devid_mask;
 	
-	enum mt9m113_runmode runmode;
 
+	
 	int default_width;
 	int default_height;
 	int capture_width;
@@ -295,7 +306,7 @@ static int mt9m113_set_preview_start(struct v4l2_subdev *sd)
 
 	int err = 0;
 	mt9m113_info(&client->dev, "%s: set_Preview_start\n", __func__);
-    msleep(120);
+  msleep(120);
 
     if (!state->fmt.width || !state->fmt.height)
 		return -EINVAL;
@@ -422,32 +433,144 @@ static int mt9m113_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 	int err = 0;
 
 	*fmt = state->fmt;
+	printk( "mt9m113_g_fmt state requested res(%d, %d)\n",
+		state->fmt.width, state->fmt.height);
 	return err;
 }
 
+static int mt9m113_set_capture_start(struct v4l2_subdev *sd)
+{
+#ifdef MT9M113_DEBUG
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+#endif
+	struct mt9m113_state *state = to_state(sd);
+
+	int err = 0;
+#ifdef MT9M113_DEBUG
+	unsigned short lvalue = 0;
+#endif
+	printk(" mt9m113_set_capture_start  state->req_fmt.width=%d state->req_fmt.height %d================== \n",state->req_fmt.width,state->req_fmt.height );
+
+    msleep(50);
+	mt9m113_info(&client->dev, "%s : light value is %x\n", __func__, lvalue);
+	/* set initial regster value */
+
+
+	if((state->req_fmt.width== WILLOW_PREVIEW_MIN_W) && (state->req_fmt.height == WILLOW_PREVIEW_MIN_H))
+	{
+		mt9m113_i2c_write_regs(sd, &set_resol_640x480[0], ARRAY_SIZE(set_resol_640x480));
+		msleep(10);
+		mt9m113_i2c_write_regs(sd, &Refresh[0], ARRAY_SIZE(Refresh));
+
+	}
+	if((state->req_fmt.width== WILLOW_PREVIEW_MAX_W) && (state->req_fmt.height == WILLOW_PREVIEW_MAX_H))
+	{
+		mt9m113_i2c_write_regs(sd, &set_resol_1280x960[0], ARRAY_SIZE(set_resol_1280x960));
+		msleep(10);
+		mt9m113_i2c_write_regs(sd, &Refresh[0], ARRAY_SIZE(Refresh));
+	}
+	
+	err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+#if 0
+	err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+    msleep(50);
+	err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+	//err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+    msleep(50);
+	err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+    msleep(50);
+	err = mt9m113_i2c_write_regs(sd, &mt9m113_capture_regs[0], ARRAY_SIZE(mt9m113_capture_regs));
+#endif
+	if (unlikely(err)) {
+		mt9m113_info(&client->dev, "%s: failed to make capture\n", __func__);
+		return err;
+	}
+    msleep(50);
+
+	state->runmode = MT9M113_RUNMODE_IDLE;
+
+	return err;
+}
 static int mt9m113_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct mt9m113_state *state = to_state(sd);
 	int err = 0;
 
-	dev_dbg(&client->dev, "requested res(%d, %d)\n",
+	printk( "mt9m113_s_fmt requested res(%d, %d)\n",
 		fmt->width, fmt->height);
+	printk( "requested res(%d, %d)\n",fmt->width, fmt->height);
 
-	if (!state->fmt.width ||
-		!state->fmt.height ||
-		!state->fmt.code)
+#if 1
+	if((fmt->width == WILLOW_PREVIEW_MIN_W) && (fmt->height == WILLOW_PREVIEW_MIN_H))
+	{
+		mt9m113_i2c_write_regs(sd, &set_resol_640x480[0], ARRAY_SIZE(set_resol_640x480));
+		msleep(10);
+		mt9m113_i2c_write_regs(sd, &Refresh[0], ARRAY_SIZE(Refresh));
+
 		state->fmt = *fmt;
-	else
-		*fmt = state->fmt;
+	}
+	else if((fmt->width == WILLOW_PREVIEW_MAX_W) && (fmt->height == WILLOW_PREVIEW_MAX_H))
+	{
+		mt9m113_i2c_write_regs(sd, &set_resol_1280x960[0], ARRAY_SIZE(set_resol_1280x960));
+		msleep(10);
+		mt9m113_i2c_write_regs(sd, &Refresh[0], ARRAY_SIZE(Refresh));
+		printk( "set resolution %dx%d done.\n",fmt->width,fmt->height);
+		state->fmt = *fmt;
+	}
+#endif
+	state->req_fmt.width = fmt->width;
+	state->req_fmt.height = fmt->height;
+	state->set_fmt.width = fmt->width;
+	state->set_fmt.height = fmt->height;
 
+	//state->req_fmt.pixelformat = fmt->fmt.pix.pixelformat;
+	state->req_fmt.colorspace = fmt->colorspace;
+	state->req_fmt.pixelformat = DEFAULT_FMT;
+	
+	printk( "mt9m113_s_fmt state requested res(%d, %d)\n",
+		state->fmt.width, state->fmt.height);
 	return err;
 }
 static int mt9m113_enum_framesizes(struct v4l2_subdev *sd,
 					struct v4l2_frmsizeenum *fsize)
 {
 	int err = 0;
+	struct mt9m113_state *state = to_state(sd);
 
+	/*
+	 * Return the actual output settings programmed to the camera
+	 */
+	printk("%s : width - %d , height - %d\n", __func__, fsize->discrete.width, fsize->discrete.height);
+
+#if 0
+	if(willow_capture_status==0)
+	{
+		fsize->discrete.width = state->default_width=640;
+		fsize->discrete.height = state->default_height=480;
+	}
+	else
+	{
+		fsize->discrete.width = state->default_width=1280;
+		fsize->discrete.height = state->default_height=960;
+	}
+#else
+	if(state->req_fmt.width < state->capture_width) {
+		fsize->discrete.width = state->default_width;
+		fsize->discrete.height = state->default_height;
+	} else if (state->req_fmt.width >= state->capture_width) {
+		fsize->discrete.width = state->capture_width;
+		fsize->discrete.height = state->capture_height;
+	} else {
+		fsize->discrete.width = state->req_fmt.width;
+		fsize->discrete.height = state->req_fmt.height;
+	}
+#endif
+
+	state->set_fmt.width = fsize->discrete.width;
+	state->set_fmt.height = fsize->discrete.height;
+	//fsize->pixel_format=DEFAULT_FMT;
+	printk("%s : width - %d , height - %d\n", __func__, fsize->discrete.width, fsize->discrete.height);
 	return err;
 }
 
@@ -481,6 +604,11 @@ static int mt9m113_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int err = -EINVAL;
 
 	switch (ctrl->id) {
+	case V4L2_CID_CAM_JPEG_MEMSIZE:
+		ctrl->value = MT9M113_JPEG_MAXSIZE +
+			MT9M113_THUMB_MAXSIZE + MT9M113_POST_MAXSIZE;
+		err = 0;
+		break;	
 	case V4L2_CID_EXPOSURE:
 		ctrl->value = userset.exposure_bias;
 		err = 0;
@@ -535,7 +663,7 @@ static int mt9m113_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			err = mt9m113_set_preview_start(sd);
 		else
 			err = mt9m113_set_preview_stop(sd);
-		mt9m113_info(&client->dev, "V4L2_CID_CAM_PREVIEW_ONOFF [%d] \n", ctrl->value);
+		printk( "V4L2_CID_CAM_PREVIEW_ONOFF [%d] \n", ctrl->value);
 		break;
 		
 	case V4L2_CID_EXPOSURE:
@@ -543,6 +671,18 @@ static int mt9m113_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			__func__);
 		//err = mt9m113_write_regs(sd, mt9m113_regs_ev_bias[ctrl->value]);
 		break;
+
+	case V4L2_CID_CAM_CAPTURE:
+		err = mt9m113_set_capture_start(sd);
+		mt9m113_info(&client->dev, "V4L2_CID_CAM_CAPTURE [%d] \n", ctrl->value);
+		printk( "V4L2_CID_CAM_CAPTURE \n");
+		break;
+	case V4L2_CID_CAMERA_STANBY:
+		//mt9m113_stanby();
+		err=0;
+		printk( "V4L2_CID_CAMERA_STANBY \n");
+		break;
+		
 #if 0
 	case V4L2_CID_AUTO_WHITE_BALANCE:
 		dev_dbg(&client->dev, "%s: V4L2_CID_AUTO_WHITE_BALANCE\n", \
@@ -607,21 +747,44 @@ static int mt9m113_init(struct v4l2_subdev *sd, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = -EINVAL;
+	struct mt9m113_platform_data *pdata;
+	struct mt9m113_state *state = to_state(sd);
 
 	v4l_info(client, "%s: camera initialization start\n", __func__);
 
+	pdata = client->dev.platform_data;
+
+	
+	state->default_width  = pdata->default_width ; //=1280;
+	state->default_height = pdata->default_height;// =960;
+	state->capture_width  = pdata->max_width; //=1280;
+	state->capture_height = pdata->max_height;//=960;
 
 	err = mt9m113_i2c_write_regs(sd, \
 				&mt9m113_init_regs[0], ARRAY_SIZE(mt9m113_init_regs));
     msleep(20);
+#if 0		
+	err = mt9m113_i2c_write_regs(sd, \
+				&mt9m113_init_regs[0], ARRAY_SIZE(mt9m113_init_regs));
+#endif
 
+    msleep(100);
+		
+	state->set_fmt.width = state->capture_width;
+	state->set_fmt.height = state->capture_height;
+	state->req_fmt.width=state->default_width;
+	state->req_fmt.height=state->default_width;
+	
+	printk(" 	mt9m113_init d_width=%d d_height=%d c_width=%d c_height=%d \n", \
+		state->default_width,state->default_height,state->capture_width,state->capture_height );
+	
 	if (err < 0) {
 		v4l_err(client, "%s: camera initialization failed\n", \
 			__func__);
 		return -EIO;	/* FIXME */
 	}
 	v4l_info(client, "%s: camera initialization end\n", __func__);
-
+	msleep(100);
 	return 0;
 }
 
@@ -716,6 +879,21 @@ static int mt9m113_s_stream(struct v4l2_subdev *sd, int enable)
 	
 	int err=0;
 	printk("%s %d \n",__func__,enable);
+
+	switch(enable) {
+		case 1:  //PREVIEW
+		err = mt9m113_set_preview_start(sd);
+		break;
+		case 3: //Snapshot
+		err = mt9m113_set_capture_start(sd);
+		break;
+		case 6: //stanby reset
+		break;
+		mt9m113_stanby();
+		default:
+		break;
+	}
+	
 #if 0
 	switch (enable) {
 		case STREAM_MODE_CAM_ON:
@@ -804,8 +982,8 @@ static int mt9m113_probe(struct i2c_client *client,
 
 	/* set default data from sensor specific value */
 #if 1
-	state->fmt.width = 640;
-	state->fmt.height =480;
+	state->fmt.width = WILLOW_PREVIEW_MAX_W;
+	state->fmt.height =WILLOW_PREVIEW_MAX_H;
 	state->runmode = MT9M113_RUNMODE_NOTREADY;
 	state->default_width =  -1;
 	state->default_height = -1;

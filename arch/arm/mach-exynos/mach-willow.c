@@ -343,14 +343,35 @@ static int smdk4x12_cam0_reset(int dummy)
 /*  MT9M113 Camera driver configuration */
 
 #ifdef CONFIG_VIDEO_MT9M113
+int mt9m113_stanby(void)
+{
+	int err;
+
+	err = gpio_request(EXYNOS4212_GPM1(5), "GPM1_5"); //stnby
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_5 stnby ####\n");
+	
+		gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+		mdelay(300);		
+		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby	
+		mdelay(50);		
+
+}
+EXPORT_SYMBOL(mt9m113_stanby);
+
 static int mt9m113_power_en(int onoff)
 {
 	int err;
 	/* Camera A */
 	// Vdd_cam_io 1.8 vdd_cam 2.8v
-	struct regulator *camera_vio = regulator_get(NULL, "vdd_cam");  
-	struct regulator *camera_vdd = regulator_get(NULL, "vdd_cam_io");
+	struct regulator *camera_vio = regulator_get(NULL, "vdd_cam");    
 
+#if defined(FEATURE_TW_CAMERA_LDO_CHAGNE)
+	struct regulator *camera_vdd = regulator_get(NULL, "vdd_ldo21");
+#else
+	struct regulator *camera_vdd = regulator_get(NULL, "vdd_cam_io");
+#endif
+	
 	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4"); //reset
 	if (err)
 		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
@@ -365,12 +386,38 @@ static int mt9m113_power_en(int onoff)
 	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
 
 	if (onoff) {
+
+#if 1
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+		//mdelay(10);		
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
+		mdelay(10);		
+		gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+		mdelay(10);		
 		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
 		
 		regulator_enable(camera_vio);
 		//mdelay(50);
 		regulator_enable(camera_vdd);
-		mdelay(50);
+		mdelay(10);
+		
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+
+		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
+		msleep(50);
+		gpio_direction_output(EXYNOS4212_GPM1(4), 1);
+		msleep(100);
+		
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
+		//mdelay(10);		
+		//gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby		
+#else
+		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
+		mdelay(10);		
+		regulator_enable(camera_vio);
+		//mdelay(50);
+		regulator_enable(camera_vdd);
+		mdelay(10);
 		
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
 
@@ -379,6 +426,7 @@ static int mt9m113_power_en(int onoff)
 		gpio_direction_output(EXYNOS4212_GPM1(4), 1);
 		msleep(100);
 		//gpio_direction_output(EXYNOS4212_GPJ1(5), 0);
+#endif		
 	
 	} else {
 		gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
@@ -411,8 +459,10 @@ void mt9m113_gpio_init(void)
 }
 
 static struct mt9m113_platform_data mt9m113_plat = {
-	.default_width = 640,
-	.default_height = 480,
+	.default_width = WILLOW_PREVIEW_MIN_W,//480,
+	.default_height = WILLOW_PREVIEW_MIN_H,
+	.max_width = WILLOW_PREVIEW_MAX_W,//960,
+	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
 	.freq = 24000000,
 	.is_mipi = 0,
@@ -436,14 +486,14 @@ static struct s3c_platform_camera mt9m113 = {
 	.srclk_name	= "xusbxti",
 
 	.clk_rate	= 24000000,
-	.line_length	= 1280,
-	.width		= 1280,
-	.height		= 960,
+	.line_length	= WILLOW_PREVIEW_MAX_W,
+	.width		= WILLOW_PREVIEW_MAX_W,
+	.height		= WILLOW_PREVIEW_MAX_H,
 	.window		= {
 		.left	= 0,
 		.top	= 0,
-		.width	= 1280,
-		.height	= 960,
+		.width	= WILLOW_PREVIEW_MAX_W,
+		.height	= WILLOW_PREVIEW_MAX_H,
 	},
 
 	.mipi_lanes	= 0,

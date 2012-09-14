@@ -30,6 +30,64 @@
 
 #include "fimc.h"
 
+int willow_capture_status=0;
+
+void fimc_pixelformat_deb(u32 pformat)
+{
+	switch (pformat) {
+	case V4L2_PIX_FMT_JPEG:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_JPEG \n");
+		break;
+	case V4L2_PIX_FMT_RGB32:	/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_RGB32 \n");
+		break;
+
+	case V4L2_PIX_FMT_RGB565:	/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_RGB565 \n");
+		break;
+
+	case V4L2_PIX_FMT_YUYV:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_YUYV \n");
+		break;
+
+	case V4L2_PIX_FMT_UYVY:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_UYVY \n");
+		break;
+	case V4L2_PIX_FMT_VYUY:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_VYUY \n");
+		break;
+	case V4L2_PIX_FMT_YVYU:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_YVYU \n");
+		break;
+	case V4L2_PIX_FMT_NV21:
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_NV21 \n");
+		break;
+	case V4L2_PIX_FMT_NV16:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_NV16 \n");
+		break;
+	case V4L2_PIX_FMT_NV61:
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_NV61 \n");
+		break;
+	case V4L2_PIX_FMT_NV12:		/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_NV12 \n");
+		break;
+	case V4L2_PIX_FMT_NV12T:
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_NV12T \n");
+		break;
+	case V4L2_PIX_FMT_YUV422P:	/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_YUV422P \n");
+		break;
+	case V4L2_PIX_FMT_YUV420:	/* fall through */
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_YUV420 \n");
+		break;
+	case V4L2_PIX_FMT_YVU420:
+		printk(" fimc_pixelformat_deb V4L2_PIX_FMT_YVU420 \n");
+		break;
+	default:
+		break;
+	}
+}
+
 static const struct v4l2_fmtdesc capture_fmts[] = {
 	{
 		.index		= 0,
@@ -1461,7 +1519,7 @@ static void fimc_free_buffers(struct fimc_control *ctrl)
 		memset(&cap->bufs[i], 0, sizeof(cap->bufs[i]));
 		cap->bufs[i].state = VIDEOBUF_NEEDS_INIT;
 	}
-
+	printk(" fimc_free_buffers ============ \n");
 	ctrl->mem.curr = ctrl->mem.base;
 }
 
@@ -1731,7 +1789,7 @@ int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
 
 	ctrl->cap->bufs[b->index].state = VIDEOBUF_IDLE;
 
-	fimc_dbg("%s: %d bytes with offset: %d\n",
+	printk("%s: %d bytes with offset: %d\n",
 		__func__, b->length, b->m.offset);
 
 	mutex_unlock(&ctrl->v4l2_lock);
@@ -1811,6 +1869,7 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 
 	case V4L2_CID_PADDR_Y:
+		printk(" V4L2_CID_PADDR_Y ===============\n");
 		if (&ctrl->cap->bufs[c->value])
 			c->value = ctrl->cap->bufs[c->value].base[FIMC_ADDR_Y];
 		break;
@@ -1886,6 +1945,17 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		dev_unlock(ctrl->bus_dev, ctrl->dev);
 		break;
 #endif
+
+	case V4L2_CID_CAMERA_CAPTURE_STATUS:
+		willow_capture_status=c->value;
+ 		printk(" V4L2_CID_CAMERA_CAPTURE_STATUS =%d \n", c->value);
+		ret = 0;
+		break;
+
+	case V4L2_CID_CAMERA_STANBY:
+		//willow_capture_status=c->value;
+ 		printk(" V4L2_CID_CAMERA_STANBY =%d \n", c->value);
+		break;
 	default:
 		/* try on subdev */
 		/* WriteBack doesn't have subdev_call */
@@ -2138,7 +2208,7 @@ int fimc_streamon_capture(void *fh)
 
 	if (cam->sd) {
 		if (is_scale_up(ctrl))
-			return -EINVAL;
+			1; //return -EINVAL;
 	}
 
 	if (pdata->hw_ver < 0x51)
@@ -2169,13 +2239,14 @@ int fimc_streamon_capture(void *fh)
 					cam->height
 						= cam->window.height
 						= cam_frmsize.discrete.height;
-					fimc_info2("enum_framesizes width = %d,\
+					printk("enum_framesizes width = %d,\
 						height = %d\n", cam->width,
 						cam->height);
 				}
 			}
 
 			if (cap->fmt.priv == V4L2_PIX_FMT_MODE_CAPTURE) {
+				printk(" V4L2_PIX_FMT_MODE_CAPTURE \n");
 				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",
@@ -2197,7 +2268,14 @@ int fimc_streamon_capture(void *fh)
 					cap->fmt.pixelformat);
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
-				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
+		 		printk(" fimc_s_ctrl_capture V4L2_CID_IS_S_STREAM =1 \n");
+
+				if(willow_capture_status==0)
+					ret=v4l2_subdev_call(cam->sd, video, s_stream, 1);  //preview
+				else if(willow_capture_status==1)
+							ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
+
+				//t = v4l2_subdev_call(cam->sd, video, s_stream, 1);
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",
 							__func__);
