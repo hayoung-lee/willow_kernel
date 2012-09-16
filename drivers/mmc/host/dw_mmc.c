@@ -50,7 +50,7 @@
 				 DW_MCI_CMD_ERROR_FLAGS  | SDMMC_INT_HLE)
 #define DW_MCI_SEND_STATUS	1
 #define DW_MCI_RECV_STATUS	2
-#define DW_MCI_DMA_THRESHOLD	16
+#define DW_MCI_DMA_THRESHOLD	4
 
 #ifdef CONFIG_MMC_DW_IDMAC
 struct idmac_desc {
@@ -65,7 +65,7 @@ struct idmac_desc {
 
 	u32		des1;	/* Buffer sizes */
 #define IDMAC_SET_BUFFER1_SIZE(d, s) \
-	((d)->des1 = ((d)->des1 & 0x03ffc000) | ((s) & 0x3fff))
+	((d)->des1 = ((d)->des1 & 0x03ffe000) | ((s) & 0x1fff))
 
 	u32		des2;	/* buffer 1 physical address */
 
