@@ -205,6 +205,13 @@ static int exynos_pcm_cfg_gpio(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_SND_SOC_BCM4334
+	/* this is temporary setting, electrical characterics of pcm port should be checked. */
+	if (soc_is_exynos4412() && pdev->id == 1) {
+		s5p_gpio_set_drvstr(EXYNOS4_GPC0(2), S5P_GPIO_DRVSTR_LV4);
+	}
+#endif
+
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(exynos4_cfg[pdev->id].addr,
 			exynos4_cfg[pdev->id].num, exynos4_cfg[pdev->id].bit);
