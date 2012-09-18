@@ -8,40 +8,26 @@
 #include <sound/pcm.h>
 #include <sound/soc.h>
 
-#define BCM4334_RATES SNDRV_PCM_RATE_8000_96000
-
-#define BCM4334_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
-			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
-
-//static int bcm4334_hw_params(struct snd_pcm_substream *substream,
-//			    struct snd_pcm_hw_params *params,
-//			    struct snd_soc_dai *dai)
-//{
-//	return 0;
-//}
-//
-//static struct snd_soc_dai_ops bcm4334_aif1_dai_ops = {
-//	.hw_params	= bcm4334_hw_params,
-//};
-
 static struct snd_soc_dai_driver bcm4334_dai = {
 	.name = "bcm4334-pcm",
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 2,
 		.channels_max = 2,
-		.rates = BCM4334_RATES,
-		.formats = BCM4334_FORMATS,
+		.rate_min = 8000,
+		.rate_max = 16000,
+		.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = BCM4334_RATES,
-		.formats = BCM4334_FORMATS,
+		.rate_min = 8000,
+		.rate_max = 16000,
+		.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
-	//.ops = &bcm4334_aif1_dai_ops,
-	.symmetric_rates = 1
 };
 
 static int bcm4334_codec_probe(struct snd_soc_codec *codec)
