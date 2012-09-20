@@ -48,11 +48,18 @@ extern void LTN101AL03_backlight_crtl(int onoff);
 extern void set_backlight_ctrl(int ctrl_b);
 #endif
 
-//#define FEATURE_S3CFB_DEBUG
+//#define BOOTLOADER_INIT_LCD
+
+#define FEATURE_S3CFB_DEBUG
 #ifdef FEATURE_S3CFB_DEBUG
 #define s3c_log(fmt, arg...) 	printk(fmt, ##arg)
 #else
 #define s3c_log(fmt, arg...)
+#endif
+
+#define IDLE_WAKE_LOCK_ENABLE
+#if defined(IDLE_WAKE_LOCK_ENABLE)
+struct wake_lock	lcd_wakelock;
 #endif
 
 struct s3cfb_fimd_desc		*fbfimd;
@@ -291,7 +298,9 @@ static int s3cfb_probe(struct platform_device *pdev)
 		}
 
 		/* enable display */
+#ifndef BOOTLOADER_INIT_LCD	
 		s3cfb_set_clock(fbdev[i]);
+#endif
 		s3cfb_enable_window(fbdev[0], pdata->default_win);
 
 		s3cfb_update_power_state(fbdev[i], pdata->default_win,
@@ -308,7 +317,8 @@ static int s3cfb_probe(struct platform_device *pdev)
 #endif
 #endif
 	}
-#ifdef CONFIG_FB_S5P_LCD_INIT
+
+#if defined(CONFIG_FB_S5P_LCD_INIT) && !defined(BOOTLOADER_INIT_LCD)
 	/* panel control */
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 		LTN101AL03_lcd_onoff(1);
@@ -325,6 +335,10 @@ static int s3cfb_probe(struct platform_device *pdev)
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
 	if (ret < 0)
 		dev_err(fbdev[0]->dev, "failed to add sysfs entries\n");
+
+#ifdef IDLE_WAKE_LOCK_ENABLE
+	wake_lock_init(&lcd_wakelock, WAKE_LOCK_SUSPEND, "lcd_idle_lock");
+#endif
 
 	dev_info(fbdev[0]->dev, "registered successfully\n");
 	return 0;
@@ -382,6 +396,10 @@ static int s3cfb_remove(struct platform_device *pdev)
 		kfree(fbdev[i]->fb);
 		kfree(fbdev[i]);
 	}
+#ifdef IDLE_WAKE_LOCK_ENABLE
+	wake_lock_destroy(&lcd_wakelock);
+#endif
+
 #ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	pm_runtime_put(&pdev->dev);
@@ -405,7 +423,8 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	info->system_state = POWER_OFF;
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-	set_backlight_ctrl(0);
+	set_backlight_ctrl(1);
+	LTN101AL03_backlight_onoff(0);
 #endif
 
 	for (i = 0; i < FIMD_MAX; i++) {
@@ -434,7 +453,10 @@ void s3cfb_early_suspend(struct early_suspend *h)
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 	LTN101AL03_lvds_on(0);
-	//LTN101AL03_lcd_onoff(0);
+#endif
+
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+	set_backlight_ctrl(0);
 #endif
 
 	s3c_log("s3cfb_early_suspend is called end \n");

@@ -23,7 +23,7 @@
 
 int checklog=0;
 
-//#define FEATURE_PWM_DEBUG
+#define FEATURE_PWM_DEBUG
 #define FEATURE_WILLOW_BACKLIGHT
 
 #ifdef FEATURE_PWM_DEBUG
@@ -67,7 +67,7 @@ void willow_backlight_on(void)
 		
 		pwm_config(g_pb->pwm, brightness, g_pb->period);
 		pwm_enable(g_pb->pwm);
-		pwm_log(" pwm backlight  on ==========================\n");		
+		pwm_log(" pwm backlight  on\n");		
 }
 EXPORT_SYMBOL(willow_backlight_on);
 #endif
@@ -92,14 +92,16 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		brightness = pb->notify(pb->dev, brightness);
 
 	if (brightness == 0) {
-
-		pwm_config(pb->pwm, 0, pb->period);
-		pwm_disable(pb->pwm);
+		if(willow_backlight_ctrl==0)
+		{
+			pwm_config(pb->pwm, 0, pb->period);
+			pwm_disable(pb->pwm);
 #if defined(FEATURE_WILLOW_BACKLIGHT)	
-		pwm_log(" pwm backlight off n");
-		LTN101AL03_backlight_onoff(0);		
-		checklog=0;
-#endif		
+			pwm_log(" pwm backlight off \n");
+			LTN101AL03_backlight_onoff(0);		
+			checklog=0;
+#endif
+		}
 	} else {
 		if(checklog==0)
 		{
