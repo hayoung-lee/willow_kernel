@@ -48,6 +48,8 @@ int willow_backlight_ctrl=0;
 int cu_brightness=0;
 int max_brightness=0;
 extern void LTN101AL03_backlight_onoff(int onoff);
+extern void LTN101AL03_backlight_crtl(int onoff);
+
 void set_backlight_ctrl(int ctrl_b)
 {
 	willow_backlight_ctrl=ctrl_b;
@@ -58,6 +60,7 @@ void willow_backlight_on(void)
 {
 		int brightness =cu_brightness;
 		int max = max_brightness;
+		LTN101AL03_backlight_crtl(0);
 
 		brightness = g_pb->lth_brightness +
 			(brightness * (g_pb->period - g_pb->lth_brightness) / max);
@@ -93,7 +96,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		pwm_config(pb->pwm, 0, pb->period);
 		pwm_disable(pb->pwm);
 #if defined(FEATURE_WILLOW_BACKLIGHT)	
-		pwm_log(" pwm backlight off ==========================\n");
+		pwm_log(" pwm backlight off n");
 		LTN101AL03_backlight_onoff(0);		
 		checklog=0;
 #endif		
@@ -106,6 +109,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 #if defined(FEATURE_WILLOW_BACKLIGHT)	
 		if(willow_backlight_ctrl==0)
 		{
+			LTN101AL03_backlight_crtl(0);
 			brightness = pb->lth_brightness +
 				(brightness * (pb->period - pb->lth_brightness) / max);
 			pwm_config(pb->pwm, brightness, pb->period);
@@ -170,6 +174,9 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
+#if defined(FEATURE_WILLOW_BACKLIGHT)
+	LTN101AL03_backlight_crtl(0);
+#endif
 
 	pb->period = data->pwm_period_ns;
 	pb->notify = data->notify;

@@ -218,7 +218,7 @@ void LTN101AL03_lvds_on(int onoff)
 	if(onoff)
 	{
 		err = gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_HIGH, "GPM1(0)");
-		mdelay(5);
+		mdelay(100);
 	}
 	else
 	{
@@ -242,13 +242,13 @@ void LTN101AL03_backlight_crtl(int onoff)
 	{
 		//gpio_request(GPIO_LCD_BL_PWM, "GPIO_LCD_BL_PWM");
 		s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_OUTPUT);
-		printk(" LTN101AL03_backlight_crtl output setting  \n");
+		//printk(" LTN101AL03_backlight_crtl output setting  \n");
 
 	}
 	else
 	{
 		s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));	
-		printk(" LTN101AL03_backlight_crtl PWM setting  \n");		
+		//printk(" LTN101AL03_backlight_crtl PWM setting  \n");		
 	}
 
 }
@@ -259,8 +259,8 @@ void LTN101AL03_backlight_onoff(int onoff)
 {
 	int err;
 	//LCD PWM on
+
 	mdelay(250); 	
-	s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_OUTPUT);
 
 	err = gpio_request(GPIO_LCD_BL_PWM, "GPIO_LCD_BL_PWM");
 	if (err) {
@@ -268,10 +268,16 @@ void LTN101AL03_backlight_onoff(int onoff)
 			"lcd backlight control\n");
 		//return err;
 	}
+	s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_OUTPUT);
+	
 	lcd_log(" LTN101AL03_backlight_onoff %d \n",onoff);
-	gpio_direction_output(GPIO_LCD_BL_PWM, onoff);
+	//gpio_direction_output(GPIO_LCD_BL_PWM, onoff);
+	gpio_set_value(GPIO_LCD_BL_PWM, onoff);
+
 	mdelay(5); 
-	s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));	
+	
+	//s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));	
+
 	gpio_free(GPIO_LCD_BL_PWM);
 
 }

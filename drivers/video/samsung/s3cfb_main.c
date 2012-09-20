@@ -401,7 +401,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	struct fb_info *fb;
 	int i;
 
-	s3c_log("s3cfb_early_suspend is called start ======>\n");
+	s3c_log("s3cfb_early_suspend is called start \n");
 	info->system_state = POWER_OFF;
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
@@ -434,10 +434,10 @@ void s3cfb_early_suspend(struct early_suspend *h)
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 	LTN101AL03_lvds_on(0);
-	LTN101AL03_lcd_onoff(0);
+	//LTN101AL03_lcd_onoff(0);
 #endif
 
-	s3c_log("s3cfb_early_suspend is called end ======>\n");
+	s3c_log("s3cfb_early_suspend is called end \n");
 
 	return ;
 }
@@ -454,7 +454,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 	int i, j;
 	struct platform_device *pdev = to_platform_device(info->dev);
 
-	s3c_log("s3cfb_late_resume is called start ============>\n");
+	s3c_log("s3cfb_late_resume is called start \n");
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 	set_backlight_ctrl(1);
@@ -512,7 +512,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 		}
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-		LTN101AL03_backlight_onoff(1);
+		//LTN101AL03_backlight_onoff(1);
 		set_backlight_ctrl(0);
 		willow_backlight_on();		
 #else
@@ -522,7 +522,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 	}
 
 	info->system_state = POWER_ON;
-	s3c_log("s3cfb_late_resume is called end ============>\n");
+	s3c_log("s3cfb_late_resume is called end \n");
 	return;
 }
 #else /* else !CONFIG_HAS_EARLYSUSPEND */
@@ -615,15 +615,13 @@ int s3cfb_resume(struct platform_device *pdev)
 	return 0;
 }
 #endif
-#ifdef CONFIG_FB_S3C_LTN101AL03
 
+#ifdef CONFIG_FB_S5P_LTN101AL03
 static int s3cfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct s3c_platform_fb *pdata = to_fb_plat(&pdev->dev);
 	pr_debug("s3cfb_suspend is called\n");
-		if (pdata->lcd_off)
-			pdata->lcd_off(pdev);
-	//ltn101al03_lcd_off();
+	LTN101AL03_lcd_onoff(0);
 	return 0;
 }
 #endif
@@ -657,7 +655,7 @@ static struct platform_driver s3cfb_driver = {
 	.suspend	= s3cfb_suspend,
 	.resume		= s3cfb_resume,
 #endif
-#ifdef CONFIG_FB_S3C_LTN101AL03
+#ifdef CONFIG_FB_S5P_LTN101AL03
 	.suspend = s3cfb_suspend,
 #endif
 	.driver		= {
