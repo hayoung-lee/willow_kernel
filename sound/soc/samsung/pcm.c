@@ -329,8 +329,9 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	else
 		clk = pcm->cclk;
 
-	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
-		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
+	/* temporarily removed, must be checked later */
+	//if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
+	//clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
 #if defined(CONFIG_ARCH_S5PC100) || defined(CONFIG_ARCH_S5PV210)
 	/* Set the SCLK divider */
@@ -554,6 +555,8 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	struct resource *mem_res, *dmatx_res, *dmarx_res;
 	struct s3c_audio_pdata *pcm_pdata;
 	int ret;
+	char clock_name[10];
+	char clock_id[2];
 
 	/* Check for valid device index */
 	if ((pdev->id < 0) || pdev->id >= ARRAY_SIZE(s3c_pcm)) {
@@ -595,7 +598,10 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	/* Default is 128fs */
 	pcm->sclk_per_fs = 128;
 
-	pcm->cclk = clk_get(&pdev->dev, "sclk_pcm");
+	strcpy (clock_name,"sclk_pcm");
+	sprintf(clock_id,"%d",pdev->id);
+	strcat (clock_name, clock_id);
+	pcm->cclk = clk_get(&pdev->dev, clock_name);
 	if (IS_ERR(pcm->cclk)) {
 		dev_err(&pdev->dev, "failed to get sclk_pcm\n");
 		ret = PTR_ERR(pcm->cclk);

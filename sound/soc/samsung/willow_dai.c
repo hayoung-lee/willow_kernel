@@ -79,6 +79,7 @@ static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 	}
 #endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
+#if 0
 	switch (params_rate(params)) {
 	case 16000:
 	case 22050:
@@ -110,6 +111,9 @@ static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 			__func__, __LINE__, params_rate(params));
 		return -EINVAL;
 	}
+#else /* 8kHz * 64(16bits * 4slots, frame sync) = 512kHz Clock Out */
+	rfs = 64;
+#endif
 
 #if !defined(CONFIG_SND_SOC_BCM4334)
 	/* Set the codec DAI configuration,
@@ -156,6 +160,11 @@ static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 #endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+
+	/* 8kHz * 64(16bits * 4slots, frame sync) = 512kHz Clock Out */
+	ret = snd_soc_dai_set_sysclk(cpu_dai, S3C_PCM_CLKSRC_MUX,
+				params_rate(params)*rfs,
+				SND_SOC_CLOCK_IN);
 
 	/* Set SCLK_DIV for making bclk */
 	ret = snd_soc_dai_set_clkdiv(cpu_dai, S3C_PCM_SCLK_PER_FS, rfs);
