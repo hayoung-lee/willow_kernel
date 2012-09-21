@@ -56,3 +56,6 @@ obj-$(CONFIG_SAMSUNG_C2C)	+= c2c/
 obj-$(CONFIG_VIBRATOR_ISA1200)		+= isa1200.o
 obj-$(CONFIG_HAPTIC_ISA1200)		+= isa1200_haptic.o
 obj-$(CONFIG_GPS_G6010)        += g6010.o
+
+# Secure OS Mobicore Interface
+obj-$(CONFIG_MOBICORE_SUPPORT)  += tzic.o
