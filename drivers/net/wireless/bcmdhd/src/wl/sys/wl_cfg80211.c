@@ -4127,7 +4127,7 @@ wl_cfg80211_send_pending_tx_act_frm(struct wl_priv *wl)
 		/* Suspend P2P discovery's search-listen to prevent it from
 		 * starting a scan or changing the channel.
 		 */
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error remove sending act frame to improve P2P connection ratio
 		wl_clr_drv_status(wl, SENDING_ACT_FRM, wl->afx_hdl->dev);
 #endif
@@ -4237,7 +4237,7 @@ wl_cfg80211_send_at_common_channel(struct wl_priv *wl,
 	wl->afx_hdl->pending_tx_act_frm = NULL;
 	wl->afx_hdl->dev = NULL;
 	wl->afx_hdl->bssidx = WL_INVALID;
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error remove sending act frame to improve P2P connection ratio
 	wl_clr_drv_status(wl, SENDING_ACT_FRM, dev);
 #endif
@@ -5903,7 +5903,7 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 				if (wl->escan_on) {
 					WL_SCAN2(("link down notify escan complete: %p(%d)\n",
 						ndev, wl->escan_info.cur_sync_id));
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error inform bss will be done at notify function
 					{
 						u8 temp_id = wl->escan_info.cur_sync_id;
@@ -7362,7 +7362,7 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 			mutex_lock(&wl->usr_sync);
 			del_timer_sync(&wl->scan_timeout);
 			WL_SCAN2(("ESCAN COMPLETED\n"));
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error bss list is informed at notify function
 			wl->bss_list = (wl_scan_results_t *)wl->escan_info.escan_buf[wl->escan_info.cur_sync_id%2];
 			wl_inform_bss(wl);
@@ -7387,7 +7387,7 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 			mutex_lock(&wl->usr_sync);
 			del_timer_sync(&wl->scan_timeout);
 			WL_SCAN2(("ESCAN ABORTED\n"));
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error bss list is informed at notify function
 			wl->bss_list = (wl_scan_results_t *)wl->escan_info.escan_buf[(wl->escan_info.cur_sync_id+1)%2];
 			wl_inform_bss(wl);
@@ -7418,7 +7418,7 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 		} else if (likely(wl->scan_request)) {
 			mutex_lock(&wl->usr_sync);
 			del_timer_sync(&wl->scan_timeout);
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error bss list is informed at notify function
 			wl->bss_list = (wl_scan_results_t *)wl->escan_info.escan_buf[(wl->escan_info.cur_sync_id+1)%2];
 			wl_inform_bss(wl);

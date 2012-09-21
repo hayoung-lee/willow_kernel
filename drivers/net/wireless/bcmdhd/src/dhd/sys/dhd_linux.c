@@ -3815,7 +3815,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		dhd->pktfilter[4] = "104 0 0 0 0xFFFFFF 0x01005E";
 		/* customer want to get IPV4 multicast packets */
 #else
-#error Customer want to filter out all IPV6 packets
+//#error Customer want to filter out all IPV6 packets
 	dhd->pktfilter[0] = "100 0 0 0 0x01 0x00";
 #endif
 	dhd->pktfilter[1] = NULL;
@@ -5162,7 +5162,7 @@ int net_os_send_hang_message(struct net_device *dev)
 #endif
 #if defined(WL_CFG80211)
 			ret = wl_cfg80211_hang(dev, WLAN_REASON_UNSPECIFIED);
-#if !defined(CUSTOMER_HW_SAMSUNG)
+#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
 #error do not use these it cause kernel panic
 			dev_close(dev);
 			dev_open(dev);

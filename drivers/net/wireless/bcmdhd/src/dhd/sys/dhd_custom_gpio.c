@@ -275,7 +275,7 @@ const struct cntry_locales_custom translate_custom_table[] = {
 */
 void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 {
-#ifndef CUSTOMER_HW_SAMSUNG
+#if !defined(CUSTOMER_HW_SAMSUNG) && !defined(CONFIG_COMMON_PATCH)
 	struct cntry_locales_custom *cloc_ptr;
 
 	if (!cspec)

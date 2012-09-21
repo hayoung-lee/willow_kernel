@@ -34,7 +34,6 @@
 #ifndef _dhd_h_
 #define _dhd_h_
 
-#include "dhd_sec_feature.h"
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -120,7 +119,7 @@ enum dhd_prealloc_index {
 	DHD_PREALLOC_PROT = 0,
 	DHD_PREALLOC_RXBUF,
 	DHD_PREALLOC_DATABUF,
-#if defined (CUSTOMER_HW_SAMSUNG) && defined (CONFIG_DHD_USE_STATIC_BUF)
+#if defined (CONFIG_DHD_USE_STATIC_BUF)
 	DHD_PREALLOC_OSL_BUF,
 	DHD_PREALLOC_WIPHY_ESCAN0 = 5,
 	DHD_PREALLOC_WIPHY_ESCAN1
