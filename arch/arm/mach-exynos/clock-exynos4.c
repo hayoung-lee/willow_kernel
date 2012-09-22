@@ -1119,7 +1119,7 @@ static struct clksrc_clk exynos4_clk_sclk_audio1 = {
 	},
 	.sources = &exynos4_clkset_sclk_audio1,
 	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 0, .size = 4 },
-	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 0, .size = 8 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 0, .size = 4 },
 };
 
 static struct clk *exynos4_clkset_sclk_audio2_list[] = {

@@ -329,9 +329,8 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	else
 		clk = pcm->cclk;
 
-	/* temporarily removed, must be checked later */
-	//if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
-	//clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
+	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
+		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
 #if defined(CONFIG_ARCH_S5PC100) || defined(CONFIG_ARCH_S5PV210)
 	/* Set the SCLK divider */
