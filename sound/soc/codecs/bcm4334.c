@@ -78,4 +78,3 @@ module_exit(bcm4334_exit);
 
 MODULE_DESCRIPTION("BCM4334 PCM driver");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:bcm4334-pcm");
