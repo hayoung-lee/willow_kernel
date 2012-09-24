@@ -17,7 +17,7 @@ DHDCFLAGS += -DCONFIG_COMMON_PATCH
 
 # distinguish between the 43xx chip
 ifeq ($(CONFIG_BCM4334),m)
-DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV
+DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB
 DHDCFLAGS += -DUSE_CID_CHECK
 DHDCFLAGS += -DPROP_TXSTATUS
 DHDCFLAGS += -DVSDB -DHT40_GO
@@ -25,7 +25,7 @@ DHDCFLAGS += -DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 DHDCFLAGS += -DDHD_USE_IDLECOUNT
 endif
 ifeq ($(CONFIG_BCM4334),y)
-DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV
+DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB
 DHDCFLAGS += -DUSE_CID_CHECK
 DHDCFLAGS += -DPROP_TXSTATUS
 DHDCFLAGS += -DVSDB -DHT40_GO
@@ -135,7 +135,7 @@ EXTRA_CFLAGS += -I$(src)/src/wl/bcmwifi/include/
 EXTRA_LDFLAGS += --strip-debug
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
 
-obj-m   += bcmdhd.o
+obj-$(CONFIG_BCM4334) += bcmdhd.o
 
 bcmdhd-y := src/bcmsdio/sys/bcmsdh.o	src/bcmsdio/sys/bcmsdh_linux.o \
 	 src/bcmsdio/sys/bcmsdh_sdmmc.o	src/bcmsdio/sys/bcmsdh_sdmmc_linux.o \

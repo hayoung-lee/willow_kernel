@@ -337,8 +337,8 @@ typedef struct dhd_info {
 /* Definitions to provide path to the firmware and nvram
  * example nvram_path[MOD_PARAM_PATHLEN]="/projects/wlan/nvram.txt"
  */
-char firmware_path[MOD_PARAM_PATHLEN]="/vendor/firmware/fw_bcmdhd.bin";
-char nvram_path[MOD_PARAM_PATHLEN]="/system/etc/wifi/bcmdhd.cal";
+char firmware_path[MOD_PARAM_PATHLEN];
+char nvram_path[MOD_PARAM_PATHLEN];
 
 int op_mode = 0;
 int disable_proptx = 0;
@@ -362,8 +362,8 @@ module_param(dhd_msg_level, int, 0);
 module_param(disable_proptx, int, 0);
 
 /* load firmware and/or nvram values from the filesystem */
-//module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
-//module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
+module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
+module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
 
 /* Watchdog interval */
 uint dhd_watchdog_ms = 10;
@@ -2735,7 +2735,7 @@ dhd_open(struct net_device *net)
 			strcpy(fw_path, firmware_path);
 #if defined(BCM4334_CHECK_CHIP_REV)
 			strcpy(fw_down_path, fw_path);
-			//strcat(fw_down_path, chipver_tag);
+			strcat(fw_down_path, chipver_tag);
 #endif
 		firmware_path[0] = '\0';
 	}
@@ -3236,7 +3236,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 				down_path = fw_path;
 #if defined(BCM4334_CHECK_CHIP_REV)
 				strcpy(fw_down_path, fw_path);
-				//strcat(fw_down_path, chipver_tag);
+				strcat(fw_down_path, chipver_tag);
 				down_path = fw_down_path;
 #endif
 		/* wake lock moved to dhdsdio_download_firmware */
