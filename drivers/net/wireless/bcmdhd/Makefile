@@ -3,30 +3,25 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
         -DBCMDONGLEHOST -DUNRELEASEDCHIP -DBCMDMA32 -DWLBTAMP -DBCMFILEIMAGE  \
         -DDHDTHREAD -DDHD_GPL -DDHD_SCHED -DDHD_DEBUG -DBDC                   \
         -DDHD_BCMEVENTS -DSHOW_EVENTS -DDONGLEOVERLAYS -DBCMDBG               \
-        -DOOB_INTR_ONLY                                                       \
+        -DCUSTOMER_HW_SAMSUNG -DOOB_INTR_ONLY                                 \
         -DMMC_SDIO_ABORT -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS -DWLP2P     \
         -DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
         -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT                             \
         -DEMBEDDED_PLATFORM
 #-DPNO_SUPPORT
 
-ifeq ($(CONFIG_WIFI_CONTROL_FUNC),y)
-DHDCFLAGS += -DCUSTOMER_HW2
-endif
-DHDCFLAGS += -DCONFIG_COMMON_PATCH
-
 # distinguish between the 43xx chip
 ifeq ($(CONFIG_BCM4334),m)
-DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB
-DHDCFLAGS += -DUSE_CID_CHECK
+DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV
+DHDCFLAGS += -DCONFIG_CONTROL_PM
 DHDCFLAGS += -DPROP_TXSTATUS
 DHDCFLAGS += -DVSDB -DHT40_GO
 DHDCFLAGS += -DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 DHDCFLAGS += -DDHD_USE_IDLECOUNT
 endif
 ifeq ($(CONFIG_BCM4334),y)
-DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB
-DHDCFLAGS += -DUSE_CID_CHECK
+DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV
+DHDCFLAGS += -DCONFIG_CONTROL_PM
 DHDCFLAGS += -DPROP_TXSTATUS
 DHDCFLAGS += -DVSDB -DHT40_GO
 DHDCFLAGS += -DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
@@ -141,6 +136,7 @@ bcmdhd-y := src/bcmsdio/sys/bcmsdh.o	src/bcmsdio/sys/bcmsdh_linux.o \
 	 src/bcmsdio/sys/bcmsdh_sdmmc.o	src/bcmsdio/sys/bcmsdh_sdmmc_linux.o \
 	 src/dhd/sys/dhd_bta.o		src/dhd/sys/dhd_cdc.o \
 	 src/dhd/sys/dhd_common.o	src/dhd/sys/dhd_custom_gpio.o \
+	 src/dhd/sys/dhd_custom_sec.o \
 	 src/dhd/sys/dhd_linux.o	src/dhd/sys/dhd_linux_sched.o \
 	 src/dhd/sys/dhd_cfg80211.o	src/dhd/sys/dhd_sdio.o \
 	 src/shared/aiutils.o		src/shared/bcmevent.o \

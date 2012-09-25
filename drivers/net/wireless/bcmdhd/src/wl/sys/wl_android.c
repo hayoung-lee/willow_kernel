@@ -234,11 +234,11 @@ static int wl_android_set_suspendopt(struct net_device *dev, char *command, int 
 	if (!dhd_download_fw_on_driverload) {
 #endif /* CUSTOMER_HW_SAMSUNG */
 		suspend_flag = *(command + strlen(CMD_SETSUSPENDOPT) + 1) - '0';
-	
+
 		if (suspend_flag != 0)
 			suspend_flag = 1;
 		ret_now = net_os_set_suspend_disable(dev, suspend_flag);
-	
+
 		if (ret_now != suspend_flag) {
 			if (!(ret = net_os_set_suspend(dev, ret_now)))
 				DHD_INFO(("%s: Suspend Flag %d -> %d\n",
@@ -946,7 +946,7 @@ wl_android_set_ampdu_mpdu(struct net_device *dev, const char* string_num)
 		DHD_ERROR(("%s : ampdu_mpdu set error. %d\n", __FUNCTION__, err));
 		return -1;
 	}
-	
+
 	return 0;
 }
 #endif

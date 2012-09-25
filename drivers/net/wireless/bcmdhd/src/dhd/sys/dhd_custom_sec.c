@@ -38,7 +38,7 @@ extern int _dhd_set_mac_address(struct dhd_info *dhd,
 #define	REVINFO "/data/.rev"
 #else
 #define MACINFO "/data/.mac.info"
-#define MACINFO_EFS "/factory/wifi/.mac.info"
+#define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
 #define	REVINFO "/data/.rev"
 #define CIDINFO "/data/.cid.info"
@@ -174,7 +174,7 @@ int dhd_write_rdwr_macaddr(struct ether_addr *mac)
 		set_fs(oldfs);
 		filp_close(fp_mac, NULL);
 	}
-	/* /factory/wifi/.mac.info will be created */
+	/* /efs/wifi/.mac.info will be created */
 	fp_mac = filp_open(filepath_efs, O_RDWR | O_CREAT, 0666);
 	if (IS_ERR(fp_mac)) {
 		DHD_ERROR(("[WIFI] %s: File open error\n", filepath_efs));
@@ -814,7 +814,7 @@ startwrite:
 	filp_close(fp_mac, NULL);
 	/* end of /data/.mac.info */
 
-	/* File will be created /factory/wifi/.mac.info. */
+	/* File will be created /efs/wifi/.mac.info. */
 	fp_mac = filp_open(filepath_efs, O_RDWR | O_CREAT, 0666);
 
 	if (IS_ERR(fp_mac)) {

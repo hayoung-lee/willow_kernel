@@ -1412,7 +1412,7 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt)
 			ASSERT(((uintptr)frame % DHD_SDALIGN) == 0);
 			pad1 = 0;
 		} else {
-#if defined(CUSTOMER_HW4) || defined(CONFIG_COMMON_PATCH)
+#ifdef CUSTOMER_HW_SAMSUNG
 			/* Adjust pad value to fix firmware crash problems
 			 * because of odd start address of the frame
 			 * (CSP#455126)
@@ -1943,14 +1943,14 @@ dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		R_SDREG(status, &bus->regs->intstatus, retry);
 		DHD_ERROR(("%s: resumed on timeout, INT status=0x%08X\n", __FUNCTION__, status));
 #ifdef DHD_DEBUG
-#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
+#if !defined(CUSTOMER_HW_SAMSUNG)
 #error need debug message if dongle trap occured
 		if (!SLPAUTO_ENAB(bus)) {
 #endif
 			dhd_os_sdlock(bus->dhd);
 			dhdsdio_checkdied(bus, NULL, 0);
 			dhd_os_sdunlock(bus->dhd);
-#if !defined(CUSTOMER_HW4) && !defined(CONFIG_COMMON_PATCH)
+#if !defined(CUSTOMER_HW_SAMSUNG)
 		}
 #endif
 #endif /* DHD_DEBUG */
