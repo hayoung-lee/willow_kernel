@@ -21,6 +21,20 @@
 struct platform_device;
 struct clk;
 
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+/* enumerates display mode. */
+enum {
+	SINGLE_LCD_MODE = 1,
+	DUAL_LCD_MODE = 2,
+};
+
+/* enumerates interface mode. */
+enum {
+	FIMD_RGB_INTERFACE = 1,
+	FIMD_CPU_INTERFACE = 2,
+};
+#endif
+
 struct s3c_platform_fb {
 	int		hw_ver;
 	char		clk_name[16];
@@ -28,7 +42,8 @@ struct s3c_platform_fb {
 	int		nr_buffers[5];
 	int		default_win;
 	int		swap;
-
+	void		*lcd;
+	void		(*set_display_path)(void);
 	void		(*cfg_gpio)(struct platform_device *dev);
 	int		(*backlight_on)(struct platform_device *dev);
 	int		(*backlight_off)(struct platform_device *dev);
@@ -41,6 +56,7 @@ struct s3c_platform_fb {
 extern void s3cfb_set_platdata(struct s3c_platform_fb *fimd);
 
 /* defined by architecture to configure gpio */
+extern void s3cfb_set_display_path(void);
 extern void s3cfb_cfg_gpio(struct platform_device *pdev);
 extern int s3cfb_backlight_on(struct platform_device *pdev);
 extern int s3cfb_backlight_off(struct platform_device *pdev);
