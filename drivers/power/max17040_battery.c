@@ -54,8 +54,6 @@ struct fg_state{
 };
 
 static struct wake_lock vbus_wake_lock;
-bool usb_is_connected = 0;
-int dc_is_connected = 0;
 
 void isUSBconnected(bool usb_connect)
 {
@@ -70,7 +68,6 @@ void isUSBconnected(bool usb_connect)
 	}
 }
 EXPORT_SYMBOL(isUSBconnected);
-EXPORT_SYMBOL(dc_is_connected);
 #else
 struct max17040_chip {
 	struct i2c_client		*client;

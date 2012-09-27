@@ -42,6 +42,11 @@ extern int fg_read_soc(void);
 extern int fg_read_vcell(void);
 #endif
 
+bool usb_is_connected = false;
+bool dc_is_connected = false;
+EXPORT_SYMBOL(usb_is_connected);
+EXPORT_SYMBOL(dc_is_connected);
+
 struct max8903_data {
 	struct max8903_pdata *pdata;
 	struct device *dev;
@@ -213,6 +218,17 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 
 	data->ta_in = ta_in;
 	data->usb_in = usb_in;
+
+	if ( ta_in && usb_in ) {
+		usb_is_connected = true;
+		dc_is_connected = false;
+	} else if ( ta_in ) {
+		usb_is_connected = false;
+		dc_is_connected = true;
+	} else {
+		usb_is_connected = false;
+		dc_is_connected = false;
+	}
 
 	/* Set Current-Limit-Mode 1:DC 0:USB */
 #ifdef CTRL_DCM
@@ -576,6 +592,17 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 	data->fault = false;
 	data->ta_in = ta_in;
 	data->usb_in = usb_in;
+
+	if ( ta_in && usb_in ) {
+		usb_is_connected = true;
+		dc_is_connected = false;
+	} else if ( ta_in ) {
+		usb_is_connected = false;
+		dc_is_connected = true;
+	} else {
+		usb_is_connected = false;
+		dc_is_connected = false;
+	}
 
 	battery->name = CHARGER_BATTERY_NAME;//"charger-battery";
 	battery->type = POWER_SUPPLY_TYPE_BATTERY;
