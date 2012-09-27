@@ -20,7 +20,7 @@
 
 int init_shm(struct mfc_inst_ctx *ctx)
 {
-#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_alloc_buffer *alloc;
 

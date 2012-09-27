@@ -7,7 +7,7 @@ obj-$(CONFIG_FB_S5P_MIPI_DSIM)	+= s5p_dsim_lowlevel.o
 obj-$(CONFIG_FB_S5P_MIPI_DSIM)	+= s5p-dsim.o
 
 obj-y				+= s3cfb.o
-s3cfb-y				:= s3cfb_main.o s3cfb_ops.o lcdfreq.o
+s3cfb-y				:= s3cfb_main.o s3cfb_ops.o
 obj-$(CONFIG_ARCH_S5PV210)	+= s3cfb_fimd6x.o
 obj-$(CONFIG_ARCH_EXYNOS4)	+= s3cfb_fimd6x.o
 

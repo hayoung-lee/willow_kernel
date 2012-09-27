@@ -47,7 +47,7 @@ unsigned long mfc_mem_base(int port);
 unsigned char *mfc_mem_addr(int port);
 unsigned long mfc_mem_data_base(int port);
 unsigned int mfc_mem_data_size(int port);
-#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 unsigned int mfc_mem_hole_size(void);
 #endif
 unsigned long mfc_mem_data_ofs(unsigned long addr, int contig);

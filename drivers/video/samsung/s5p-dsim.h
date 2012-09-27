@@ -18,7 +18,7 @@
 
 #include <linux/device.h>
 
-enum dsim_read_id {
+typedef enum {
 	Ack = 0x02,
 	EoTp = 0x08,
 	GenShort1B = 0x11,
@@ -27,62 +27,27 @@ enum dsim_read_id {
 	DcsLong = 0x1c,
 	DcsShort1B = 0x21,
 	DcsShort2B = 0x22,
-};
+} dsim_read_id;
 
 struct mipi_lcd_driver {
 	s8	name[64];
 
-	s32	(*init)(struct device *dev);
+	s32	(*init)(void);
 	void	(*display_on)(struct device *dev);
+	s32	(*set_link)(void *pd, u32 dsim_base,
+		u8 (*cmd_write)(u32 dsim_base, u32 data0, u32 data1, u32 data2),
+		u8 (*cmd_read)(u32 dsim_base, u32 data0, u32 data1, u32 data2));
 	s32	(*probe)(struct device *dev);
 	s32	(*remove)(struct device *dev);
 	void	(*shutdown)(struct device *dev);
-	s32	(*suspend)(struct device *dev, pm_message_t mesg);
+	s32	(*suspend)(void);
 	s32	(*resume)(struct device *dev);
-};
 
-struct dsim_ops {
-	u8	(*cmd_write)(void *ptr, u32 data0, u32 data1, u32 data2);
-	int	(*cmd_read)(void *ptr, u8 addr, u16 count, u8 *buf);
-	int	(*cmd_dcs_read)(void *ptr, u8 addr, u16 count, u8 *buf);
-	void	(*suspend)(void);
-	void	(*resume)(void);
-};
-
-/* Indicates the state of the device */
-struct dsim_global {
-	struct device *dev;
-	struct device panel;
-	struct clk *clock;
-	struct s5p_platform_dsim *pd;
-	struct dsim_config *dsim_info;
-	struct dsim_lcd_config *dsim_lcd_info;
-	/* lcd panel data. */
-	struct s3cfb_lcd *lcd_panel_info;
-	/* platform and machine specific data for lcd panel driver. */
-	struct mipi_ddi_platform_data *mipi_ddi_pd;
-	/* lcd panel driver based on MIPI-DSI. */
-	struct mipi_lcd_driver *mipi_drv;
-
-	unsigned int irq;
-	unsigned int te_irq;
-	unsigned int reg_base;
-	unsigned char state;
-	unsigned int data_lane;
-	enum dsim_byte_clk_src e_clk_src;
-	unsigned long hs_clk;
-	unsigned long byte_clk;
-	unsigned long escape_clk;
-	unsigned char freq_band;
-	char header_fifo_index[DSIM_HEADER_FIFO_SZ];
-
-	struct delayed_work	dsim_work;
-	struct delayed_work	check_hs_toggle_work;
-	unsigned int		dsim_toggle_per_frame_count;
-
-	spinlock_t slock;
-
-	struct dsim_ops		*ops;
+	bool	(*partial_mode_status)(struct device *dev);
+	int     (*partial_mode_on)(struct device *dev, u8 display);
+	int     (*partial_mode_off)(struct device *dev);
+	void	(*display_off)(struct device *dev);
+	int	(*is_panel_on)(void);
 };
 
 int s5p_dsim_register_lcd_driver(struct mipi_lcd_driver *lcd_drv);

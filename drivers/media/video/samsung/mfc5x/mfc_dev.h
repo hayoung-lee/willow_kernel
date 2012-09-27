@@ -80,7 +80,7 @@ struct mfc_dev {
 	struct mfc_vcm		vcm_info;
 #endif
 	int			mem_ports;
-#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	struct mfc_mem		mem_infos[MFC_MAX_MEM_CHUNK_NUM];
 	struct mfc_mem		drm_info;
 	int			drm_playback;

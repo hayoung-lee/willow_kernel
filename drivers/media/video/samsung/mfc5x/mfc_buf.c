@@ -274,12 +274,12 @@ static unsigned long mfc_get_free_buf(unsigned int size, int align, int port)
 
 int mfc_init_buf(void)
 {
-#ifndef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifndef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	int port;
 #endif
 	int ret = 0;
 
-#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	INIT_LIST_HEAD(&mfc_alloc_head[0]);
 	INIT_LIST_HEAD(&mfc_free_head[0]);
 
