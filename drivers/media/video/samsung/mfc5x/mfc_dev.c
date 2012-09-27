@@ -67,7 +67,7 @@ static struct proc_dir_entry *mfc_proc_entry;
 #define MFC_PROC_ROOT		"mfc"
 #define MFC_PROC_TOTAL_INSTANCE_NUMBER	"total_instance_number"
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 #define MFC_DRM_MAGIC_SIZE	0x10
 #define MFC_DRM_MAGIC_CHUNK0	0x13cdbf16
 #define MFC_DRM_MAGIC_CHUNK1	0x8b803342
@@ -110,7 +110,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 	int ret;
 	enum mfc_ret_code retcode;
 	int inst_id;
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	struct mfc_alloc_buffer *alloc;
 #endif
 
@@ -119,7 +119,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&mfcdev->lock);
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	if (mfcdev->drm_playback) {
 		mfc_err("DRM playback was activated, cannot open no more instance\n");
 		ret = -EINVAL;
@@ -155,7 +155,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 	}
 
 	if (atomic_read(&mfcdev->inst_cnt) == 0) {
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 		if (check_magic(mfcdev->drm_info.addr)) {
 			mfc_dbg("DRM playback starting\n");
 
@@ -225,7 +225,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 			goto err_start_hw;
 		}
 	}
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	else {
 		if (check_magic(mfcdev->drm_info.addr)) {
 			clear_magic(mfcdev->drm_info.addr);
@@ -261,7 +261,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 	mfc_ctx->id = inst_id;
 	mfc_ctx->dev = mfcdev;
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	if (mfcdev->drm_playback) {
 		alloc = _mfc_alloc_buf(mfc_ctx, MFC_CTX_SIZE_L, ALIGN_2KB, MBT_CTX | PORT_A);
 		if (alloc == NULL) {
@@ -286,13 +286,13 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	return 0;
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 err_drm_ctx:
 #endif
 err_inst_ctx:
 err_inst_id:
 err_inst_cnt:
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 err_drm_start:
 #endif
 err_start_hw:
@@ -303,7 +303,7 @@ err_start_hw:
 
 err_pwr_enable:
 err_fw_state:
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 err_drm_playback:
 #endif
 	mutex_unlock(&mfcdev->lock);
@@ -338,7 +338,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 	}
 #endif
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	mfcdev->drm_playback = 0;
 
 	mfc_set_buf_alloc_scheme(MBS_BEST_FIT);
@@ -575,7 +575,7 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		in_param.ret_code = MFC_OK;
 		ret = 0;
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 		for (i = 0; i < MFC_MAX_MEM_CHUNK_NUM; i++)
 			ret += mfc_mem_data_size(i);
 
@@ -757,7 +757,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		mfc_mem_data_size(1),
 		real_size);
 
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	real_size += mfc_mem_hole_size();
 #endif
 
@@ -873,7 +873,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 #else	/* not SYSMMU_MFC_ON */
 	/* early allocator */
 	/* CMA or bootmem(memblock) */
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	vma->vm_flags |= VM_RESERVED | VM_IO;
 	if (mfc_ctx->buf_cache_type == NO_CACHE)
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);

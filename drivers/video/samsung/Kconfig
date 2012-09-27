@@ -74,7 +74,7 @@ config VIDEO_SAMSUNG_MEMSIZE_FIMD
 
 config VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO
 	int "Memory size in kbytes for FIMD Video Layer"
-	depends on FB_S5P && EXYNOS4_CONTENT_PATH_PROTECTION
+	depends on FB_S5P && EXYNOS_CONTENT_PATH_PROTECTION
 	default "16384"
 
 config FB_S5P_MIPI_DSIM
