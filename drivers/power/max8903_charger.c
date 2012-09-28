@@ -32,6 +32,7 @@
 //#define SUPPORT_USB_STATE
 #define FULL_VCELL 4250000
 #define FULL_SOC 100
+#define WORK_DELAY 1000
 
 #ifdef CONFIG_BATTERY_MAX17040
 #define HAVE_FUEL_GAUGE
@@ -428,7 +429,7 @@ static void max8903_work(struct delayed_work *work)
 
 	if ( data->ta_in || data->usb_in ) {
 		if ( msg_update_cnt > 58 ) {
-			printk("[BATTERY] soc=%d\%, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+			printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
 			msg_update_cnt = 0;
 		} else {
 			msg_update_cnt++;
@@ -439,7 +440,7 @@ static void max8903_work(struct delayed_work *work)
 		}
 	}
 
-	schedule_delayed_work(&data->work, 1000);
+	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
 }
 
 static int max8903_suspend(struct platform_device *pdev, pm_message_t state)
@@ -462,7 +463,7 @@ static int max8903_resume(struct platform_device* pdev)
 	struct max8903_data *data = platform_get_drvdata(pdev);
 	struct max8903_pdata *pdata = data->pdata;
   
-	schedule_delayed_work(&data->work, 1000);
+	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
 
 	if(pdata->dok) {
 		int irq = gpio_to_irq(pdata->dok);
@@ -680,7 +681,7 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK_DEFERRABLE(&data->work, max8903_work);
 
-	schedule_delayed_work(&data->work, 1000);
+	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
 
 	return 0;
 
