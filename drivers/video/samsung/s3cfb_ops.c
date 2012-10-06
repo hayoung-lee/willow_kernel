@@ -39,6 +39,8 @@
 #define CMA_REGION_VIDEO	"fimd"
 #endif
 
+static unsigned int bootloaderfb = 0x5f800000; //CFG_LCD_FBUFFER
+
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -117,6 +119,14 @@ int s3cfb_draw_logo(struct fb_info *fb)
 	}
 #endif
 #endif
+
+#else /* CONFIG_FB_S5P_SPLASH_SCREEN */
+	if (bootloaderfb) {
+		u8 *logo_virt_buf;
+		logo_virt_buf = cma_get_virt(bootloaderfb, fb->var.yres * fb->fix.line_length, 1);
+		memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
+		iounmap(logo_virt_buf);
+	}
 #endif
 
 	return 0;
