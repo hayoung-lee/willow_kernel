@@ -38,8 +38,6 @@
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
 #include <linux/input.h>
-//#include <mach/gpio-t9.h>
-
 
 /* Insmod parameters */
 //I2C_CLIENT_INSMOD_1(isl29023);
@@ -50,11 +48,9 @@ static int last_mod;
 #define DEBUG 0
 
 static DEFINE_MUTEX(mutex);
-//extern t9_hw_version_type t9_get_hw_version(void);
 
-//[boomshaky@bit&pulse.com] Check light sensor device. 20110915 
 static int is_device = 1;
-// END
+
 static int isl_set_range(struct i2c_client *client, int range)
 {
 	int ret_val;
@@ -239,13 +235,11 @@ isl_enable_show(struct device *dev,
     int val;
     int temp_val = 1;
     
-     //[boomshaky@bit&pulse.com] Check light sensor device. 20110915 
     if(!is_device)
     {
         printk("[LIGHT] NO DEVICE is_device = %d  \n",is_device);
         return;
     }
-    // END
   
     mutex_lock(&mutex);
     val = isl_get_mod(isl29023->client);
@@ -278,22 +272,17 @@ isl_enable_store(struct device *dev,
 		return -EINVAL;
 
     //printk("[LIGHT]isl_enable_store val = %ld  \n",val);
-    //[boomshaky@bit&pulse.com] Check light sensor device. 20110915 
     if(!is_device)
     {
         printk("[LIGHT] NO DEVICE is_device = %d  \n",is_device);
         return;
     }
-    // END
-	if(val == 1) 
+
+    if(val == 1)
 	    val = 5;  //ISL_MOD_ALS_CONT
-    //[boomshaky@bit&pulse.com] Avoid kernel panic ES1 version. 20110910
-//    if(t9_get_hw_version() >= T9_HW_VERSION_ES2){
     mutex_lock(&mutex);
 	ret_val = isl_set_mod(isl29023->client, val);
 	mutex_unlock(&mutex);
-//    }
-    //END 20110910
 
 	if (ret_val < 0)
 		return ret_val;
@@ -465,8 +454,7 @@ isl29023_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
     //printk(KERN_INFO MODULE_NAME ": %s isl29023 probe call, ID= %s\n", __func__, id->name);
-//[boomshaky@bitnpulse.com] input_device µî·Ï¼ø¼­ º¯°æ.
-#if 1  //Ä¨ÀÇ ºÒ·®À¸·Î ÀÎÇÑ Å¸ ¼¾¼­ÀÇ ¿Àµ¿ÀÛÀ» ¸·±â À§ÇÑ ÀÛ¾÷. input_driver ¸ÕÀú »ý¼º.
+#if 1
 	err = isl29023_input_init(isl29023);
 	if (err < 0) {
 		return -EINVAL;
@@ -480,7 +468,7 @@ isl29023_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (res < 0) {
 		//pr_warn("isl29023: set default config failed!!\n");
      printk(KERN_INFO MODULE_NAME ": %s isl29023 set default config failed\n", __func__);
-     //[boomshaky@bit&pulse.com] Check light sensor device. 20110915 
+
      is_device = 0;
      //
 		return -EINVAL;
@@ -501,8 +489,7 @@ isl29023_probe(struct i2c_client *client, const struct i2c_device_id *id)
     cancel_delayed_work_sync(&isl29023->work);
 
   
-//[boomshaky@bitnpulse.com] input_device µî·Ï¼ø¼­ º¯°æ.
-#if 0 //Ä¨ÀÇ ºÒ·®À¸·Î ÀÎÇÑ Å¸ ¼¾¼­ÀÇ ¿Àµ¿ÀÛÀ» ¸·±â À§ÇÑ ÀÛ¾÷.
+#if 0 //Ä¨ï¿½ï¿½ ï¿½Ò·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¸ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Û¾ï¿½.
 	err = isl29023_input_init(isl29023);
 	if (err < 0) {
 		return -EINVAL;
