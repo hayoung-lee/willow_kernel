@@ -48,6 +48,8 @@ bool dc_is_connected = false;
 EXPORT_SYMBOL(usb_is_connected);
 EXPORT_SYMBOL(dc_is_connected);
 
+bool g_update_need = true;
+
 struct max8903_data {
 	struct max8903_pdata *pdata;
 	struct device *dev;
@@ -419,25 +421,23 @@ static void max8903_work(struct delayed_work *work)
 	else if(data->usb_in)
 		power_supply_changed(&data->usb);
 #else
-	if(data->ta_in && data->usb_in)
-		power_supply_changed(&data->usb);
-	else if(data->ta_in)
-		power_supply_changed(&data->adapter);
-	else
-		power_supply_changed(&data->battery);
+	if(g_update_need || msg_update_cnt > 58) {
+		if(g_update_need)
+			g_update_need = false;
+		if(data->ta_in && data->usb_in)
+			power_supply_changed(&data->usb);
+		else if(data->ta_in)
+			power_supply_changed(&data->adapter);
+		else
+			power_supply_changed(&data->battery);
+	}
 #endif
 
-	if ( data->ta_in || data->usb_in ) {
-		if ( msg_update_cnt > 58 ) {
-			printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
-			msg_update_cnt = 0;
-		} else {
-			msg_update_cnt++;
-		}
+	if ( msg_update_cnt > 58 ) {
+		printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+		msg_update_cnt = 0;
 	} else {
-		if ( msg_update_cnt ) {
-			msg_update_cnt = 0;
-		}
+		msg_update_cnt++;
 	}
 
 	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
@@ -448,6 +448,7 @@ static int max8903_suspend(struct platform_device *pdev, pm_message_t state)
 	struct max8903_data *data = platform_get_drvdata(pdev);
 	struct max8903_pdata *pdata = data->pdata;
 
+	g_update_need = false;
 	cancel_delayed_work(&data->work);
 
 	if(pdata->dok) {
@@ -462,7 +463,8 @@ static int max8903_resume(struct platform_device* pdev)
 {
 	struct max8903_data *data = platform_get_drvdata(pdev);
 	struct max8903_pdata *pdata = data->pdata;
-  
+
+	g_update_need = true;
 	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
 
 	if(pdata->dok) {
