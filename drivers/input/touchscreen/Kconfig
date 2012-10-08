@@ -17,6 +17,18 @@ config TOUCHSCREEN_FOCALTECH_I2C
         help
           This driver support for FocalTech FT5606 Touch Screen, I2C interface
 
+config TOUCHSCREEN_ATMEL_MXT1664S
+        tristate "Atmel mXT 1664S I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have Atmel mXT series I2C touchscreen,
+          such as ATMEL MXT1664S, connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called mxt1664s.
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X

@@ -140,8 +140,9 @@ extern int dc_is_connected;
 #endif
 
 #include <mach/gpio.h>
-
-
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S)
+#include <linux/i2c/1664s_driver.h>
+#endif
 /* wifi */
 extern int brcm_wlan_init(void);
 
@@ -2083,12 +2084,124 @@ static struct i2c_board_info i2c_devs4[] __initdata = {
 	},
 #endif
 };
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
+static struct regulator *touch_ldo;
+
+int touch_reset(int onoff)
+{
+	int err;
+
+	if(onoff)
+		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_HIGH, "TOUCH_RESET");
+	else
+		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "TOUCH_RESET");		
+	if (err) {
+		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
+	}
+	gpio_free(EXYNOS4_GPB(4));
+ 
+	return 0;
+}
+
+void touch_on(void)
+{
+	int err=0;
+	
+	printk("[ATMEL] TS_POWER ON\n");
+
+  //touch_ldo = regulator_get(NULL, "vdd_tsp");
+		
+	//regulator_enable(touch_ldo);
+
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);  // Interrupt
+	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_UP);
+
+    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
+    if(err) {
+        printk(KERN_ERR "failed to request 1664_reset\n");
+    }
+	mdelay(10);
+	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT); //reset
+	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4_GPB(4), 0);
+	mdelay(100);
+	gpio_set_value(EXYNOS4_GPB(4), 1);
+	mdelay(150);
+
+	gpio_free(EXYNOS4_GPB(4));
+	
+	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE); //interrupt
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_SFN(0xf));
+	mdelay(40);
+	
+	//regulator_put(touch_ldo);
+	
+}
+
+
+void touch_off(void)
+{
+	int err=0;
+
+	printk("[ATMEL] TS_POWER OFF\n");
+  //touch_ldo = regulator_get(NULL, "vdd_tsp");
+
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+
+    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
+    if(err) {
+        printk(KERN_ERR "failed to request 1664_reset\n");
+    }
+		
+	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4_GPB(4), 0);
+
+	//if (regulator_is_enabled(touch_ldo))
+		//regulator_disable(touch_ldo);
+	gpio_free(EXYNOS4_GPB(4));
+
+	//if (regulator_is_enabled(touch_ldo))
+		//regulator_disable(touch_ldo);
+
+	//regulator_put(touch_ldo);
+
+}
+
+int atmel1664_gpio_chg_get(void)
+{
+	return gpio_get_value(EXYNOS4_GPX0(4));
+}
+	
+
+static struct mxt_platform_data atmel1664_touch_platform_data = {
+	.max_finger_touches = 10,
+	.min_x=0,
+	.max_x=1279,
+	.min_y=0,
+	.max_y=799,
+	.min_z=0,
+	.max_z=255,  //ABS_MT_TOUCH_MAJOR
+	.min_w=0,
+	.max_w=200,  //WIDTH_MAJOR
+	.gpio_read_done = EXYNOS4_GPX0(4),	
+	.power_on=touch_on,
+	.power_off=touch_off,
+	.boot_address	=0x4a,
+};
+#endif
 
 static struct i2c_board_info i2c_devs5[] __initdata = {
 	{
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
         I2C_BOARD_INFO("ft5x0x_ts", (0x70>>1)),
 #endif
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
+		I2C_BOARD_INFO("atmel_1664", 0x4a),
+		.platform_data = &atmel1664_touch_platform_data,
+		.irq		= IRQ_EINT(4),
+#endif 
 	},
 };
 
