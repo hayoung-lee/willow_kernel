@@ -32,6 +32,7 @@
 //#define SUPPORT_USB_STATE
 #define FULL_VCELL 4250000
 #define FULL_SOC 100
+#define LOW_SOC 1
 #define WORK_DELAY 1000
 
 #ifdef CONFIG_BATTERY_MAX17040
@@ -410,6 +411,7 @@ static void max8903_work(struct delayed_work *work)
 {
 	struct max8903_data* data;
 	static int msg_update_cnt =0;
+	int soc = fg_read_soc();
 
 	data = container_of(work, struct max8903_data, work);
 
@@ -421,6 +423,9 @@ static void max8903_work(struct delayed_work *work)
 	else if(data->usb_in)
 		power_supply_changed(&data->usb);
 #else
+	if(LOW_SOC >= soc || FULL_SOC <= soc)
+		g_update_need = true;
+
 	if(g_update_need || msg_update_cnt > 58) {
 		if(g_update_need)
 			g_update_need = false;
