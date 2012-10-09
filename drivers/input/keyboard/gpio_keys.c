@@ -333,7 +333,6 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 	struct gpio_keys_button *button = bdata->button;
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
-	struct irq_desc *desc = irq_to_desc(gpio_to_irq(button->gpio));
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
 
 #if defined(FEATURE_TW_TOUCH_AUTO_CAL)
@@ -350,6 +349,8 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 		input_sync(input);
 	}
 #else
+	struct irq_desc *desc = irq_to_desc(gpio_to_irq(button->gpio));
+
 	if (type == EV_ABS) {
 		if (state)
 			input_event(input, type, button->code, button->value);

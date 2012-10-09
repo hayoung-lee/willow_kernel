@@ -344,7 +344,7 @@ static int smdk4x12_cam0_reset(int dummy)
 /*  MT9M113 Camera driver configuration */
 
 #ifdef CONFIG_VIDEO_MT9M113
-int mt9m113_stanby(void)
+void mt9m113_stanby(void)
 {
 	int err;
 

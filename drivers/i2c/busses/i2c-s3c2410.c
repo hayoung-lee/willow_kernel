@@ -878,7 +878,6 @@ int s3c24xx_i2c_set(int num, int slave, int setfreq)
 	unsigned int freq;
 	unsigned long clkin = clk_get_rate(t10s_i2c_backup[num].i2c->clk);
 	unsigned int divs, div1;
-	unsigned long target_frequency;
 	unsigned long siicon =0;
 	/* get the plafrom data */
 
@@ -895,7 +894,7 @@ int s3c24xx_i2c_set(int num, int slave, int setfreq)
 
 	/* we need to work out the divisors for the clock... */
 
-	printk( "pdata desired setfreq frequency %lu t10s_i2c_backup[num].i2c->clkrate=%lu clkin=%lu \n", setfreq,t10s_i2c_backup[num].i2c->clkrate,clkin);
+	//printk( "pdata desired setfreq frequency %lu t10s_i2c_backup[num].i2c->clkrate=%lu clkin=%lu \n", setfreq,t10s_i2c_backup[num].i2c->clkrate,clkin);
 
 	freq = s3c24xx_i2c_calcdivisor(clkin, setfreq, &div1, &divs);
 

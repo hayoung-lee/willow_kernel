@@ -317,6 +317,8 @@ int lcd_off_charging_ctrl(int onoff)
 		return err;
 	}
 	gpio_free(EXYNOS4212_GPM0(3));
+
+	return 0;
 }
 EXPORT_SYMBOL(lcd_off_charging_ctrl);
 
