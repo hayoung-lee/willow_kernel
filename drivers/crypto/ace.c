@@ -70,7 +70,7 @@
 
 enum s5p_cpu_type {
 	TYPE_S5PV210,
-	TYPE_EXYNOS4,
+	TYPE_EXYNOS,
 };
 
 enum {
@@ -91,6 +91,8 @@ static void s5p_ace_bc_task(unsigned long data);
 
 static int count_clk;
 static int count_clk_delta;
+
+static int count_use_sw;
 
 #if defined(ACE_DEBUG_HEARTBEAT) || defined(ACE_DEBUG_WATCHDOG)
 #define ACE_HEARTBEAT_MS		10000
@@ -328,7 +330,7 @@ static int s5p_ace_aes_set_cipher(struct s5p_ace_aes_ctx *sctx,
 	new_status |= ACE_AES_SWAPCNT_ON;
 	new_status |= ACE_AES_SWAPIV_ON;
 
-	if (s5p_ace_dev.cputype == TYPE_EXYNOS4) {
+	if (s5p_ace_dev.cputype == TYPE_EXYNOS) {
 		new_status |= ACE_AES_SWAPDO_ON;
 		new_status |= ACE_AES_SWAPDI_ON;
 		new_status |= ACE_AES_COUNTERSIZE_128;
@@ -1535,7 +1537,7 @@ static int s5p_ace_sha_engine(struct s5p_ace_hash_ctx *sctx,
 	s5p_ace_write_sfr(ACE_FC_HRDMAC, reg);
 
 	/* Set byte swap of data in */
-	if (s5p_ace_dev.cputype == TYPE_EXYNOS4)
+	if (s5p_ace_dev.cputype == TYPE_EXYNOS)
 		s5p_ace_write_sfr(ACE_HASH_BYTESWAP, ACE_HASH_SWAPDI_ON |
 				ACE_HASH_SWAPDO_ON | ACE_HASH_SWAPIV_ON);
 	else
@@ -2209,6 +2211,7 @@ int ace_s5p_get_sync_lock(void)
 {
 	unsigned long timeout;
 	int get_lock_bc = 0, get_lock_hash = 0;
+	unsigned long flags;
 
 	timeout = jiffies + msecs_to_jiffies(10);
 	while (time_before(jiffies, timeout)) {
@@ -2229,8 +2232,12 @@ int ace_s5p_get_sync_lock(void)
 	}
 
 	/* set lock flag */
-	if (get_lock_bc && get_lock_hash)
+	if (get_lock_bc && get_lock_hash) {
+		spin_lock_irqsave(&s5p_ace_dev.lock, flags);
+		count_use_sw++;
+		spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
 		set_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	}
 
 	if (get_lock_bc) {
 #ifdef CONFIG_ACE_BC_ASYNC
@@ -2259,11 +2266,16 @@ int ace_s5p_get_sync_lock(void)
 
 int ace_s5p_release_sync_lock(void)
 {
-	/* clear lock flag */
-	if (!test_and_clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags))
-		return -ENOLCK;
+	unsigned long flags;
 
-	clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	spin_lock_irqsave(&s5p_ace_dev.lock, flags);
+	count_use_sw--;
+	spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
+
+	/* clear lock flag */
+	if (!count_use_sw)
+		clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
 	return 0;
@@ -2422,6 +2434,8 @@ static int __devinit s5p_ace_probe(struct platform_device *pdev)
 	secmem_ftn.lock = &ace_s5p_get_sync_lock;
 	secmem_ftn.release = &ace_s5p_release_sync_lock;
 	secmem_crypto_register(&secmem_ftn);
+
+	count_use_sw = 0;
 
 	printk(KERN_NOTICE "ACE driver is initialized\n");
 
@@ -2597,8 +2611,8 @@ static struct platform_device_id s5p_ace_driver_ids[] = {
 		.name		= "s5pv210-ace",
 		.driver_data	= TYPE_S5PV210,
 	}, {
-		.name		= "exynos4-ace",
-		.driver_data	= TYPE_EXYNOS4,
+		.name		= "exynos-ace",
+		.driver_data	= TYPE_EXYNOS,
 	},
 	{}
 };
