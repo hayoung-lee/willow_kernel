@@ -407,13 +407,13 @@ static bool charger_online(void)
 	return false;
 }
 
-static void max8903_work(struct delayed_work *work)
+static void max8903_work(struct work_struct *work)
 {
 	struct max8903_data* data;
 	static int msg_update_cnt =0;
 	int soc = fg_read_soc();
 
-	data = container_of(work, struct max8903_data, work);
+	data = container_of(work, struct max8903_data, work.work);
 
 #ifdef SUPPORT_USB_STATE
 	if(!data->usb_in && !data->ta_in)
@@ -477,7 +477,7 @@ static int max8903_resume(struct platform_device* pdev)
 		disable_irq_wake(irq);
 	}
 
-	max8903_work(&data->work);
+	max8903_work(&data->work.work);
 
 	return 0;
 }
