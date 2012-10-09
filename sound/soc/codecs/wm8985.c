@@ -552,16 +552,16 @@ static int wm8985_dac_mute(struct snd_soc_dai *dai, int mute)
 	struct snd_soc_codec *codec = dai->codec;
 	int ret;
 
-	if (mute) {
-		gpio_set_value(GPIO_SPEAKER_AMP_OFF, !mute);
-		gpio_set_value(GPIO_POP_DISABLE, !mute);
+	if (mute) { /* SOFTMUTE Disabled, AMP Off, POP Suppressor Off */
+		gpio_set_value(GPIO_SPEAKER_AMP_ONOFF, !mute);
+		gpio_set_value(GPIO_POP_SUPPRESSOR_ONOFF, !mute);
 	}
 	ret = snd_soc_update_bits(codec, WM8985_DAC_CONTROL,
 				   WM8985_SOFTMUTE_MASK,
 				   !!mute << WM8985_SOFTMUTE_SHIFT);
-	if (!mute) {
-		gpio_set_value(GPIO_SPEAKER_AMP_OFF, !mute);
-		gpio_set_value(GPIO_POP_DISABLE, !mute);
+	if (!mute) { /* SOFTMUTE Enabled, AMP On, POP Suppressor On */
+		gpio_set_value(GPIO_SPEAKER_AMP_ONOFF, !mute);
+		gpio_set_value(GPIO_POP_SUPPRESSOR_ONOFF, !mute);
 	}
 	return ret;
 }
@@ -983,8 +983,8 @@ static int wm8985_remove(struct snd_soc_codec *codec)
 	wm8985 = snd_soc_codec_get_drvdata(codec);
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	regulator_bulk_free(ARRAY_SIZE(wm8985->supplies), wm8985->supplies);
-	gpio_free(GPIO_SPEAKER_AMP_OFF);
-	gpio_free(GPIO_POP_DISABLE);
+	gpio_free(GPIO_SPEAKER_AMP_ONOFF);
+	gpio_free(GPIO_POP_SUPPRESSOR_ONOFF);
 	return 0;
 }
 
@@ -1026,19 +1026,19 @@ static int wm8985_probe(struct snd_soc_codec *codec)
 		goto err_reg_enable;
 	}
 
-	ret = gpio_request(GPIO_SPEAKER_AMP_OFF, "SPEAKER_AMP_OFF");
+	ret = gpio_request(GPIO_SPEAKER_AMP_ONOFF, "SPEAKER_AMP_ONOFF");
 	if (ret) {
-		dev_err(codec->dev,"[%s] SPEAKER_AMP_OFF gpio request error : %d\n",__func__,ret);
-		goto exit_spk_amp_off_gpio_request_failed;
+		dev_err(codec->dev,"[%s] SPEAKER_AMP_ONOFF gpio request error : %d\n",__func__,ret);
+		goto exit_spk_amp_onoff_gpio_request_failed;
 	}
-	gpio_direction_output(GPIO_SPEAKER_AMP_OFF, 0);
+	gpio_direction_output(GPIO_SPEAKER_AMP_ONOFF, 0);
 
-	ret = gpio_request(GPIO_POP_DISABLE, "POP_DISABLE");
+	ret = gpio_request(GPIO_POP_SUPPRESSOR_ONOFF, "POP_SUPPRESSOR_ONOFF");
 	if (ret) {
-		dev_err(codec->dev,"[%s] GPIO_POP_DISABLE gpio request error : %d\n",__func__,ret);
-		goto exit_pop_disable_gpio_request_failed;
+		dev_err(codec->dev,"[%s] POP_SUPPRESSOR_ONOFF gpio request error : %d\n",__func__,ret);
+		goto exit_pop_suppressor_onoff_gpio_request_failed;
 	}
-	gpio_direction_output(GPIO_POP_DISABLE, 0);
+	gpio_direction_output(GPIO_POP_SUPPRESSOR_ONOFF, 0);
 
 	cache = codec->reg_cache;
 	/* latch volume update bits */
@@ -1055,10 +1055,10 @@ static int wm8985_probe(struct snd_soc_codec *codec)
 	wm8985_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	return 0;
 
-exit_pop_disable_gpio_request_failed:	
-	gpio_free(GPIO_POP_DISABLE);
-exit_spk_amp_off_gpio_request_failed:
-	gpio_free(GPIO_SPEAKER_AMP_OFF);
+exit_pop_suppressor_onoff_gpio_request_failed:
+	gpio_free(GPIO_POP_SUPPRESSOR_ONOFF);
+exit_spk_amp_onoff_gpio_request_failed:
+	gpio_free(GPIO_SPEAKER_AMP_ONOFF);
 err_reg_enable:
 	regulator_bulk_disable(ARRAY_SIZE(wm8985->supplies), wm8985->supplies);
 err_reg_get:
