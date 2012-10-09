@@ -175,7 +175,7 @@ int fg_read_soc(void)
 	msb = max17040_read_reg(client, MAX17040_SOC_MSB);
 	lsb = max17040_read_reg(client, MAX17040_SOC_LSB);
 
-	return min((msb >> 1), (u8)100);
+	return min((msb >> 1), 100);
 
 }
 #else
