@@ -72,6 +72,7 @@ ENTRY(exynos5_enter_lp)
         mov     r1, #0
         mov     r2, #0
         mov     r3, #0
+        .arch_extension sec
         smc     0
 #else
 	dsb
@@ -95,14 +96,17 @@ resume_with_mmu:
         ldr	r0, =SMC_CMD_REG
 	ldr	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)	@ aux control register
 	ldr	r2, [r4], #4
+	.arch_extension sec
 	smc	0
         ldr	r0, =SMC_CMD_REG
 	ldr	r1, =SMC_REG_ID_CP15(9, 1, 0, 2)	@ L2 control register
 	ldr	r2, [r4], #4
+	.arch_extension sec
 	smc	0
         ldr	r0, =SMC_CMD_REG
 	ldr	r1, =SMC_REG_ID_CP15(15, 1, 0, 3)	@ L2 prefetch register
 	ldr	r2, [r4], #4
+	.arch_extension sec
 	smc	0
 #else
 	ldr	r2, [r4], #4

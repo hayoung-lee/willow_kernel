@@ -196,9 +196,10 @@ export KBUILD_BUILDHOST := $(SUBARCH)
 #CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 ARCH		?= arm
 #CROSS_COMPILE	?=  /usr/local/arm/arm-2009q3/bin/arm-none-linux-gnueabi-
-#CROSS_COMPILE	?= /usr/local/arm/arm-2012.03/bin/arm-none-linux-gnueabi-
+CROSS_COMPILE	?= /usr/local/arm/arm-2012.03/bin/arm-none-linux-gnueabi-
 #CROSS_COMPILE	?= ../willow_jb_android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
-CROSS_COMPILE	?= ../willow_android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+#CROSS_COMPILE	?= ../willow_android/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+#CROSS_COMPILE	?= ../willow_jb_android/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -568,6 +569,14 @@ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
 else
 KBUILD_CFLAGS	+= -O2
+endif
+
+ifdef CONFIG_CC_CHECK_WARNING_STRICTLY
+KBUILD_CFLAGS	+= -fdiagnostics-show-option -Werror \
+		   -Wno-error=unused-function \
+		   -Wno-error=unused-variable \
+		   -Wno-error=unused-value \
+		   -Wno-error=unused-label
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
