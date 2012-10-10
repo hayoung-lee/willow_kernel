@@ -140,10 +140,7 @@ static int battery_get_property(struct power_supply *battery,
 						gpio_set_value(data->pdata->cen, 0); // on
 					}
 
-					if(data->ta_in || data->usb_in)
-						val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
-					else
-						val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+					val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 				}
 #endif
 			}
