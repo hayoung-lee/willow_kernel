@@ -723,6 +723,7 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 15),
 	}, {
 		.name		= "watchdog",
+		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_perir_ctrl,
 		.ctrlbit	= (1 << 14),
 	}, {
