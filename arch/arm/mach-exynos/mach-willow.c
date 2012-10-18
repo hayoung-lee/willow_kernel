@@ -218,21 +218,6 @@ void willow_check_hw_version( void )
 
 	printk("WILLOW HW_VERSION: [%s]\n", str_version[g_willow_hw_version]);
 }
-
-void willow_jig_led_gpio_export( void )
-{
-	int err;
-
-	err = gpio_request(EXYNOS4212_GPM0(1), "JIG_LED_ON");
-	if (err) {
-		printk(KERN_ERR "failed to request JIG_LED_ON\n");
-	} else {
-		err = gpio_export(EXYNOS4212_GPM0(1), true);
-		if (err) {
-			printk(KERN_ERR "failed to export JIG_LED_ON\n");
-		}
-	}
-}
 #endif /* CONFIG_MACH_WILLOW */
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
@@ -3170,7 +3155,6 @@ static void __init willow_machine_init(void)
 	samsung_board_rev = get_samsung_board_rev();
 
 	willow_config_gpio_table();
-	willow_jig_led_gpio_export();
 	willow_check_hw_version();
 #ifdef CONFIG_BATTERY_MAX17040
 	max8903_gpio_init();
