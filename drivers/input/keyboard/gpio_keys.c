@@ -334,33 +334,25 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
+	struct irq_desc *desc = irq_to_desc(gpio_to_irq(button->gpio));
 
 #if defined(FEATURE_TW_TOUCH_AUTO_CAL)
 	if(check_touch_cal==1 &&  button->code==KEY_POWER)
 		printk("No Key Event Key Power \n");
 	else
 	{
+#endif
 		if (type == EV_ABS) {
 			if (state)
 				input_event(input, type, button->code, button->value);
 		} else {
-			input_event(input, type, button->code, !!state);
+			input_event(input, type, button->code,
+					irqd_is_wakeup_set(&desc->irq_data) ? 1 :!!state);
 		}
 		input_sync(input);
+#if defined(FEATURE_TW_TOUCH_AUTO_CAL)
 	}
-#else
-	struct irq_desc *desc = irq_to_desc(gpio_to_irq(button->gpio));
-
-	if (type == EV_ABS) {
-		if (state)
-			input_event(input, type, button->code, button->value);
-	} else {
-		input_event(input, type, button->code,
-				irqd_is_wakeup_set(&desc->irq_data) ? 1 :!!state);
-	}
-	input_sync(input);
-#endif	
-
+#endif
 }
 
 static void gpio_keys_work_func(struct work_struct *work)
