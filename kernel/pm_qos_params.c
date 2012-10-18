@@ -74,7 +74,7 @@ static DEFINE_SPINLOCK(pm_qos_lock);
 static struct pm_qos_object null_pm_qos;
 static BLOCKING_NOTIFIER_HEAD(cpu_dma_lat_notifier);
 static struct pm_qos_object cpu_dma_pm_qos = {
-	.requests = PLIST_HEAD_INIT(cpu_dma_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(cpu_dma_pm_qos.requests, pm_qos_lock),
 	.notifiers = &cpu_dma_lat_notifier,
 	.name = "cpu_dma_latency",
 	.target_value = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE,
@@ -84,7 +84,7 @@ static struct pm_qos_object cpu_dma_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(network_lat_notifier);
 static struct pm_qos_object network_lat_pm_qos = {
-	.requests = PLIST_HEAD_INIT(network_lat_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(network_lat_pm_qos.requests, pm_qos_lock),
 	.notifiers = &network_lat_notifier,
 	.name = "network_latency",
 	.target_value = PM_QOS_NETWORK_LAT_DEFAULT_VALUE,
@@ -95,7 +95,7 @@ static struct pm_qos_object network_lat_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(network_throughput_notifier);
 static struct pm_qos_object network_throughput_pm_qos = {
-	.requests = PLIST_HEAD_INIT(network_throughput_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(network_throughput_pm_qos.requests, pm_qos_lock),
 	.notifiers = &network_throughput_notifier,
 	.name = "network_throughput",
 	.target_value = PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE,
@@ -105,7 +105,7 @@ static struct pm_qos_object network_throughput_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(bus_dma_throughput_notifier);
 static struct pm_qos_object bus_dma_throughput_pm_qos = {
-	.requests = PLIST_HEAD_INIT(bus_dma_throughput_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(bus_dma_throughput_pm_qos.requests, pm_qos_lock),
 	.notifiers = &bus_dma_throughput_notifier,
 	.name = "bus_dma_throughput",
 	.target_value = PM_QOS_BUS_DMA_THROUGHPUT_DEFAULT_VALUE,
@@ -115,7 +115,7 @@ static struct pm_qos_object bus_dma_throughput_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(display_frequency_notifier);
 static struct pm_qos_object display_frequency_pm_qos = {
-	.requests = PLIST_HEAD_INIT(display_frequency_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(display_frequency_pm_qos.requests, pm_qos_lock),
 	.notifiers = &display_frequency_notifier,
 	.name = "display_frequency",
 	.target_value = PM_QOS_DISPLAY_FREQUENCY_DEFAULT_VALUE,
@@ -125,7 +125,7 @@ static struct pm_qos_object display_frequency_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(bus_qos_notifier);
 static struct pm_qos_object bus_qos_pm_qos = {
-	.requests = PLIST_HEAD_INIT(bus_qos_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(bus_qos_pm_qos.requests, pm_qos_lock),
 	.notifiers = &bus_qos_notifier,
 	.name = "bus_qos",
 	.target_value = 0,
@@ -135,7 +135,7 @@ static struct pm_qos_object bus_qos_pm_qos = {
 
 static BLOCKING_NOTIFIER_HEAD(dvfs_res_lat_notifier);
 static struct pm_qos_object dvfs_res_lat_pm_qos = {
-	.requests = PLIST_HEAD_INIT(dvfs_res_lat_pm_qos.requests),
+	.requests = PLIST_HEAD_INIT(dvfs_res_lat_pm_qos.requests, pm_qos_lock),
 	.notifiers = &dvfs_res_lat_notifier,
 	.name = "dvfs_response_latency",
 	.target_value = PM_QOS_DVFS_RESPONSE_LAT_DEFAULT_VALUE,
