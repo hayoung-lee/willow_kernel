@@ -1885,7 +1885,7 @@ static struct sec_jack_zone sec_jack_zones[] = {
     /* adc <= 2000, unstable zone, default to 3pole if it stays
      * in this range for a half second (20ms delays, 25 samples)
      */
-    .adc_high = 2000,
+    .adc_high = 100,
     .delay_ms = 20,
     .check_count = 25,
     .jack_type = SEC_HEADSET_3POLE,
@@ -1894,19 +1894,10 @@ static struct sec_jack_zone sec_jack_zones[] = {
     /* 2000 < adc <= 3300, 4 pole zone, default to 4pole if it
      * stays in this range for 200ms (20ms delays, 10 samples)
      */
-    .adc_high = 3300,
+    .adc_high = 0x7fffffff,
     .delay_ms = 20,
     .check_count = 10,
     .jack_type = SEC_HEADSET_4POLE,
-  },
-  {
-    /* adc > 3300, unstable zone, default to 3pole if it stays
-     * in this range for a second (10ms delays, 100 samples)
-     */
-    .adc_high = 0x7fffffff,
-    .delay_ms = 10,
-    .check_count = 100,
-    .jack_type = SEC_HEADSET_3POLE,
   },
 };
 
@@ -1934,27 +1925,15 @@ static struct sec_jack_remote_key_zone sec_jack_remote_key_zones[] = {
   }
 };
 
+extern int jack_mgr_get_adc_data(void);
 static int sec_jack_get_adc_value(void)
 {
-    return (0);
-    //not supported yet
-#if 0
-  /* WS ==> 3-pole only */
-  if( willow_get_hw_version() == T10_HW_VERSION_WS ){
-    return (0);
- } else{
-    //TODO : other key adc value include remote key.
-    int adc = s3c_adc_get_adc_data(4);
-    return adc;
- }
-#endif
+	return jack_mgr_get_adc_data();
 }
 
-extern int wm8985_micbias2_set_bias_ctrl(bool onoff);
 static void sec_jack_set_micbias_state(bool on, int jack_type)
 {
     //TODO: micbias control if need.
-    //wm8985_micbias2_set_bias_ctrl(on);
 }
 
 struct sec_jack_platform_data willow_jack_pdata = {
