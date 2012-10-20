@@ -20,6 +20,7 @@
 #include <linux/sec_jack.h>
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
+#include <plat/adc.h>
 
 #define MAX_ZONE_LIMIT		10
 #define SEND_KEY_CHECK_TIME_MS	30		/* 30ms */
@@ -27,6 +28,8 @@
 
 #define DEBUG_MSG(f, a...)
 //#define DEBUG_MSG(f, a...)  printk(f, ## a)
+
+struct s3c_adc_client *adc_client;
 
 struct jack_mgr_info {
 	struct sec_jack_platform_data *pdata;
@@ -92,6 +95,13 @@ int willow_jack_get_type(void)
 	return willow_curr_headset_type;
 }
 
+#define WILLOW_REMOTE_KEY_ADC_ID		2
+int jack_mgr_get_adc_data(void)
+{
+	int adc =  s3c_adc_read(adc_client, WILLOW_REMOTE_KEY_ADC_ID);
+	return adc;
+}
+
 static void jack_mgr_set_type(struct jack_mgr_info *hi, int jack_type)
 {
 	//struct sec_jack_platform_data *pdata = hi->pdata;
@@ -120,7 +130,7 @@ static void jack_mgr_set_type(struct jack_mgr_info *hi, int jack_type)
 					&sec_jack_input_data,
 					sizeof(sec_jack_input_data));
 #endif // 0
-	willow_enable_media_key();
+	//willow_enable_media_key();
 	} else {
 /// WILLOW 4pole earjack remote key detection
 #if 0
@@ -131,7 +141,7 @@ static void jack_mgr_set_type(struct jack_mgr_info *hi, int jack_type)
 			hi->send_key_dev = NULL;
 		}
 #endif // 0
-	willow_disable_media_key();
+	//willow_disable_media_key();
 
 		/* micbias is left enabled for 4pole and disabled otherwise */
 //    printk("[KYJUNG][File: %s][Fun: %s][Line: %d] set_micbias_state\n", __FILE__, __func__, __LINE__);
@@ -258,6 +268,12 @@ static int jack_mgr_probe(struct platform_device *pdev)
 		goto err_kzalloc;
 	}
 
+	adc_client = s3c_adc_register(pdev, NULL, NULL, 0);
+	if (IS_ERR(adc_client)) {
+		pr_err("%s  : failed to register adc client\n",__func__);
+		goto err_kzalloc;
+	}
+
 	hi->pdata = pdata;
 
 	/* make the id of our gpi_event device the same as our platform device,
@@ -343,6 +359,8 @@ static int jack_mgr_remove(struct platform_device *pdev)
 	gpio_free(hi->pdata->det_gpio);
 	kfree(hi);
 	atomic_set(&instantiated, 0);
+	if (!IS_ERR(adc_client))
+		s3c_adc_release(adc_client);
 
 	return 0;
 }
