@@ -254,6 +254,24 @@ void LTN101AL03_backlight_crtl(int onoff)
 }
 EXPORT_SYMBOL(LTN101AL03_backlight_crtl);
 
+int lcd_on_charging_ctrl(int onoff)
+{
+	int err;
+
+	if(onoff)
+		err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_LOW, "GPM0(3)");
+	else
+		err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_HIGH, "GPM0(3)"); //FastCharger mode
+
+	if (err) {
+		printk(KERN_ERR "failed to request GPM0(3) for "
+			"lcd off charging control\n");
+		return err;
+	}
+	gpio_free(EXYNOS4212_GPM0(3));
+
+	return 0;
+}
 
 void LTN101AL03_backlight_onoff(int onoff)
 {
@@ -277,6 +295,7 @@ void LTN101AL03_backlight_onoff(int onoff)
 	mdelay(5); 
 	
 	//s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));	
+	lcd_on_charging_ctrl(onoff);
 
 	gpio_free(GPIO_LCD_BL_PWM);
 
@@ -304,24 +323,6 @@ void LTN101AL03_lcd_onoff(int onoff)
 
 }
 EXPORT_SYMBOL(LTN101AL03_lcd_onoff);
-
-int lcd_off_charging_ctrl(int onoff)
-{
-	int err;
-
-	err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_HIGH, "GPM0(3)");
-
-	if (err) {
-		printk(KERN_ERR "failed to request GPM0(3) for "
-			"lcd off charging control\n");
-		return err;
-	}
-	gpio_free(EXYNOS4212_GPM0(3));
-
-	return 0;
-}
-EXPORT_SYMBOL(lcd_off_charging_ctrl);
-
 
 int s3cfb_backlight_on(struct platform_device *pdev)
 {

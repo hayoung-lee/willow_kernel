@@ -44,7 +44,6 @@
 extern void LTN101AL03_lvds_on(int onoff);
 extern void LTN101AL03_backlight_onoff(int onoff);
 extern void LTN101AL03_lcd_onoff(int onoff);
-extern int lcd_off_charging_ctrl(int onoff);
 extern void LTN101AL03_backlight_crtl(int onoff);
 extern void set_backlight_ctrl(int ctrl_b);
 #endif
