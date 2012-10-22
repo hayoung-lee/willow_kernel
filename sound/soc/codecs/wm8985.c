@@ -561,6 +561,7 @@ static int wm8985_dac_mute(struct snd_soc_dai *dai, int mute)
 	if (!mute) { /* SOFTMUTE Enabled, AMP On, POP Suppressor On */
 		gpio_set_value(GPIO_SPEAKER_AMP_ONOFF, !mute);
 		gpio_set_value(GPIO_POP_SUPPRESSOR_ONOFF, !mute);
+		msleep(100);
 	}
 	return ret;
 }
