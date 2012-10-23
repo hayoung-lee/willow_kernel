@@ -169,17 +169,13 @@ void willow_check_hw_version( void )
 {
 	int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
 	int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
-	int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2
+	int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2 //RESERVERD e.g. LCD
 
 	char *str_version[] = {
-		"WILLOW_HW_WS",
-		"WILLOW_HW_ES1",
-		"WILLOW_HW_ES2",
-		"WILLOW_HW_RESERVED1",
+		"WILLOW_HW_DVT",
+		"WILLOW_HW_MVT",
 		"WILLOW_HW_PP",
-		"WILLOW_HW_RESERVED2",
-		"WILLOW_HW_RESERVED3",
-		"WILLOW_HW_RESERVED4",
+		"WILLOW_HW_MP",
 		"WILLOW_HW_UNKNOWN"
 	};
 
@@ -197,13 +193,13 @@ void willow_check_hw_version( void )
 	 * --------------------------------------------------
 	 * VER | ADC2_HW_VER0 | ADC1_HW_VER0 | ADC0_HW_VER0 |
 	 * --------------------------------------------------
-	 * WS1 |       0      |       0      |       0      | //0
+	 * DVT |       0      |       0      |       0      | //0
 	 * --------------------------------------------------
-	 * ES1 |       0      |       0      |       1      | //1
+	 * MVT |       0      |       0      |       1      | //1
 	 * --------------------------------------------------
-	 * ES2 |       0      |       1      |       0      | //2
+	 * PP  |       0      |       1      |       0      | //2
 	 * --------------------------------------------------
-	 * PP  |       1      |       0      |       0      | //4
+	 * MP  |       0      |       1      |       1      | //3
 	 * --------------------------------------------------
 	 */
 	ADC0_HW = gpio_get_value(GPIO_HW_VERSION_0) << 0; //bit0
@@ -213,7 +209,7 @@ void willow_check_hw_version( void )
 	ADC2_HW = gpio_get_value(GPIO_HW_VERSION_2) << 2; //bit2
 	printk("ADC2_HW[0x%01X]\n", ADC2_HW);
 
-	g_willow_hw_version = ADC2_HW | ADC1_HW | ADC0_HW;
+	g_willow_hw_version = /*ADC2_HW |*/ ADC1_HW | ADC0_HW;
 	printk("g_willow_hw_version[0x%01X]\n", g_willow_hw_version);
 
 	printk("WILLOW HW_VERSION: [%s]\n", str_version[g_willow_hw_version]);
