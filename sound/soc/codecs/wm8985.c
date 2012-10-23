@@ -45,7 +45,7 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R1  - Power management 1 */
 	0x0000,     /* R2  - Power management 2 */
 	0x0000,     /* R3  - Power management 3 */
-	0x0052,     /* R4  - Audio Interface, ADC data appears in right phase of LRC */
+	0x0056,     /* R4  - Audio Interface, ADC, DAC data appears in right phase of LRC */
 	0x0000,     /* R5  - Companding control */
 	0x0140,     /* R6  - Clock Gen control */
 	0x0000,     /* R7  - Additional control */
@@ -328,7 +328,6 @@ static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE_TLV("EQ4 Volume", WM8985_EQ4_PEAK_3, 0, 24, 1, eq_tlv),
 	SOC_ENUM("EQ5 Cutoff", eq5_cutoff),
 	SOC_SINGLE_TLV("EQ5 Volume", WM8985_EQ5_HIGH_SHELF, 0, 24, 1, eq_tlv),
-	SOC_SINGLE("ADC LR Swap Switch", WM8985_AUDIO_INTERFACE, 1, 1, 0),
 
 	SOC_ENUM("3D Depth", depth_3d),
 
@@ -412,6 +411,9 @@ static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 		5, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("Right Speaker Out", WM8985_POWER_MANAGEMENT_3,
 		6, 0, NULL, 0),
+
+	/* we want mic to be turned on always */
+	//SND_SOC_DAPM_MICBIAS("Mic Bias", WM8985_POWER_MANAGEMENT_1, 4, 0),
 
 	SND_SOC_DAPM_INPUT("LIN"),
 	SND_SOC_DAPM_INPUT("LIP"),
@@ -890,6 +892,10 @@ static int wm8985_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
 				    WM8985_VMIDSEL_MASK,
 				    1 << WM8985_VMIDSEL_SHIFT);
+		/* we want mic to be turned on always */
+		//snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+		//		    WM8985_MICBEN_MASK,
+		//		    1 << WM8985_MICBEN_SHIFT);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
