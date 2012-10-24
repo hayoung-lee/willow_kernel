@@ -45,7 +45,7 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R1  - Power management 1 */
 	0x0000,     /* R2  - Power management 2 */
 	0x0000,     /* R3  - Power management 3 */
-	0x0056,     /* R4  - Audio Interface, ADC, DAC data appears in right phase of LRC */
+	0x0052,     /* R4  - Audio Interface, Main Mic ADC data appears in right phase of LRC */
 	0x0000,     /* R5  - Companding control */
 	0x0140,     /* R6  - Clock Gen control */
 	0x0000,     /* R7  - Additional control */
@@ -328,6 +328,8 @@ static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE_TLV("EQ4 Volume", WM8985_EQ4_PEAK_3, 0, 24, 1, eq_tlv),
 	SOC_ENUM("EQ5 Cutoff", eq5_cutoff),
 	SOC_SINGLE_TLV("EQ5 Volume", WM8985_EQ5_HIGH_SHELF, 0, 24, 1, eq_tlv),
+	/* Main Mic Right, Headset Mic Left */
+	SOC_SINGLE("ADC LR Swap Switch", WM8985_AUDIO_INTERFACE, 1, 1, 0),
 
 	SOC_ENUM("3D Depth", depth_3d),
 
