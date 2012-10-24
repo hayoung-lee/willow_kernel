@@ -62,7 +62,7 @@ static int is_host_detect(struct exynos_usb_switch *usb_switch)
 
 static int is_device_detect(struct exynos_usb_switch *usb_switch)
 {
-	return gpio_get_value(usb_switch->gpio_device_detect);
+	return !gpio_get_value(usb_switch->gpio_device_detect);
 }
 
 static void set_host_vbus(struct exynos_usb_switch *usb_switch, int value)

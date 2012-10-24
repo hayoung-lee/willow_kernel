@@ -2451,7 +2451,7 @@ static void __init willow_usbswitch_init(void)
 	s3c_gpio_setpull(pdata->gpio_host_detect, S3C_GPIO_PULL_NONE);
 	gpio_free(pdata->gpio_host_detect);
 
-	pdata->gpio_device_detect = EXYNOS4_GPX2(6); /* high active */
+	pdata->gpio_device_detect = EXYNOS4_GPX2(6); /* low active */
 	err = gpio_request_one(pdata->gpio_device_detect, GPIOF_IN, "DEVICE_DETECT");
 	if (err) {
 		printk(KERN_ERR "failed to request gpio_device_detect\n");
@@ -2462,7 +2462,7 @@ static void __init willow_usbswitch_init(void)
 	s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
 	gpio_free(pdata->gpio_device_detect);
 
-	if (1) //(samsung_board_rev_is_0_0()) /* willow has not gpio_host_vbus */
+	if (1) //(samsung_board_rev_is_0_0()) /* Willow DVT has not gpio_host_vbus */
 		pdata->gpio_host_vbus = 0;
 	else {
 		pdata->gpio_host_vbus = EXYNOS4_GPL2(0);
