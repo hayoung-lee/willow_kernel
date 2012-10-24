@@ -19,6 +19,7 @@
 #include <mach/gpio.h>
 #include <plat/cpu.h>
 #include <mach/pmu.h>
+#include <mach/willow_version.h>
 
 struct gpio_init_data {
 	uint num;
@@ -30,6 +31,7 @@ struct gpio_init_data {
 
 extern int s3c_gpio_slp_cfgpin(unsigned int pin, unsigned int config);
 extern int s3c_gpio_slp_setpull_updown(unsigned int pin, unsigned int config);
+extern WILLOW_HW_VERSION willow_get_hw_version( void );
 
 /* this is sample code for willow board */
 static struct gpio_init_data willow_init_gpios[] = {
@@ -218,9 +220,6 @@ static unsigned int exynos4_sleep_gpio_table_common[][3] = {
 	{EXYNOS4_GPL1(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
 	{EXYNOS4_GPL1(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
 
-	{EXYNOS4_GPL2(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_NONE},		// HW_VER2
-	{EXYNOS4_GPL2(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_NONE}, 	// HW_VER1
-	{EXYNOS4_GPL2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_NONE}, 	// HW_VER0
 	{EXYNOS4_GPL2(3),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
 	{EXYNOS4_GPL2(4),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 	/* NC */
 	{EXYNOS4_GPL2(5),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
@@ -306,7 +305,6 @@ static unsigned int exynos4212_sleep_gpio_table[][3] = {
 	{EXYNOS4212_GPJ1(3),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},
 	{EXYNOS4212_GPJ1(4),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
 
-	{EXYNOS4212_GPM0(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
 	{EXYNOS4212_GPM0(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		// JIG_LED_ON
 	{EXYNOS4212_GPM0(2),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN},		// nCHARGE_EN
 	{EXYNOS4212_GPM0(3),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_UP}, 		// LCD_OFF_CHG
@@ -323,16 +321,8 @@ static unsigned int exynos4212_sleep_gpio_table[][3] = {
 	{EXYNOS4212_GPM1(5),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// CAM_STANDBY
 	{EXYNOS4212_GPM1(6),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN},		// nUSB_DET_EN
 
-	{EXYNOS4212_GPM2(0),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// KEY_LED_EN
-	{EXYNOS4212_GPM2(1),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_NONE}, 		// WL_DEV_WAKE
-	{EXYNOS4212_GPM2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
-	{EXYNOS4212_GPM2(3),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// TEST_PWM_DRV
-	{EXYNOS4212_GPM2(4),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
-
 	{EXYNOS4212_GPM3(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
 	{EXYNOS4212_GPM3(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
-	{EXYNOS4212_GPM3(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
-	{EXYNOS4212_GPM3(3),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
 	{EXYNOS4212_GPM3(3),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
 	{EXYNOS4212_GPM3(4),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
 	{EXYNOS4212_GPM3(5),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
@@ -388,6 +378,46 @@ static unsigned int exynos4212_sleep_gpio_table[][3] = {
 	{EXYNOS4212_GPV4(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},
 };
 
+static unsigned int willow_dvt_sleep_gpio_table[][3] = {
+	{EXYNOS4_GPL2(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		// HW_VER2 (0)
+	{EXYNOS4_GPL2(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 	// HW_VER1 (0)
+	{EXYNOS4_GPL2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 	// HW_VER0 (0)
+
+	{EXYNOS4212_GPM0(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
+
+	{EXYNOS4212_GPM2(0),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// KEY_LED_EN
+	{EXYNOS4212_GPM2(1),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_NONE}, 		// WL_DEV_WAKE
+	{EXYNOS4212_GPM2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
+	{EXYNOS4212_GPM2(3),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// TEST_PWM_DRV
+	{EXYNOS4212_GPM2(4),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
+
+	{EXYNOS4212_GPM3(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
+	{EXYNOS4212_GPM3(3),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		/* NC */
+};
+
+static unsigned int willow_mvt_sleep_gpio_table[][3] = {
+	{EXYNOS4_GPL2(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		// HW_VER2 (0)
+	{EXYNOS4_GPL2(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 	// HW_VER1 (0)
+	{EXYNOS4_GPL2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_UP}, 		// HW_VER0 (1)
+
+	{EXYNOS4212_GPM0(0),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		//VDD_5V0_EN
+
+	{EXYNOS4212_GPM2(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 		/* NC */
+	{EXYNOS4212_GPM2(1),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_NONE}, 		// WL_DEV_WAKE
+	{EXYNOS4212_GPM2(2),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN},		// CAM_MCLK
+	{EXYNOS4212_GPM2(3),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// HUB_CONNECT
+	{EXYNOS4212_GPM2(4),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// HUB_RESET(N)
+
+	{EXYNOS4212_GPM3(2),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		// HDMI_PWR_EN
+	{EXYNOS4212_GPM3(3),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN},		// TSP_BOOST_EN
+};
+
+static unsigned int willow_pp_sleep_gpio_table[][3] = {
+};
+
+static unsigned int willow_mp_sleep_gpio_table[][3] = {
+};
+
 static void config_sleep_gpio_table(int array_size,
 				    unsigned int (*gpio_table)[3])
 {
@@ -408,6 +438,26 @@ void willow_config_sleep_gpio_table(void)
 
 	config_sleep_gpio_table(ARRAY_SIZE(exynos4212_sleep_gpio_table),
 			exynos4212_sleep_gpio_table);
+
+	switch(willow_get_hw_version()){
+	case WILLOW_HW_DVT:
+		config_sleep_gpio_table(ARRAY_SIZE(willow_dvt_sleep_gpio_table),
+				willow_dvt_sleep_gpio_table);
+		break;
+	case WILLOW_HW_MVT:
+		config_sleep_gpio_table(ARRAY_SIZE(willow_mvt_sleep_gpio_table),
+				willow_mvt_sleep_gpio_table);
+		break;
+	case WILLOW_HW_PP:
+		config_sleep_gpio_table(ARRAY_SIZE(willow_pp_sleep_gpio_table),
+				willow_pp_sleep_gpio_table);
+		break;
+	case WILLOW_HW_MP:
+	default:
+		config_sleep_gpio_table(ARRAY_SIZE(willow_mp_sleep_gpio_table),
+				willow_mp_sleep_gpio_table);
+		break;
+	}
 }
 
 /* Intialize gpio set in willow board */

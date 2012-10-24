@@ -167,9 +167,9 @@ WILLOW_HW_VERSION g_willow_hw_version = WILLOW_HW_UNKNOWN;
 
 void willow_check_hw_version( void )
 {
-	int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
-	int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
-	int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2 //RESERVERD e.g. LCD
+	static int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
+	static int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
+	static int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2 //RESERVERD e.g. LCD
 
 	char *str_version[] = {
 		"WILLOW_HW_DVT",
@@ -214,6 +214,20 @@ void willow_check_hw_version( void )
 
 	printk("WILLOW HW_VERSION: [%s]\n", str_version[g_willow_hw_version]);
 }
+
+WILLOW_HW_VERSION willow_get_hw_version( void )
+{
+	static int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
+	static int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
+	static int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2 //RESERVERD e.g. LCD
+
+	ADC0_HW = gpio_get_value(GPIO_HW_VERSION_0) << 0; //bit0
+	ADC1_HW = gpio_get_value(GPIO_HW_VERSION_1) << 1; //bit1
+	ADC2_HW = gpio_get_value(GPIO_HW_VERSION_2) << 2; //bit2
+
+	return g_willow_hw_version = /*ADC2_HW |*/ ADC1_HW | ADC0_HW;
+}
+EXPORT_SYMBOL(willow_get_hw_version);
 #endif /* CONFIG_MACH_WILLOW */
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
@@ -968,17 +982,21 @@ REGULATOR_SUPPLY("vdd_alive", NULL);
 static struct regulator_consumer_supply __initdata max77686_ldo2_consumer =
 REGULATOR_SUPPLY("vdd_m12", NULL);
 
-static struct regulator_consumer_supply __initdata max77686_ldo3_consumer =
-REGULATOR_SUPPLY("vdd_io", NULL);
+static struct regulator_consumer_supply __initdata max77686_ldo3_consumer[] = {
+		REGULATOR_SUPPLY("vdd_io", NULL),
+		REGULATOR_SUPPLY("vdd_bt_wifi_io", NULL),
+};
 
-static struct regulator_consumer_supply __initdata max77686_ldo4_consumer =
-REGULATOR_SUPPLY("vdd_sd", NULL);
+static struct regulator_consumer_supply __initdata max77686_ldo4_consumer[] = {
+		REGULATOR_SUPPLY("vdd_sd", NULL),
+		REGULATOR_SUPPLY("vdd_mmc012", NULL),
+};
 
 static struct regulator_consumer_supply __initdata max77686_ldo5_consumer =
 REGULATOR_SUPPLY("vdd_cam_io", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo6_consumer =
-REGULATOR_SUPPLY("vdd_ldo6", NULL);
+REGULATOR_SUPPLY("vdd_tsp_1v8", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo7_consumer =
 REGULATOR_SUPPLY("vdd_pll", NULL);
@@ -1002,7 +1020,7 @@ static struct regulator_consumer_supply __initdata max77686_ldo13_consumer =
 REGULATOR_SUPPLY("vdd_c2c_1v8", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo14_consumer =
-REGULATOR_SUPPLY("vdd_mmc_1v8", NULL);
+REGULATOR_SUPPLY("vdd_mmc01_1v8", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo15_consumer =
 REGULATOR_SUPPLY("vdd_uotg_1v0", NULL);
@@ -1015,12 +1033,14 @@ REGULATOR_SUPPLY("vdd_cam", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo18_consumer =
 REGULATOR_SUPPLY("vdd_gps_2v8", NULL);
-#if 0 // reset timming bug
+
+#if 0 //reset timming bug
 static struct regulator_consumer_supply __initdata max77686_ldo20_consumer =
-REGULATOR_SUPPLY("vdd_bt_wifi_io", NULL);
+REGULATOR_SUPPLY("vdd_mmc_1v8", NULL);
 #endif
+
 static struct regulator_consumer_supply __initdata max77686_ldo21_consumer =
-REGULATOR_SUPPLY("vdd_ldo21", NULL);
+REGULATOR_SUPPLY("vdd_cam_core", NULL);
 
 static struct regulator_consumer_supply __initdata max77686_ldo22_consumer =
 REGULATOR_SUPPLY("vdd_bt_wifi", NULL);
@@ -1200,7 +1220,7 @@ static struct regulator_init_data __initdata max77686_ldo2_data = {
 
 static struct regulator_init_data __initdata max77686_ldo3_data = {
 	.constraints	= {
-		.name		= "vdd_io range",
+		.name		= "vdd_io/vdd_bt_wifi_io range",
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
@@ -1211,13 +1231,13 @@ static struct regulator_init_data __initdata max77686_ldo3_data = {
 			.enabled	= 1,
 		},
 	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max77686_ldo3_consumer,
+	.num_consumer_supplies	= ARRAY_SIZE(max77686_ldo3_consumer),
+	.consumer_supplies	= max77686_ldo3_consumer,
 };
 
 static struct regulator_init_data __initdata max77686_ldo4_data = {
 	.constraints	= {
-		.name		= "vdd_sd range",
+		.name		= "vdd_sd/vdd_mmc012 range",
 		.min_uV		= 1200000,
 		.max_uV		= 2800000,
 		.apply_uV	= 1,
@@ -1230,8 +1250,8 @@ static struct regulator_init_data __initdata max77686_ldo4_data = {
 			.enabled	= 0,
 		},
 	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max77686_ldo4_consumer,
+	.num_consumer_supplies	= ARRAY_SIZE(max77686_ldo4_consumer),
+	.consumer_supplies	= max77686_ldo4_consumer,
 };
 
 static struct regulator_init_data __initdata max77686_ldo5_data = {
@@ -1252,13 +1272,12 @@ static struct regulator_init_data __initdata max77686_ldo5_data = {
 
 static struct regulator_init_data __initdata max77686_ldo6_data = {
 	.constraints	= {
-		.name		= "vdd_ldo6 range",
-		.min_uV		= 800000,
-		.max_uV		= 2375000,
+		.name		= "vdd_tsp_1v8 range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
 		.apply_uV	= 1,
 		.boot_on 	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-							REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
 			.enabled	= 0,
@@ -1387,7 +1406,7 @@ static struct regulator_init_data __initdata max77686_ldo13_data = {
 
 static struct regulator_init_data __initdata max77686_ldo14_data = {
 	.constraints	= {
-		.name		= "vdd_mmc_1v8 range",
+		.name		= "vdd_mmc01_1v8 range",
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
@@ -1471,7 +1490,7 @@ static struct regulator_init_data __initdata max77686_ldo18_data = {
 #if 0  //reset timming bug
 static struct regulator_init_data __initdata max77686_ldo20_data = {
 	.constraints	= {
-		.name		= "vdd_bt_wifi_io range",
+		.name		= "vdd_mmc_1v8 range",
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
@@ -1489,9 +1508,9 @@ static struct regulator_init_data __initdata max77686_ldo20_data = {
 
 static struct regulator_init_data __initdata max77686_ldo21_data = {
 	.constraints	= {
-		.name		= "vdd_ldo21 range",
-		.min_uV		= 850000,
-		.max_uV		= 3300000,
+		.name		= "vdd_cam_core range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -1574,8 +1593,8 @@ static struct regulator_init_data __initdata max77686_ldo25_data = {
 static struct regulator_init_data __initdata max77686_ldo26_data = {
 	.constraints	= {
 		.name		= "vdd_tsp range",
-		.min_uV		= 3000000,
-		.max_uV		= 3000000,
+		.min_uV		= 3300000,
+		.max_uV		= 3300000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -1671,7 +1690,7 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_LDO17] = {MAX77686_LDO17, MAX77686_OPMODE_LP},
 	[MAX77686_LDO18] = {MAX77686_LDO18, MAX77686_OPMODE_LP},
 //	[MAX77686_LDO20] = {MAX77686_LDO20, MAX77686_OPMODE_LP},
-//	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
+	[MAX77686_LDO21] = {MAX77686_LDO21, MAX77686_OPMODE_LP},
 	[MAX77686_LDO22] = {MAX77686_LDO22, MAX77686_OPMODE_NORMAL},
 	[MAX77686_LDO23] = {MAX77686_LDO23, MAX77686_OPMODE_LP},
 	[MAX77686_LDO24] = {MAX77686_LDO24, MAX77686_OPMODE_LP},
