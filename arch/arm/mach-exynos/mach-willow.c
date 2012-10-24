@@ -1593,11 +1593,12 @@ static struct regulator_init_data __initdata max77686_ldo25_data = {
 static struct regulator_init_data __initdata max77686_ldo26_data = {
 	.constraints	= {
 		.name		= "vdd_tsp range",
-		.min_uV		= 3300000,
+		.min_uV		= 3000000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
+			.uV		= 3000000,
 			.disabled	= 1,
 			.enabled	= 0,
 		},
