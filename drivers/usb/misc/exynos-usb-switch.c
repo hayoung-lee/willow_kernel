@@ -255,12 +255,16 @@ static int exynos_usbswitch_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct exynos_usb_switch *usb_switch = platform_get_drvdata(pdev);
+	struct s3c_udc *udc = the_controller;
 
 	printk(KERN_INFO "%s\n", __func__);
 	exynos_usb_status_init(usb_switch);
 
-	if (!atomic_read(&usb_switch->connect) && !usb_switch->gpio_host_vbus)
+	/* add udc_disable to avoid unbalanced irq enable */
+	if (!atomic_read(&usb_switch->connect) && !usb_switch->gpio_host_vbus) {
 		exynos_host_port_power_off();
+		udc->gadget.ops->vbus_session(&udc->gadget, 0);
+	}
 
 	return 0;
 }
