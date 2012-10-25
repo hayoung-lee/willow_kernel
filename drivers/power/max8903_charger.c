@@ -74,6 +74,7 @@ static enum power_supply_property battery_charger_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
 #endif	
+	POWER_SUPPLY_PROP_TECHNOLOGY,
 };
 
 static enum power_supply_property usb_charger_props[] = {
@@ -155,6 +156,9 @@ static int battery_get_property(struct power_supply *battery,
 			break;
 		case POWER_SUPPLY_PROP_CAPACITY:
 			val->intval = fg_read_soc();
+			break;
+		case POWER_SUPPLY_PROP_TECHNOLOGY:
+			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
 			break;
 		default:
 			return -EINVAL;
