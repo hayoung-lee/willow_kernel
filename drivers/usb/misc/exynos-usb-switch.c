@@ -62,7 +62,7 @@ static int is_host_detect(struct exynos_usb_switch *usb_switch)
 
 static int is_device_detect(struct exynos_usb_switch *usb_switch)
 {
-	return !gpio_get_value(usb_switch->gpio_device_detect);
+	return (!gpio_get_value(EXYNOS4_GPX2(4)) && !gpio_get_value(usb_switch->gpio_device_detect));
 }
 
 static void set_host_vbus(struct exynos_usb_switch *usb_switch, int value)
@@ -208,7 +208,7 @@ static irqreturn_t exynos_device_detect_thread(int irq, void *data)
 	if (is_host_detect(usb_switch)) {
 		printk(KERN_ERR "Not expected situation\n");
 	} else if (is_device_detect(usb_switch)) {
-		if (usb_switch->gpio_host_vbus)
+		if (1) //(usb_switch->gpio_host_vbus)
 			exynos_change_usb_mode(usb_switch, USB_DEVICE_ATTACHED);
 		else
 			queue_work(usb_switch->workqueue, &usb_switch->switch_work);
@@ -229,7 +229,7 @@ static int exynos_usb_status_init(struct exynos_usb_switch *usb_switch)
 	else if (is_host_detect(usb_switch))
 		exynos_change_usb_mode(usb_switch, USB_HOST_ATTACHED);
 	else if (is_device_detect(usb_switch)) {
-		if (usb_switch->gpio_host_vbus)
+		if (1) //(usb_switch->gpio_host_vbus)
 			exynos_change_usb_mode(usb_switch, USB_DEVICE_ATTACHED);
 		else
 			queue_work(usb_switch->workqueue, &usb_switch->switch_work);
@@ -255,15 +255,12 @@ static int exynos_usbswitch_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct exynos_usb_switch *usb_switch = platform_get_drvdata(pdev);
-	struct s3c_udc *udc = the_controller;
 
 	printk(KERN_INFO "%s\n", __func__);
 	exynos_usb_status_init(usb_switch);
 
-	/* add udc_disable to avoid unbalanced irq enable */
 	if (!atomic_read(&usb_switch->connect) && !usb_switch->gpio_host_vbus) {
 		exynos_host_port_power_off();
-		udc->gadget.ops->vbus_session(&udc->gadget, 0);
 	}
 
 	return 0;
