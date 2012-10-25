@@ -217,6 +217,9 @@ udc_proc_read(char *page, char **start, off_t off, int count,
 
 #include "s3c_udc_otg_xfer_dma.c"
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+static int irq_state = 0;
+#endif
 /*
  *	udc_disable - disable USB device controller
  */
@@ -227,7 +230,13 @@ static void udc_disable(struct s3c_udc *dev)
 	u32 utemp;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	if (irq_state)
+#endif
 	disable_irq(dev->irq);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	irq_state = 0;
+#endif
 	udc_set_address(dev, 0);
 
 	dev->ep0state = WAIT_FOR_SETUP;
@@ -289,7 +298,13 @@ static int udc_enable(struct s3c_udc *dev)
 	struct s5p_usbgadget_platdata *pdata = pdev->dev.platform_data;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	if (!irq_state)
+#endif
 	enable_irq(dev->irq);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	irq_state = 1;
+#endif
 	clk_enable(dev->clk);
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_DEVICE);
@@ -1214,6 +1229,9 @@ static int s3c_udc_probe(struct platform_device *pdev)
 	}
 	dev->irq = irq;
 	disable_irq(dev->irq);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	irq_state = 0;
+#endif
 
 	dev->clk = clk_get(&pdev->dev, "usbotg");
 
