@@ -545,8 +545,6 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 #else
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);
 #endif
-	printk("%s %d CONFIG_ARM_TRUSTZONE EXYNOS4_PA_DMC0_4212 != S5P_VA_DMC0 (base S5P_VA_DMC0)\n",__func__,__LINE__);
-	val = __raw_readl(S5P_VA_DMC0 + 0x4);
 	val = (val >> 8) & 0xf;
 
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
