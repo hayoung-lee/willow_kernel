@@ -35,6 +35,7 @@ struct platform_device; /* don't need the contents */
 void exynos_fimc_is_cfg_gpio(struct platform_device *pdev)
 {
 	int ret;
+	
 	/* 1. UART setting for FIMC-IS */
 	/* GPM3[5] : TXD_UART_ISP */
 	ret = gpio_request(EXYNOS4212_GPM3(5), "GPM3");
@@ -52,6 +53,7 @@ void exynos_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_setpull(EXYNOS4212_GPM3(7), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS4212_GPM3(7));
 
+#if 0 //defined(CONFIG_VIDEO_AS0260)
 	/* 2. GPIO setting for FIMC-IS */
 	ret = gpio_request(EXYNOS4212_GPM4(0), "GPM4");
 	if (ret)
@@ -66,7 +68,7 @@ void exynos_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), (0x2<<4));
 	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS4212_GPM4(1));
-
+#endif
 	ret = gpio_request(EXYNOS4212_GPM4(2), "GPM4");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPM4_2 ####\n");

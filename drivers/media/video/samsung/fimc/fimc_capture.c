@@ -259,6 +259,10 @@ void s3c_csis_start(int csis_id, int lanes, int settle, \
 void s3c_csis_stop(int csis_id) {}
 #endif
 
+#if defined(CONFIG_VIDEO_AS0260)
+extern int as0260_camera_reset(void);
+#endif
+
 static int fimc_init_camera(struct fimc_control *ctrl)
 {
 	struct fimc_global *fimc = get_fimc_dev();
@@ -315,6 +319,23 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 
 retry:
 	/* set rate for mclk */
+#if defined(CONFIG_VIDEO_AS0260)
+	printk("[FIMC]______ fimc_init_camera \n");
+	/* enable camera power if needed */
+	if (cam->cam_power) {
+		ret = cam->cam_power(1);
+		if (unlikely(ret < 0))
+			fimc_err("\nfail to power on\n");
+	}
+
+	if ((clk_get_rate(cam->clk)) && (fimc->mclk_status == CAM_MCLK_OFF)) {
+		clk_set_rate(cam->clk, cam->clk_rate);
+		clk_enable(cam->clk);
+		fimc->mclk_status = CAM_MCLK_ON;
+		fimc_info1("clock for camera: %d\n", cam->clk_rate);
+	}
+	as0260_camera_reset( );
+#else
 	if ((clk_get_rate(cam->clk)) && (fimc->mclk_status == CAM_MCLK_OFF)) {
 		clk_set_rate(cam->clk, cam->clk_rate);
 		clk_enable(cam->clk);
@@ -328,7 +349,7 @@ retry:
 		if (unlikely(ret < 0))
 			fimc_err("\nfail to power on\n");
 	}
-
+#endif
 	/* "0" argument means preview init for s5k4ea */
 	ret = v4l2_subdev_call(cam->sd, core, init, 0);
 

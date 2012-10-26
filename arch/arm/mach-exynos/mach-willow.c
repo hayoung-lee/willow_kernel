@@ -78,8 +78,6 @@
 #include <plat/s5p-mfc.h>
 #endif
 
-#include <media/s5k4ba_platform.h>
-#include <media/s5k4ea_platform.h>
 #include <media/exynos_flite.h>
 #include <media/exynos_fimc_is.h>
 #include <video/platform_lcd.h>
@@ -160,6 +158,15 @@ extern int brcm_wlan_init(void);
 #define CONFIG_ITU_A
 #undef  CAM_ITU_CH_B
 #endif
+
+#ifdef CONFIG_VIDEO_AS0260
+#include <media/as0260_platform.h>
+#define CAMERA_CSI_D
+#undef  CAM_ITU_CH_A
+#undef  CAM_ITU_CH_B
+#undef  CAMERA_CSI_C
+#endif
+
 
 #ifdef CONFIG_MACH_WILLOW
 #include <mach/willow_version.h>
@@ -397,8 +404,6 @@ static int mt9m113_power_en(int onoff)
 	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
 
 	if (onoff) {
-
-#if 1
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
 		//mdelay(10);		
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
@@ -422,23 +427,7 @@ static int mt9m113_power_en(int onoff)
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
 		//mdelay(10);		
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby		
-#else
-		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
-		mdelay(10);		
-		regulator_enable(camera_vio);
-		//mdelay(50);
-		regulator_enable(camera_vdd);
-		mdelay(10);
 		
-		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
-
-		gpio_direction_output(EXYNOS4212_GPM1(4), 0);  //reset
-		msleep(50);
-		gpio_direction_output(EXYNOS4212_GPM1(4), 1);
-		msleep(100);
-		//gpio_direction_output(EXYNOS4212_GPJ1(5), 0);
-#endif		
-	
 	} else {
 		gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
 		msleep(50);	
@@ -543,15 +532,188 @@ static struct i2c_board_info willow_i2c_devs9[] __initdata = {
 };
 
 #endif
+
+#ifdef CONFIG_VIDEO_AS0260
+void as0260_i2c_gpio_init(void)
+{
+	/* i2c scl, sda */
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
+}
+static void __init as0260_camera_config(void)
+{
+	int ret=0;
+	//CAM_SHUTDOWN  Low Setting GPM1_5 
+	ret = gpio_request(EXYNOS4212_GPM1(5), "GPM1_5");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM1_5 ####\n");
+
+	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4212_GPM1(5), 0);
+	gpio_free(EXYNOS4212_GPM1(5));	
+}
+
+int as0260_camera_reset(void)
+{
+	int err;
+	mdelay(50);
+
+	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
+
+	printk("AS0260 CAMERA_RESET START___________\n");
+
+	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+
+	gpio_set_value(EXYNOS4212_GPM1(4), 1);
+	mdelay(10);
+	gpio_set_value(EXYNOS4212_GPM1(4), 0);
+	mdelay(5);
+	gpio_set_value(EXYNOS4212_GPM1(4), 1);	
+	mdelay(15);
+	gpio_free(EXYNOS4212_GPM1(4));
+	
+	printk("AS0260 CAMERA_RESET END ____________\n");
+	return 0;
+}
+EXPORT_SYMBOL(as0260_camera_reset);
+
+int as0260_power_ctrl(int ctrl)
+{
+	int err=0;
+
+/* 	Camera Power UP Seq 
+	1. Reset High GPM1_4
+	2. VDDC  vdd_cam_core ldo21
+	3. mdelay (50)~200 
+	4. VDD_IO  vdd_cam_io ldo5
+	5. AVDD     vdd_cam ldo17
+*/
+	struct regulator *camera_vddc = regulator_get(NULL, "vdd_cam_core");    
+	struct regulator *camera_vddi = regulator_get(NULL, "vdd_cam_io");
+	struct regulator *camera_vdda = regulator_get(NULL, "vdd_cam");
+
+	printk("[AS0260] _____ as0260_power_ctrl =%d \n",ctrl);
+	if(ctrl==1)
+	{
+		err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+		if (err)
+			printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
+
+		printk("#### AS0260 CAMERA_RESET####\n");
+
+		s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+
+		gpio_set_value(EXYNOS4212_GPM1(4), 1);
+		gpio_free(EXYNOS4212_GPM1(4));		
+
+		mdelay(10);
+
+		if (!regulator_is_enabled(camera_vddc))
+			regulator_disable(camera_vddc);
+
+		mdelay(100);
+
+		if (!regulator_is_enabled(camera_vddi))
+			regulator_disable(camera_vddi);
+		
+		mdelay(30);
+
+		if (!regulator_is_enabled(camera_vdda))
+			regulator_disable(camera_vdda);
+
+		mdelay(100);
+
+	} else {
+		msleep(50);	
+		if (regulator_is_enabled(camera_vdda))
+			regulator_disable(camera_vdda);
+
+		msleep(50);		
+		if (regulator_is_enabled(camera_vddi))
+			regulator_disable(camera_vddi);
+		msleep(100);
+		
+		if (regulator_is_enabled(camera_vddc))
+			regulator_disable(camera_vddc);
+		msleep(50);	
+	}
+	regulator_put(camera_vddc);
+	regulator_put(camera_vddi);
+	regulator_put(camera_vdda);
+
+	return 0;
+}
+
+static struct as0260_platform_data as0260_plat = {
+	.default_width =640, //1920,
+	.default_height = 480,//1080,
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.freq = 24000000,
+	.is_mipi = 1,
+};
+
+static struct i2c_board_info as0260_i2c_info = {
+	I2C_BOARD_INFO("AS0260", 0x90>>1),
+	.platform_data = &as0260_plat,
+};
+
+static struct s3c_platform_camera as0260= {
+	.id		= CAMERA_CSI_D,
+	.clk_name	= "sclk_cam1",
+	.i2c_busnum = 9,
+	.cam_power	= as0260_power_ctrl,
+	.type		= CAM_TYPE_MIPI,
+	.fmt		= MIPI_CSI_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_YCBYCR,
+	.info		= &as0260_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.srclk_name	= "xusbxti",
+	.clk_rate	= 24000000,
+	.line_length	= 1920,
+	.width		= 1920,//1920,
+	.height		= 1080,//,1080,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 1920,//1920,
+		.height	= 1080,//1080,
+	},
+	.mipi_lanes	= 2,
+	.mipi_settle	= 24,
+	.mipi_align	= 32,
+
+	/* Polarity */
+	.inv_pclk	= 0,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+	.use_isp	= false,
+	.initialized	= 0,
+};
+#endif
+
+
 /* Interface setting */
 static struct s3c_platform_fimc fimc_plat = {
 #ifdef CONFIG_ITU_A
 	.default_cam	= CAMERA_PAR_A,
 #endif
+#ifdef CONFIG_CSI_D
+	.default_cam	= CAMERA_CSI_D,
+#endif
 	.camera		= {
 #ifdef CONFIG_VIDEO_MT9M113	
 		&mt9m113,
 #endif	
+#ifdef CONFIG_VIDEO_AS0260
+		&as0260,
+#endif
 	},
 	.hw_ver		= 0x51,
 };
@@ -3214,6 +3376,12 @@ static void __init willow_machine_init(void)
 			ARRAY_SIZE(willow_i2c_devs9));
 #endif
 
+#ifdef CONFIG_VIDEO_AS0260
+	as0260_i2c_gpio_init();
+	i2c_register_board_info(9, willow_i2c_devs9,
+			ARRAY_SIZE(willow_i2c_devs9));
+#endif
+
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
 #endif
@@ -3350,8 +3518,10 @@ static void __init willow_machine_init(void)
 #endif
 #if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
-	|| defined(CONFIG_S5K6A3_CSI_D)
-	smdk4x12_cam1_reset(1);
+	|| defined(CONFIG_S5K6A3_CSI_D) || defined(CONFIG_VIDEO_AS0260)
+	as0260_camera_config();
+	as0260_power_ctrl(0);
+	//smdk4x12_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
 
@@ -3426,8 +3596,10 @@ static void __init willow_machine_init(void)
 #endif
 #if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
-	|| defined(CONFIG_S5K6A3_CSI_D)
-	smdk4x12_cam1_reset(1);
+	|| defined(CONFIG_S5K6A3_CSI_D) || defined(CONFIG_VIDEO_AS0260)
+	//smdk4x12_cam0_reset(1);
+	smdk4x12_camera_config();
+	as0260_power_ctrl(0);
 #endif
 #endif
 
