@@ -39,6 +39,11 @@
 #define HAVE_FUEL_GAUGE
 #endif
 
+#define BATTERY_DEBUG
+#ifdef BATTERY_DEBUG
+#include <linux/proc_fs.h>
+#endif
+
 #ifdef HAVE_FUEL_GAUGE
 extern int fg_read_soc(void);
 extern int fg_read_vcell(void);
@@ -85,6 +90,46 @@ static enum power_supply_property adapter_charger_props[] = {
 	POWER_SUPPLY_PROP_ONLINE, /* External power source */
 };
 
+#ifdef BATTERY_DEBUG
+static bool g_debug_enable = false;
+static bool g_force_soc_use = false;
+static int  g_force_soc_val = 100;
+
+void print_status_table(void)
+{
+	printk("\n------------------------------------------\n");
+	printk("|     | ta_in(nDC_OK) | usb_in(nUSB_OK)  |\n");
+	printk("------------------------------------------\n");
+	printk("| NC  | H(fals)       | L(true)          |\n");
+	printk("| AC  | L(true)       | H(fals)          |\n");
+	printk("| USB | L(true)       | L(true)          |\n");
+	printk("------------------------------------------\n\n");
+}
+
+ssize_t battery_debug_enable_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
+{
+	print_status_table();
+	printk("[BATTERY_DEBUG]   g_debug_enable[%sABLE]\n", g_debug_enable ? "EN" : "DIS");
+
+	return 0;
+}
+
+ssize_t battery_debug_enable_write(struct file *file, const char __user *buffer, size_t count, loff_t * ppos)
+{
+	char *endp;
+
+	print_status_table();
+	g_debug_enable = (u32)(simple_strtoul(buffer, &endp, 10));
+	printk("[BATTERY_DEBUG]   g_debug_enable[%sABLE]\n", g_debug_enable ? "EN" : "DIS");
+
+	return (count + endp - buffer);
+}
+
+static const struct file_operations battery_debug_proc_fops = {
+	.read = battery_debug_enable_read,
+	.write = battery_debug_enable_write,
+};
+#endif
 
 static int battery_get_property(struct power_supply *battery,
 		enum power_supply_property psp,
@@ -156,6 +201,11 @@ static int battery_get_property(struct power_supply *battery,
 			break;
 		case POWER_SUPPLY_PROP_CAPACITY:
 			val->intval = fg_read_soc();
+#ifdef BATTERY_DEBUG
+			if (g_force_soc_use) {
+				val->intval = g_force_soc_val;
+			}
+#endif
 			break;
 		case POWER_SUPPLY_PROP_TECHNOLOGY:
 			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
@@ -165,6 +215,38 @@ static int battery_get_property(struct power_supply *battery,
 	}
 	return 0;
 }
+
+#ifdef BATTERY_DEBUG
+static int battery_set_property(struct power_supply *battery,
+		enum power_supply_property psp,
+		const union power_supply_propval *val)
+{
+
+	switch (psp) {
+		case POWER_SUPPLY_PROP_CAPACITY:
+			g_force_soc_use = true;
+
+			if (0 <= val->intval && 100 >= val->intval)
+			{
+				g_force_soc_val = val->intval;
+			} else {
+				g_force_soc_use = false;
+			}
+
+			printk("[BATTERY_DEBUG]   FORCE[%sABLE] SOC[%d] \n",
+				g_force_soc_use ? "EN" : "DIS",
+				g_force_soc_use ? g_force_soc_val : fg_read_soc());
+			power_supply_changed(battery);
+
+			break;
+
+		default:
+			return -EINVAL;
+	}
+
+	return 0;
+}
+#endif
 
 static int usb_get_property(struct power_supply *usb, enum power_supply_property psp, union power_supply_propval *val)
 {
@@ -216,7 +298,12 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 	ta_in = gpio_get_value(pdata->dok) ? 0 : 1;
 	mdelay(250);
 	usb_in = gpio_get_value(pdata->uok) ? 0 : 1;
-	//printk("%s() [BATTERY] dc=[%s], usb=[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
+
+#ifdef BATTERY_DEBUG
+	if (g_debug_enable) {
+		printk("%s() [BATTERY] dc=[%s], usb=[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
+	}
+#endif
 
 	if (ta_in == data->ta_in && usb_in == data->usb_in)
 		return IRQ_HANDLED;
@@ -446,6 +533,12 @@ static void max8903_work(struct work_struct *work)
 		msg_update_cnt++;
 	}
 
+#ifdef BATTERY_DEBUG
+	if ( g_debug_enable ) {
+		printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+	}
+#endif
+
 	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
 }
 
@@ -616,6 +709,9 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 	battery->name = CHARGER_BATTERY_NAME;//"charger-battery";
 	battery->type = POWER_SUPPLY_TYPE_BATTERY;
 	battery->get_property = battery_get_property;
+#ifdef BATTERY_DEBUG
+	battery->set_property = battery_set_property;
+#endif
 	battery->properties = battery_charger_props;
 	battery->num_properties = ARRAY_SIZE(battery_charger_props);
 
@@ -690,6 +786,10 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK_DEFERRABLE(&data->work, max8903_work);
 
 	schedule_delayed_work(&data->work, msecs_to_jiffies(WORK_DELAY));
+
+#ifdef BATTERY_DEBUG
+	proc_create("battery_debug", S_IRWXUGO, NULL, &battery_debug_proc_fops);
+#endif
 
 	return 0;
 
