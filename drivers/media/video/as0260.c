@@ -517,6 +517,7 @@ static inline int as0260_i2c_8_read(struct i2c_client *client,
 	return err;
 }
 
+#if 0 // Test code
 static int as0260_i2c_test_read_regs(struct v4l2_subdev *sd,
 	struct as0260_reg const *reg_tbl, int num_of_items_in_table) {
 	int i;
@@ -568,6 +569,7 @@ static int as0260_i2c_test_read_regs(struct v4l2_subdev *sd,
 
 	return err;
 }
+#endif
 
 int issueCommand(struct v4l2_subdev *sd, const HOST_COMMAND_E command)
 {
@@ -1069,7 +1071,7 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 
 	as0260_set_resolution_reg(sd,state->framesize_index);
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-	if(err=0)
+	if(err==0)
 	{
 		as0260_set_resolution_reg(sd,state->framesize_index);
 		msleep(10);
@@ -1181,14 +1183,14 @@ static int as0260_set_capture_start(struct v4l2_subdev *sd)
 	struct as0260_state *state = to_state(sd);
 
 	err=as0260_set_resolution_reg(sd,state->framesize_index);
-	if(err=0)
+	if(err==0)
 	{
 		as0260_set_resolution_reg(sd,state->framesize_index);
 		msleep(10);
 		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
-	printk(" as0260_set_capture_start  state->req_fmt.width=%d state->req_fmt.height %d index \n",
-		state->req_fmt.width,state->req_fmt.height ,state->framesize_index);
+	//printk(" as0260_set_capture_start  state->req_fmt.width=%d state->req_fmt.height %d index \n",
+	//	state->req_fmt.width,state->req_fmt.height ,state->framesize_index);
 
 	return err;
 }
@@ -1558,7 +1560,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	struct as0260_state *state = to_state(sd);
 	u32 read_value=0;
 	u16 buf16=0;
-	u8 buf=0;
+	//u8 buf=0;
 	
 	v4l_info(client, "%s: camera initialization start\n", __func__);
 	pdata = client->dev.platform_data;
@@ -1573,7 +1575,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 
 	//err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-	if(err=0)
+	if(err==0)
 	{
 		as0260_i2c_w_write_regs(sd,&as0260_init_low_regs[0], ARRAY_SIZE(as0260_init_regs));
 		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
@@ -1583,7 +1585,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 
 	backup_client=client;
 
-#if !defined(AS0260_DEBUG)
+#if 0//#if !defined(AS0260_DEBUG)
 	//err=as0260_i2c_write_reg_32(client, reg_tbl->waddr, reg_tbl->wdata);
 	as0260_i2c_32_read(client, 0xe004,&read_value);
 	printk("as0260_init ______ AS0260 0xe004 Firmware Ver =0x%x\n",read_value);

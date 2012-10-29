@@ -161,7 +161,7 @@ extern int brcm_wlan_init(void);
 
 #ifdef CONFIG_VIDEO_AS0260
 #include <media/as0260_platform.h>
-#define CAMERA_CSI_D
+#define CAMERA_CSI_D 3
 #undef  CAM_ITU_CH_A
 #undef  CAM_ITU_CH_B
 #undef  CAMERA_CSI_C
@@ -509,28 +509,6 @@ static struct s3c_platform_camera mt9m113 = {
 	.initialized	= 0,
 };
 
-
-static struct i2c_gpio_platform_data i2c9_platdata = {
-	.sda_pin = EXYNOS4212_GPM4(1),
-	.scl_pin = EXYNOS4212_GPM4(0),
-	.udelay = 2,  //250Mhz
-	.sda_is_open_drain = 0,
-	.scl_is_open_drain = 0,
-	.scl_is_output_only = 0,
-};
-
-static struct platform_device s3c_device_i2c9= {
-	.name = "i2c-gpio",
-	.id = 9,
-	.dev.platform_data = &i2c9_platdata,
-};
-
-static struct i2c_board_info willow_i2c_devs9[] __initdata = {
-	{
-		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
-	},
-};
-
 #endif
 
 #ifdef CONFIG_VIDEO_AS0260
@@ -698,6 +676,35 @@ static struct s3c_platform_camera as0260= {
 };
 #endif
 
+#if defined(CONFIG_VIDEO_MT9M113) ||defined(CONFIG_VIDEO_AS0260) 
+static struct i2c_gpio_platform_data i2c9_platdata = {
+	.sda_pin = EXYNOS4212_GPM4(1),
+	.scl_pin = EXYNOS4212_GPM4(0),
+	.udelay = 2,  //250Mhz
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
+};
+
+static struct platform_device s3c_device_i2c9= {
+	.name = "i2c-gpio",
+	.id = 9,
+	.dev.platform_data = &i2c9_platdata,
+};
+
+static struct i2c_board_info willow_i2c_devs9[] __initdata = {
+#if defined(CONFIG_VIDEO_MT9M113) 
+	{
+		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
+	},
+#elif defined(CONFIG_VIDEO_AS0260) 
+	{
+		I2C_BOARD_INFO("AS0260", 0x90>>1),
+	},
+
+#endif
+};
+#endif
 
 /* Interface setting */
 static struct s3c_platform_fimc fimc_plat = {
@@ -2704,7 +2711,7 @@ static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_timer[0],
 	&s3c_device_i2c8,
 #endif
-#ifdef CONFIG_VIDEO_MT9M113	
+#if defined(CONFIG_VIDEO_MT9M113) | defined(CONFIG_VIDEO_AS0260) 
 	&s3c_device_i2c9,
 #endif	
 #ifdef CONFIG_USB_EHCI_S5P
