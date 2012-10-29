@@ -2711,7 +2711,7 @@ static struct platform_device *willow_devices[] __initdata = {
 	&s3c_device_timer[0],
 	&s3c_device_i2c8,
 #endif
-#if defined(CONFIG_VIDEO_MT9M113) | defined(CONFIG_VIDEO_AS0260) 
+#if defined(CONFIG_VIDEO_MT9M113) || defined(CONFIG_VIDEO_AS0260) 
 	&s3c_device_i2c9,
 #endif	
 #ifdef CONFIG_USB_EHCI_S5P
