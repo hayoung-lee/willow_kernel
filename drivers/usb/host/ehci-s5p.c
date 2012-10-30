@@ -73,6 +73,23 @@ static int s5p_ehci_configurate(struct usb_hcd *hcd)
 	return 0;
 }
 
+#ifdef CONFIG_USBHUB_USB3503
+int s5p_ehci_port_control(struct platform_device *pdev, int port, int enable)
+{
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+	(void) ehci_hub_control(hcd,
+			enable ? SetPortFeature : ClearPortFeature,
+			USB_PORT_FEAT_POWER,
+			port, NULL, 0);
+	/* Flush those writes */
+	ehci_readl(ehci, &ehci->regs->command);
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PM
 static int s5p_ehci_suspend(struct device *dev)
 {

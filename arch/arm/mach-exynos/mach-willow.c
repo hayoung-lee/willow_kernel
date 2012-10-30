@@ -141,6 +141,8 @@ extern int dc_is_connected;
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S)
 #include <linux/i2c/1664s_driver.h>
 #endif
+#include <linux/platform_data/usb3503.h>
+
 /* wifi */
 extern int brcm_wlan_init(void);
 
@@ -2417,7 +2419,6 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 };
 #endif
 
-
 #ifdef CONFIG_HAPTIC_ISA1200
 static int isa1200_power(int vreg_on)
 {
@@ -2472,7 +2473,109 @@ static void isa1200_init(void)
 
 	return;
 }
+#endif
 
+#ifdef CONFIG_USBHUB_USB3503
+static int (*usbhub_set_mode)(struct usb3503_hubctl *, int);
+static struct usb3503_hubctl *usbhub_ctl;
+
+static int usb3503_hub_handler(void (*set_mode)(void), void *ctl)
+{
+    if (!set_mode || !ctl)
+        return -EINVAL;
+
+    usbhub_set_mode = (int (*)(struct usb3503_hubctl *, int))set_mode;
+    usbhub_ctl = (struct usb3503_hubctl *)ctl;
+
+    return 0;
+}
+
+static int __init usb3503_init(void)
+{
+    int err;
+
+    err = gpio_request(GPIO_USB_HUB_RST, "HUB_RST");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "HUB_RST");
+    } else {
+        gpio_direction_output(GPIO_USB_HUB_RST, 0);
+        s3c_gpio_setpull(GPIO_USB_HUB_RST, S3C_GPIO_PULL_NONE);
+    }
+    s5p_gpio_set_drvstr(GPIO_USB_HUB_RST, S5P_GPIO_DRVSTR_LV1);
+
+    /* for USB3503 26Mhz Reference clock setting */
+    err = gpio_request(GPIO_USB_HUB_INT, "HUB_INT");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "HUB_INT");
+    } else {
+        gpio_direction_output(GPIO_USB_HUB_INT, 1);
+        s3c_gpio_setpull(GPIO_USB_HUB_INT, S3C_GPIO_PULL_NONE);
+    }
+
+    err = gpio_request(GPIO_5V_EN, "5V_EN");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "5V_EN");
+    } else {
+        gpio_direction_output(GPIO_5V_EN, 1);
+        s3c_gpio_setpull(GPIO_5V_EN, S3C_GPIO_PULL_NONE);
+    }
+
+    return 0;
+}
+
+static int usb3503_reset_n(int val)
+{
+    gpio_set_value(GPIO_USB_HUB_RST, 0);
+
+    if (val) {
+        msleep(20);
+        gpio_set_value(GPIO_USB_HUB_RST, !!val);
+        udelay(5); /* need it ?*/
+    }
+    return 0;
+}
+
+static int host_port_enable(int port, int enable)
+{
+    int err;
+
+    if (enable) {
+        err = usbhub_set_mode(usbhub_ctl, USB3503_MODE_HUB);
+        if (err < 0) {
+            printk(KERN_ERR "ERR: hub on fail\n");
+            goto exit;
+        }
+        err = s5p_ehci_port_control(&s5p_device_ehci, port, 1);
+        if (err < 0) {
+            printk(KERN_ERR "ERR: port(%d) enable fail\n", port);
+            goto exit;
+        }
+    } else {
+        err = usbhub_set_mode(usbhub_ctl, USB3503_MODE_STANDBY);
+        if (err < 0) {
+            printk(KERN_ERR "ERR: hub off fail\n");
+            goto exit;
+        }
+        err = s5p_ehci_port_control(&s5p_device_ehci, port, 0);
+        if (err < 0) {
+            printk(KERN_ERR "ERR: port(%d) enable fail\n", port);
+            goto exit;
+        }
+    }
+
+exit:
+    return err;
+}
+
+static struct usb3503_platform_data usb3503_pdata = {
+    .initial_mode = USB3503_MODE_STANDBY,
+    .reset_n = usb3503_reset_n,
+    .register_hub_handler = usb3503_hub_handler,
+    .port_enable = host_port_enable,
+};
+#endif
+
+#if defined(CONFIG_HAPTIC_ISA1200) || defined(CONFIG_USBHUB_USB3503)
 static  struct  i2c_gpio_platform_data  i2c8_platdata = {
         .sda_pin                = EXYNOS4_GPB(6),
         .scl_pin                = EXYNOS4_GPB(7),
@@ -2489,10 +2592,18 @@ struct platform_device s3c_device_i2c8 = {
 };
 
 static struct i2c_board_info i2c_devs8[] __initdata = {
+#if defined(CONFIG_HAPTIC_ISA1200)
 	{
 		I2C_BOARD_INFO("isa1200", (0x91 >> 1)),
 		.platform_data = &isa1200_pdata,
 	},
+#endif
+#if defined(CONFIG_USBHUB_USB3503)
+    {
+        I2C_BOARD_INFO(USB3503_I2C_NAME, 0x08),
+        .platform_data = &usb3503_pdata,
+    },
+#endif
 };
 #endif
 
@@ -2707,8 +2818,10 @@ static struct platform_device *willow_devices[] __initdata = {
 #ifdef CONFIG_ISL29023
 	&s3c_device_i2c7,
 #endif
+#if defined(CONFIG_HAPTIC_ISA1200) || defined(CONFIG_USBHUB_USB3503)
 #ifdef CONFIG_HAPTIC_ISA1200
 	&s3c_device_timer[0],
+#endif
 	&s3c_device_i2c8,
 #endif
 #if defined(CONFIG_VIDEO_MT9M113) || defined(CONFIG_VIDEO_AS0260) 
@@ -3372,8 +3485,12 @@ static void __init willow_machine_init(void)
 	//i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
+#if defined(CONFIG_HAPTIC_ISA1200) || defined(CONFIG_USBHUB_USB3503)
 #ifdef CONFIG_HAPTIC_ISA1200
 	isa1200_init();
+#endif
+#ifdef CONFIG_USBHUB_USB3503
+#endif
 	i2c_register_board_info(8, i2c_devs8, ARRAY_SIZE(i2c_devs8));
 #endif
 
@@ -3652,6 +3769,10 @@ static void __init willow_machine_init(void)
 
 #ifdef CONFIG_EXYNOS_C2C
 	exynos_c2c_set_platdata(&willow_c2c_pdata);
+#endif
+
+#ifdef CONFIG_USBHUB_USB3503
+    usb3503_init();
 #endif
 
 	brcm_wlan_init();

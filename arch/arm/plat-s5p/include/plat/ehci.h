@@ -35,4 +35,7 @@ extern void s5p_ehci_set_platdata(struct s5p_ehci_platdata *pd);
 extern void s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd);
 
 extern void s5p_usbswitch_set_platdata(struct s5p_usbswitch_platdata *pd);
+#ifdef CONFIG_USBHUB_USB3503
+int s5p_ehci_port_control(struct platform_device *pdev, int port, int enable);
+#endif
 #endif /* __PLAT_S5P_EHCI_H */
