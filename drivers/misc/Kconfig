@@ -551,6 +551,12 @@ config GPS_G6010
         help
 	  g6010 gps driver
 
+config USBHUB_USB3503
+	bool "USB3503 USB HUB Driver"
+	depends on I2C
+	help
+	 Enables USB HUB USB3503
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

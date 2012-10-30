@@ -103,6 +103,11 @@
 #define nUSB_OK    EXYNOS4_GPX2(6)    //nUSB_OK   //USB_OK
 #define nBAT_FLT   EXYNOS4_GPX3(0)    //nBAT_FLT  //FLT
 
+/* USB HUB */
+#define GPIO_USB_HUB_RST EXYNOS4212_GPM2(4)
+#define GPIO_USB_HUB_INT EXYNOS4212_GPM2(3)
+#define GPIO_5V_EN EXYNOS4212_GPM0(0)
+
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);
 
