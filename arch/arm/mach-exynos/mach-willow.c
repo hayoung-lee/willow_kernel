@@ -163,10 +163,9 @@ extern int brcm_wlan_init(void);
 
 #ifdef CONFIG_VIDEO_AS0260
 #include <media/as0260_platform.h>
-#define CAMERA_CSI_D 3
-#undef  CAM_ITU_CH_A
+#undef  CONFIG_ITU_A
 #undef  CAM_ITU_CH_B
-#undef  CAMERA_CSI_C
+#define CONFIG_CSI_D
 #endif
 
 
@@ -517,10 +516,12 @@ static struct s3c_platform_camera mt9m113 = {
 void as0260_i2c_gpio_init(void)
 {
 	/* i2c scl, sda */
+#if	0 
 	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
 	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
 	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
 	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
+#endif
 }
 static void __init as0260_camera_config(void)
 {
@@ -594,34 +595,40 @@ int as0260_power_ctrl(int ctrl)
 
 		mdelay(10);
 
-		if (!regulator_is_enabled(camera_vddc))
-			regulator_disable(camera_vddc);
+		//if (!regulator_is_enabled(camera_vddc))
+		err=	regulator_enable(camera_vddc);
+		if (err)
+			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddc err ..... \n");
 
-		mdelay(100);
+		mdelay(150);
 
-		if (!regulator_is_enabled(camera_vddi))
-			regulator_disable(camera_vddi);
+		//if (!regulator_is_enabled(camera_vddi))
+		err=	regulator_enable(camera_vddi);
+		if (err)
+			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddi err ..... \n");
 		
 		mdelay(30);
 
-		if (!regulator_is_enabled(camera_vdda))
-			regulator_disable(camera_vdda);
+		//if (!regulator_is_enabled(camera_vdda))
+		err=	regulator_enable(camera_vdda);
+		if (err)
+			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(100);
+		mdelay(20);
 
 	} else {
-		msleep(50);	
 		if (regulator_is_enabled(camera_vdda))
 			regulator_disable(camera_vdda);
 
-		msleep(50);		
+		mdelay(150);		
 		if (regulator_is_enabled(camera_vddi))
 			regulator_disable(camera_vddi);
-		msleep(100);
+		mdelay(30);
 		
 		if (regulator_is_enabled(camera_vddc))
 			regulator_disable(camera_vddc);
-		msleep(50);	
+
+		mdelay(20);	
 	}
 	regulator_put(camera_vddc);
 	regulator_put(camera_vddi);
@@ -633,6 +640,8 @@ int as0260_power_ctrl(int ctrl)
 static struct as0260_platform_data as0260_plat = {
 	.default_width =640, //1920,
 	.default_height = 480,//1080,
+	.max_width = WILLOW_PREVIEW_MAX_W,//960,
+	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
 	.freq = 24000000,
 	.is_mipi = 1,
@@ -665,12 +674,24 @@ static struct s3c_platform_camera as0260= {
 		.height	= 1080,//1080,
 	},
 	.mipi_lanes	= 2,
-	.mipi_settle	= 24,
+#if 0  
+	.mipi_settle	= 24,  // ok
+	.mipi_align	= 32, //ok
+#else
+#if 1 //OK
+	.mipi_settle	= 12,
 	.mipi_align	= 32,
+#else
+	.mipi_settle	= 6,
+	.mipi_align	= 32,
+#endif
+#endif
+
 
 	/* Polarity */
-	.inv_pclk	= 0,
-	.inv_vsync	= 1,
+	.inv_pclk	= 1, // 0 
+	.inv_vsync	= 1, // 1 
+
 	.inv_href	= 0,
 	.inv_hsync	= 0,
 	.use_isp	= false,
@@ -680,8 +701,8 @@ static struct s3c_platform_camera as0260= {
 
 #if defined(CONFIG_VIDEO_MT9M113) ||defined(CONFIG_VIDEO_AS0260) 
 static struct i2c_gpio_platform_data i2c9_platdata = {
-	.sda_pin = EXYNOS4212_GPM4(1),
 	.scl_pin = EXYNOS4212_GPM4(0),
+	.sda_pin = EXYNOS4212_GPM4(1),
 	.udelay = 2,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
@@ -694,7 +715,7 @@ static struct platform_device s3c_device_i2c9= {
 	.dev.platform_data = &i2c9_platdata,
 };
 
-static struct i2c_board_info willow_i2c_devs9[] __initdata = {
+static struct i2c_board_info i2c_devs9[] __initdata = {
 #if defined(CONFIG_VIDEO_MT9M113) 
 	{
 		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
@@ -2358,6 +2379,26 @@ static struct mxt_platform_data atmel1664_touch_platform_data = {
 };
 #endif
 
+int touch_bootst_ctrl(int onoff)
+{
+	int err;
+	// touch gpb4
+
+	if(onoff)
+		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_HIGH, "tsp_bootst");
+	else
+		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_LOW, "tsp_bootst");		
+	
+	if (err) {
+		printk("[ATMEL] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
+		//return err;
+	}
+	gpio_free(EXYNOS4212_GPM3(3));
+	return 0;
+}
+EXPORT_SYMBOL(touch_bootst_ctrl);
+
+
 static struct i2c_board_info i2c_devs5[] __initdata = {
 	{
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
@@ -3496,15 +3537,11 @@ static void __init willow_machine_init(void)
 
 #ifdef CONFIG_VIDEO_MT9M113
 	mt9m113_gpio_init();
-	i2c_register_board_info(9, willow_i2c_devs9,
-			ARRAY_SIZE(willow_i2c_devs9));
+#elif CONFIG_VIDEO_AS0260
+	as0260_i2c_gpio_init();
 #endif
 
-#ifdef CONFIG_VIDEO_AS0260
-	as0260_i2c_gpio_init();
-	i2c_register_board_info(9, willow_i2c_devs9,
-			ARRAY_SIZE(willow_i2c_devs9));
-#endif
+	//i2c_register_board_info(9, i2c_devs9,ARRAY_SIZE(i2c_devs9));
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
@@ -3644,7 +3681,7 @@ static void __init willow_machine_init(void)
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
 	|| defined(CONFIG_S5K6A3_CSI_D) || defined(CONFIG_VIDEO_AS0260)
 	as0260_camera_config();
-	as0260_power_ctrl(0);
+	//as0260_power_ctrl(0);
 	//smdk4x12_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
@@ -3722,8 +3759,8 @@ static void __init willow_machine_init(void)
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
 	|| defined(CONFIG_S5K6A3_CSI_D) || defined(CONFIG_VIDEO_AS0260)
 	//smdk4x12_cam0_reset(1);
-	smdk4x12_camera_config();
-	as0260_power_ctrl(0);
+	//smdk4x12_camera_config();
+	//as0260_power_ctrl(0);
 #endif
 #endif
 

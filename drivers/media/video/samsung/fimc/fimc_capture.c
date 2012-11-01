@@ -333,6 +333,7 @@ retry:
 		clk_enable(cam->clk);
 		fimc->mclk_status = CAM_MCLK_ON;
 		fimc_info1("clock for camera: %d\n", cam->clk_rate);
+		printk("[FIMC]______ MCLK ON =%d \n",cam->clk_rate);		
 	}
 	as0260_camera_reset( );
 #else
@@ -988,6 +989,7 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
+	printk("[FIMC]______ fimc_is_init_cam \n");
 
 	cam = ctrl->cam;
 	/* Do noting if already initialized */
@@ -1540,7 +1542,6 @@ static void fimc_free_buffers(struct fimc_control *ctrl)
 		memset(&cap->bufs[i], 0, sizeof(cap->bufs[i]));
 		cap->bufs[i].state = VIDEOBUF_NEEDS_INIT;
 	}
-	printk(" fimc_free_buffers ============ \n");
 	ctrl->mem.curr = ctrl->mem.base;
 }
 
@@ -1560,7 +1561,7 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 		fimc_err("%s: no capture device info\n", __func__);
 		return -ENODEV;
 	}
-
+	printk("fimc_reqbufs_capture_mmap...............................\n"); 
 	mutex_lock(&ctrl->v4l2_lock);
 
 	/*  A count value of zero frees all buffers */
@@ -1810,8 +1811,8 @@ int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
 
 	ctrl->cap->bufs[b->index].state = VIDEOBUF_IDLE;
 
-	printk("%s: %d bytes with offset: %d\n",
-		__func__, b->length, b->m.offset);
+	//printk("%s: %d bytes with offset: %d\n",
+		//__func__, b->length, b->m.offset);
 
 	mutex_unlock(&ctrl->v4l2_lock);
 
@@ -1890,7 +1891,6 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 
 	case V4L2_CID_PADDR_Y:
-		printk(" V4L2_CID_PADDR_Y ===============\n");
 		if (&ctrl->cap->bufs[c->value])
 			c->value = ctrl->cap->bufs[c->value].base[FIMC_ADDR_Y];
 		break;
@@ -1969,14 +1969,10 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 
 	case V4L2_CID_CAMERA_CAPTURE_STATUS:
 		willow_capture_status=c->value;
- 		printk(" V4L2_CID_CAMERA_CAPTURE_STATUS =%d \n", c->value);
+ 		printk("[FIMC] V4L2_CID_CAMERA_CAPTURE_STATUS =%d \n", c->value);
 		ret = 0;
 		break;
-
-	case V4L2_CID_CAMERA_STANBY:
-		//willow_capture_status=c->value;
- 		printk(" V4L2_CID_CAMERA_STANBY =%d \n", c->value);
-		break;
+		
 	default:
 		/* try on subdev */
 		/* WriteBack doesn't have subdev_call */
@@ -2275,7 +2271,7 @@ int fimc_streamon_capture(void *fh)
 					return ret;
 				}
 			}
-
+			printk(" fimc_streamon_capture cam->type=%d cam->id=%d cam->width=%d cam->height=%d\n",cam->type,cam->id,cam->width,cam->height);
 			if (cam->type == CAM_TYPE_MIPI) {
 				if (cam->id == CAMERA_CSI_C)
 					s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
@@ -2289,14 +2285,14 @@ int fimc_streamon_capture(void *fh)
 					cap->fmt.pixelformat);
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
-		 		printk(" fimc_s_ctrl_capture V4L2_CID_IS_S_STREAM =1 \n");
-
+#if 1
 				if(willow_capture_status==0)
 					ret=v4l2_subdev_call(cam->sd, video, s_stream, 1);  //preview
 				else if(willow_capture_status==1)
 							ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
-
-				//t = v4l2_subdev_call(cam->sd, video, s_stream, 1);
+#else
+				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
+#endif
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",
 							__func__);
@@ -2464,7 +2460,7 @@ int fimc_streamoff_capture(void *fh)
 	}
 
 	ctrl->status = FIMC_READY_OFF;
-
+	printk("fimc_streamoff_capture ================= \n");
 	fimc_stop_capture(ctrl);
 
 	/* wait for stop hardware */

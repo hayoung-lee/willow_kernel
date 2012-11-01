@@ -1034,6 +1034,7 @@ static struct attribute_group as0260_attribute_group = {
 static int as0260_set_resolution_reg(struct v4l2_subdev *sd,int index)
 {
 	int err=0;
+	printk("[AS0260] ______________________ as0260_set_resolution_reg=%d \n",index);
 	switch(index)
 	{
 		case AS0260_PREVIEW_QVGA:
@@ -1070,16 +1071,19 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 #endif
 
 	as0260_set_resolution_reg(sd,state->framesize_index);
+	msleep(10);
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	if(err==0)
 	{
-		as0260_set_resolution_reg(sd,state->framesize_index);
 		msleep(10);
+		as0260_set_resolution_reg(sd,state->framesize_index);
 		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
 	printk("as0260_init ______ AS0260 0xc808 CAM_SENSOR_CFG_PIXCLK Ver =0x%x\n",read_value);
 	
 	state->runmode = as0260_RUNMODE_RUNNING;
+	msleep(10);
+
 #endif	
 	return err;
 }
@@ -1183,14 +1187,18 @@ static int as0260_set_capture_start(struct v4l2_subdev *sd)
 	struct as0260_state *state = to_state(sd);
 
 	err=as0260_set_resolution_reg(sd,state->framesize_index);
+	printk("[AS0260] _______________as0260_set_capture_start index=%d \n",state->framesize_index);
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(50);
+	
 	if(err==0)
 	{
 		as0260_set_resolution_reg(sd,state->framesize_index);
-		msleep(10);
 		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
 	//printk(" as0260_set_capture_start  state->req_fmt.width=%d state->req_fmt.height %d index \n",
 	//	state->req_fmt.width,state->req_fmt.height ,state->framesize_index);
+	msleep(10);
 
 	return err;
 }
@@ -1527,11 +1535,11 @@ static int as0260_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		err = as0260_set_jpeg_quality(sd, ctrl);
 		break;
 
-    case V4L2_CID_CAMERA_EFFECT://V4L2_CID_COLORFX:
+  case V4L2_CID_CAMERA_EFFECT://V4L2_CID_COLORFX:
 		err =as0260_set_effect(sd, ctrl->value);
 		break;
 
-    case V4L2_CID_CAMERA_BRIGHTNESS://V4L2_CID_COLORFX:
+  case V4L2_CID_CAMERA_BRIGHTNESS://V4L2_CID_COLORFX:
 		err =as0260_set_brightness(sd, ctrl->value);
 		break;
 		
@@ -1556,14 +1564,14 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = -EINVAL;
-	struct as0260_platform_data *pdata;
+	//struct as0260_platform_data *pdata;
 	struct as0260_state *state = to_state(sd);
 	u32 read_value=0;
 	u16 buf16=0;
-	//u8 buf=0;
+	u8 buf=0;
 	
 	v4l_info(client, "%s: camera initialization start\n", __func__);
-	pdata = client->dev.platform_data;
+	//pdata = client->dev.platform_data;
 
 	as0260_i2c_16_read(client, 0x0000,&buf16);
 	printk("as0260_init ______ AS0260 chip ID =0x%x\n",buf16);
@@ -1580,7 +1588,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 		as0260_i2c_w_write_regs(sd,&as0260_init_low_regs[0], ARRAY_SIZE(as0260_init_regs));
 		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
-	//changestate(sd,SS_STREAMING,HC_SET_STATE);
+	changestate(sd,SS_STREAMING,HC_SET_STATE);
 	//refresh(sd);
 
 	backup_client=client;
@@ -1775,7 +1783,6 @@ static int as0260_s_config(struct v4l2_subdev *sd, int irq, void *platform_data)
 
 static const struct v4l2_subdev_core_ops as0260_core_ops = {
 	.init = as0260_init,	/* initializing API */
-	.s_power = as0260_s_power,
 	.queryctrl = as0260_queryctrl,
 	.querymenu = as0260_querymenu,
 	.g_ctrl = as0260_g_ctrl,
@@ -1806,6 +1813,45 @@ static const struct v4l2_subdev_ops as0260_ops = {
 static int as0260_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
+#if 1
+	struct as0260_state *state;
+	struct v4l2_subdev *sd;
+	u16 buf16=0;
+
+	state = kzalloc(sizeof(struct as0260_state), GFP_KERNEL);
+	if (state == NULL)
+	{
+		printk("AS0260___probe error \n");
+		return -ENOMEM;
+	}
+	sd = &state->sd;
+	strcpy(sd->name, AS0260_DRIVER_NAME);
+	//state->pdata = client->dev.platform_data;
+
+	/* set default data from sensor specific value */
+
+	state->fmt.width = WILLOW_PREVIEW_MAX_W;
+	state->fmt.height =WILLOW_PREVIEW_MAX_H;
+	//state->runmode = MT9M113_RUNMODE_NOTREADY;
+	state->default_width =  -1;
+	state->default_height = -1;
+	state->capture_width =  -1;
+	state->capture_height = -1;
+
+	printk("AS0260___probe state->fmt.width =%d state->fmt.height=%d \n",state->fmt.width ,state->fmt.height);
+
+	/* Registering subdev */
+	v4l2_i2c_subdev_init(sd, client, &as0260_ops);
+
+	/* needed for acquiring subdevice by this module name */
+	snprintf(sd->name, sizeof(sd->name), AS0260_DRIVER_NAME);
+
+	//as0260_i2c_16_read(client, 0x0000,&buf16);
+	//printk("as0260_init ______ AS0260 chip ID =0x%x\n",buf16);
+	
+	dev_info(&client->dev, "as0260_probe has been probed\n");
+	
+#else
 	struct as0260_state *state;
 	struct v4l2_subdev *sd;
 	struct as0260_platform_data *pdata;
@@ -1817,11 +1863,12 @@ static int as0260_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	sd = &state->sd;
-	strcpy(sd->name, as0260_DRIVER_NAME);
+	strcpy(sd->name, AS0260_DRIVER_NAME);
 	//state->pdata = client->dev.platform_data;
+	printk("as0260_probe 1___________ \n");
 
 	/* set default data from sensor specific value */
-
+#if 0
 	if (!(pdata->default_width && pdata->default_height)) {
 		/* TODO: assign driver default resolution */
 	} else {
@@ -1831,6 +1878,7 @@ static int as0260_probe(struct i2c_client *client,
 		state->fmt.width = pdata->default_width;
 		state->fmt.height =pdata->default_height;
 	}
+	printk("as0260_probe 2___________ \n");
 
 	if (!pdata->pixelformat)
 		state->pixelformat = DEFAULT_FMT;
@@ -1842,6 +1890,7 @@ static int as0260_probe(struct i2c_client *client,
 	else
 		state->freq = pdata->freq;
 
+	printk("as0260_probe 3___________ \n");
 	if (!pdata->is_mipi) {
 		state->is_mipi = 0;
 		dev_info(&client->dev, "parallel mode\n");
@@ -1849,12 +1898,12 @@ static int as0260_probe(struct i2c_client *client,
 		state->is_mipi = pdata->is_mipi;
 
 	printk(" as0260_probe state->fmt.width =%d state->fmt.height=%d \n",state->fmt.width ,state->fmt.height);
-
+#endif
 	/* Registering subdev */
 	v4l2_i2c_subdev_init(sd, client, &as0260_ops);
 
 	/* needed for acquiring subdevice by this module name */
-	snprintf(sd->name, sizeof(sd->name), as0260_DRIVER_NAME);
+	snprintf(sd->name, sizeof(sd->name), AS0260_DRIVER_NAME);
 
 	dev_info(&client->dev, "as0260 has been probed\n");
 
@@ -1868,8 +1917,10 @@ static int as0260_probe(struct i2c_client *client,
 	{
 		printk("[AS0260] :%s() - sysfs_create_group() succeeded.\n", __FUNCTION__);
 	}
+#endif
 
 	return 0;
+	
 }
 
 
@@ -1883,14 +1934,14 @@ static int as0260_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id as0260_id[] = {
-	{ as0260_DRIVER_NAME, 0 },
+	{ AS0260_DRIVER_NAME, 0 },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, as0260_id);
 
 static struct i2c_driver as0260_i2c_driver = {
 	.driver = {
-		.name	= as0260_DRIVER_NAME,
+		.name	= AS0260_DRIVER_NAME,
 	},
 	.probe		= as0260_probe,
 	.remove		= as0260_remove,
