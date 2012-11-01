@@ -148,7 +148,7 @@ extern int brcm_wlan_init(void);
 
 #define WILLOW_BOOT_NORMAL			1
 #define WILLOW_BOOT_RECOVERY		2
-#define WILLOW_BOOT_MMC_RECOVERY	3
+#define WILLOW_BOOT_RELEASE_UPDATE	3
 #define WILLOW_BOOT_FACTORYTEST_L	4
 #define WILLOW_BOOT_FACTORYTEST_H	5
 #define REG_INFORM4            (S5P_INFORM4)
@@ -888,8 +888,8 @@ static void willow_pm_restart(char mode, const char *cmd)
     if(strncmp(cmd,"recovery",7)==0){
       writel(WILLOW_BOOT_RECOVERY, S5P_INFORM5);
     }
-    else if(strncmp(cmd,"mmc_recovery",11)==0){
-      writel(WILLOW_BOOT_MMC_RECOVERY, S5P_INFORM5);
+    else if(strncmp(cmd,"release_update",14)==0){
+      writel(WILLOW_BOOT_RELEASE_UPDATE, S5P_INFORM5);
     }
     else if(strncmp(cmd,"FACTORYTEST_L",13)==0){
       writel(WILLOW_BOOT_FACTORYTEST_L, S5P_INFORM5);
