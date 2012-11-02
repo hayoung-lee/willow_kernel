@@ -42,14 +42,18 @@ void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(2));
-	#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
+#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
 		/* CAM B port(b0011) : PCLK, DATA[0-6] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
 		/* CAM B port(b0011) : FIELD, DATA[7]*/
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM1(0), 2, S3C_GPIO_SFN(3));
 		/* CAM B port(b0011) : VSYNC, HREF, CLKOUT*/
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM2(0), 3, S3C_GPIO_SFN(3));
-	#endif
+#else
+#ifdef CONFIG_VIDEO_AS0260
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM2(2), 1, S3C_GPIO_SFN(3));
+#endif
+#endif
 	}
 	/* note : driver strength to max is unnecessary */
 }
