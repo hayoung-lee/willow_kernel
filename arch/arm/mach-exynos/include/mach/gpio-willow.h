@@ -110,6 +110,11 @@
 #define GPIO_USB_BOOT_EN        EXYNOS4212_GPM0(0)
 #define GPIO_USB_DOCK_DET       EXYNOS4_GPX1(7)
 
+/* HDMI */
+#define GPIO_HDMI_PWR_EN        EXYNOS4212_GPM3(2)
+#define GPIO_HDMI_HPD           EXYNOS4_GPX3(7)
+#define GPIO_HDMI_CED           EXYNOS4_GPX3(6)
+
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);
 

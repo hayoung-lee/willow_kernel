@@ -2566,7 +2566,8 @@ static int __init usb3503_init(void)
     if (err) {
         printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_BOOT_EN");
     } else {
-        gpio_direction_output(GPIO_USB_BOOT_EN, 0);
+        /* GPIO_USB_BOOT_EN, TBD */
+        gpio_direction_output(GPIO_USB_BOOT_EN, 1);
         s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
     }
 
