@@ -2517,6 +2517,7 @@ static void isa1200_init(void)
 #endif
 
 #ifdef CONFIG_USBHUB_USB3503
+#if USB3503_I2C_CONTROL
 static int (*usbhub_set_mode)(struct usb3503_hubctl *, int);
 static struct usb3503_hubctl *usbhub_ctl;
 
@@ -2530,10 +2531,45 @@ static int usb3503_hub_handler(void (*set_mode)(void), void *ctl)
 
     return 0;
 }
+#endif
 
 static int __init usb3503_init(void)
 {
     int err;
+
+    err = gpio_request_one(GPIO_USB_DOCK_DET, GPIOF_IN, "USB_DOCK_DET");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_DOCK_DET");
+        return -1;
+    }
+    s3c_gpio_cfgpin(GPIO_USB_DOCK_DET, S3C_GPIO_SFN(0xF));
+    s3c_gpio_setpull(GPIO_USB_DOCK_DET, S3C_GPIO_PULL_UP);
+    gpio_free(GPIO_USB_DOCK_DET);
+
+    err = gpio_request(GPIO_USB_HUB_INT, "USB_HUB_INT");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_HUB_INT");
+    } else {
+        gpio_direction_output(GPIO_USB_HUB_INT, 0);
+        s3c_gpio_setpull(GPIO_USB_HUB_INT, S3C_GPIO_PULL_UP);
+    }
+
+    err = gpio_request(GPIO_USB_HUB_CONNECT, "USB_HUB_CONNECT");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_HUB_CONNECT");
+    } else {
+        gpio_direction_output(GPIO_USB_HUB_CONNECT, 1);
+        s3c_gpio_setpull(GPIO_USB_HUB_CONNECT, S3C_GPIO_PULL_UP);
+    }
+
+    err = gpio_request(GPIO_USB_BOOT_EN, "USB_BOOT_EN");
+    if (err) {
+        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_BOOT_EN");
+    } else {
+        /* GPIO_USB_BOOT_EN, TBD */
+        gpio_direction_output(GPIO_USB_BOOT_EN, 1);
+        s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
+    }
 
     err = gpio_request(GPIO_USB_HUB_RST, "HUB_RST");
     if (err) {
@@ -2541,24 +2577,6 @@ static int __init usb3503_init(void)
     } else {
         gpio_direction_output(GPIO_USB_HUB_RST, 0);
         s3c_gpio_setpull(GPIO_USB_HUB_RST, S3C_GPIO_PULL_NONE);
-    }
-    s5p_gpio_set_drvstr(GPIO_USB_HUB_RST, S5P_GPIO_DRVSTR_LV1);
-
-    /* for USB3503 26Mhz Reference clock setting */
-    err = gpio_request(GPIO_USB_HUB_INT, "HUB_INT");
-    if (err) {
-        printk(KERN_ERR "ERR: fail to request gpio %s\n", "HUB_INT");
-    } else {
-        gpio_direction_output(GPIO_USB_HUB_INT, 1);
-        s3c_gpio_setpull(GPIO_USB_HUB_INT, S3C_GPIO_PULL_NONE);
-    }
-
-    err = gpio_request(GPIO_5V_EN, "5V_EN");
-    if (err) {
-        printk(KERN_ERR "ERR: fail to request gpio %s\n", "5V_EN");
-    } else {
-        gpio_direction_output(GPIO_5V_EN, 1);
-        s3c_gpio_setpull(GPIO_5V_EN, S3C_GPIO_PULL_NONE);
     }
 
     return 0;
@@ -2569,13 +2587,16 @@ static int usb3503_reset_n(int val)
     gpio_set_value(GPIO_USB_HUB_RST, 0);
 
     if (val) {
+		gpio_direction_output(GPIO_USB_BOOT_EN, 1);
+		gpio_direction_output(GPIO_USB_HUB_CONNECT, 1);
         msleep(20);
         gpio_set_value(GPIO_USB_HUB_RST, !!val);
-        udelay(5); /* need it ?*/
+        msleep(10);
     }
     return 0;
 }
 
+#if USB3503_I2C_CONTROL
 static int host_port_enable(int port, int enable)
 {
     int err;
@@ -2607,12 +2628,16 @@ static int host_port_enable(int port, int enable)
 exit:
     return err;
 }
+#endif
 
 static struct usb3503_platform_data usb3503_pdata = {
-    .initial_mode = USB3503_MODE_STANDBY,
     .reset_n = usb3503_reset_n,
+    .usb_doc_det = GPIO_USB_DOCK_DET,
+#if USB3503_I2C_CONTROL
+    .initial_mode = USB3503_MODE_STANDBY,
     .register_hub_handler = usb3503_hub_handler,
     .port_enable = host_port_enable,
+#endif
 };
 #endif
 
@@ -3531,6 +3556,7 @@ static void __init willow_machine_init(void)
 	isa1200_init();
 #endif
 #ifdef CONFIG_USBHUB_USB3503
+    usb3503_init();
 #endif
 	i2c_register_board_info(8, i2c_devs8, ARRAY_SIZE(i2c_devs8));
 #endif
@@ -3806,10 +3832,6 @@ static void __init willow_machine_init(void)
 
 #ifdef CONFIG_EXYNOS_C2C
 	exynos_c2c_set_platdata(&willow_c2c_pdata);
-#endif
-
-#ifdef CONFIG_USBHUB_USB3503
-    usb3503_init();
 #endif
 
 	brcm_wlan_init();
