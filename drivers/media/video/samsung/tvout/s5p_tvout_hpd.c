@@ -19,6 +19,9 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 
+#include <mach/gpio.h>
+#include <plat/gpio-cfg.h>
+
 #include "s5p_tvout_common_lib.h"
 #include "hw_if/hw_if.h"
 
@@ -212,6 +215,10 @@ int s5p_hpd_set_hdmiint(void)
 	/* EINT -> HDMI */
 
 	HPDIFPRINTK("\n");
+
+	/* IP4791CZ12 Enable, TBD */
+	//gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
+
 	irq_set_irq_type(hpd_struct.irq_n, IRQ_TYPE_NONE);
 
 	if (last_hpd_state)
@@ -246,6 +253,9 @@ int s5p_hpd_set_eint(void)
 	s5p_hdmi_reg_intc_enable(HDMI_IRQ_HPD_UNPLUG, 0);
 
 	hpd_struct.int_src_ext_hpd();
+
+	/* IP4791CZ12 Disable, TBD */
+	//gpio_direction_output(GPIO_HDMI_PWR_EN, 0);
 
 	return 0;
 }
@@ -448,6 +458,15 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	last_uevent_state = -1;
 
+	/* IP4791CZ12 Enable */
+	ret = gpio_request(GPIO_HDMI_PWR_EN, "HDMI_PWR_EN");
+	if (ret) {
+		printk(KERN_ERR "HDMI_HPD: fail to request gpio %s\n", "HDMI_PWR_EN");
+	} else {
+		gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
+		s3c_gpio_setpull(GPIO_HDMI_PWR_EN, S3C_GPIO_PULL_NONE);
+	}
+
 	return 0;
 }
 
@@ -460,13 +479,19 @@ static int __devexit s5p_hpd_remove(struct platform_device *pdev)
 static int s5p_hpd_suspend(struct platform_device *dev, pm_message_t state)
 {
 	hpd_struct.int_src_ext_hpd();
+	/* IP4791CZ12 Disable, TDB */
+	//gpio_direction_output(GPIO_HDMI_PWR_EN, 0);
 	return 0;
 }
 
 static int s5p_hpd_resume(struct platform_device *dev)
 {
 	if (atomic_read(&hdmi_status) == HDMI_ON)
+	{
+		/* IP4791CZ12 Enable, TDB */
+		//gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
 		hpd_struct.int_src_hdmi_hpd();
+	}
 
 	return 0;
 }

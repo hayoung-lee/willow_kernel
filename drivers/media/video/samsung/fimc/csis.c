@@ -29,6 +29,7 @@
 
 #include "csis.h"
 static s32 err_print_cnt;
+static s32 err_print_cnt_check=0;
 
 static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
@@ -286,11 +287,10 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	/* receiving non-image data is not error */
 	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
 		if (err_print_cnt < 30) {
-			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
+			printk("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
 			err_print_cnt++;
 		}
 	}
-
 	return IRQ_HANDLED;
 }
 
@@ -340,7 +340,7 @@ static int s3c_csis_probe(struct platform_device *pdev)
 		goto err_regs_unmap;
 	}
 
-	info("Samsung MIPI-CSIS%d driver probed successfully\n", pdev->id);
+	printk("Samsung MIPI-CSIS%d driver probed successfully\n", pdev->id);
 
 	return 0;
 

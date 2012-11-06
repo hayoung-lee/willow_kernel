@@ -1,15 +1,5 @@
 /*
  * drivers/misc/usb3503.c - usb3503 usb hub driver
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
  */
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
@@ -18,8 +8,13 @@
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
 #include <linux/err.h>
-#define USB3503_SYSFS_DEBUG
+#include <linux/interrupt.h>
+#include <linux/gpio.h>
+#include <linux/pm_runtime.h>
+#include <plat/devs.h>
+#include <plat/ehci.h>
 
+#if USB3503_I2C_CONTROL
 static int usb3503_register_write(struct i2c_client *i2c_dev, char reg,
 	char data)
 {
@@ -90,7 +85,7 @@ static int reg_write(struct i2c_client *i2c_dev, char reg, char req, int retry)
 			pr_err(HUB_TAG "%s: usb3503_register_read failed"
 					" - retry(%d)", __func__, cnt);
 	} while (data != req && cnt--);
-exit:
+
 	pr_info(HUB_TAG "%s: write %02X, req:%02x, val:%02x\n", __func__, reg,
 		req, data);
 
@@ -123,7 +118,7 @@ static int reg_update(struct i2c_client *i2c_dev, char reg, char req, int retry)
 			pr_err(HUB_TAG "%s: usb3503_register_write failed"
 					" - retry(%d)", __func__, cnt);
 	} while (cnt--);
-exit:
+
 	pr_info(HUB_TAG "%s: update %02X, req:%02x, val:%02x\n", __func__, reg,
 		req, data);
 	return err;
@@ -155,7 +150,48 @@ exit:
 		req, data);
 	return err;
 }
+#endif
 
+static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached) {
+	hc->new_dock_status = gpio_get_value(hc->usb_doc_det);
+	if (force_detached)
+		hc->cur_dock_status = DOCK_STATE_DETACHED;
+	else if (hc->cur_dock_status == hc->new_dock_status)
+		return;
+    else
+		hc->cur_dock_status = hc->new_dock_status;
+
+	if (hc->cur_dock_status == DOCK_STATE_ATTACHED) {
+		hc->reset_n(1);
+		s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+		pm_runtime_get_sync(&s5p_device_ehci.dev);
+		pm_runtime_get_sync(&s5p_device_ohci.dev);
+	} else {
+		pm_runtime_put(&s5p_device_ohci.dev);
+		pm_runtime_put(&s5p_device_ehci.dev);
+		s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+		hc->reset_n(0);
+	}
+}
+
+static void usb3503_dock_worker(struct work_struct *work)
+{
+	struct usb3503_hubctl *hc = container_of(work, struct usb3503_hubctl, dock_work);
+
+	usb3503_change_status(hc, 0);
+	enable_irq(hc->dock_irq);
+}
+
+static irqreturn_t usb3503_dock_irq_thread(int irq, void *data) {
+	struct usb3503_hubctl *hc = data;
+
+	disable_irq_nosync(hc->dock_irq);
+	queue_work(hc->workqueue, &hc->dock_work);
+
+	return IRQ_HANDLED;
+}
+
+#if USB3503_I2C_CONTROL
 static int usb3503_set_mode(struct usb3503_hubctl *hc, int mode)
 {
 	int err = 0;
@@ -174,7 +210,7 @@ static int usb3503_set_mode(struct usb3503_hubctl *hc, int mode)
 			pr_err(HUB_TAG "SP_ILOCK write fail err = %d\n", err);
 			goto exit;
 		}
-#if 1//def USB3503_ES_VER
+#ifdef USB3503_ES_VER
 /* ES version issue
  * USB3503 can't PLL power up under cold circumstance, so enable
  * the Force suspend clock bit
@@ -185,7 +221,7 @@ static int usb3503_set_mode(struct usb3503_hubctl *hc, int mode)
 			goto exit;
 		}
 #endif
-		/* PDS : Port2,3 Disable For Self Powered Operation */
+		/* PDS : Port1,3 Disable For Self Powered Operation */
 		err = reg_update(i2c_dev, PDS_REG, (PDS_PORT1 | PDS_PORT3), 1);
 		if (err < 0) {
 			pr_err(HUB_TAG "PDS update fail err = %d\n", err);
@@ -257,81 +293,13 @@ static ssize_t mode_store(
 	return size;
 }
 static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
-
-#ifdef USB3503_SYSFS_DEBUG
-static ssize_t read_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	unsigned addr;
-	char data;
-	int err;
-	struct usb3503_hubctl *hc = dev_get_drvdata(dev);
-
-	err = sscanf(buf, "%x", &addr);
-
-	err = usb3503_register_read(hc->i2c_dev, addr, &data);
-	if (err < 0) {
-		pr_err(HUB_TAG "register read fail\n");
-		goto exit;
-	}
-	pr_info(HUB_TAG "%s: read 0x%x = 0x%x\n", __func__, addr, data);
-exit:
-	return size;
-}
-static DEVICE_ATTR(read, 0664, NULL, read_store);
-
-static ssize_t write_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	unsigned addr, data;
-	int err;
-	struct usb3503_hubctl *hc = dev_get_drvdata(dev);
-
-	err = sscanf(buf, "%x %x", &addr, &data);
-	pr_debug(HUB_TAG "%s: addr=%x, data=%x\n", __func__, addr, data);
-
-	err = usb3503_register_write(hc->i2c_dev, addr, data);
-	if (err < 0) {
-		pr_err(HUB_TAG "register write fail\n");
-		goto exit;
-	}
-
-	err = usb3503_register_read(hc->i2c_dev, addr, (char *)&data);
-	if (err < 0) {
-		pr_err(HUB_TAG "register read fail\n");
-		goto exit;
-	}
-	pr_info(HUB_TAG "%s: write 0x%x = 0x%x\n", __func__, addr, data);
-exit:
-	return size;
-}
-static DEVICE_ATTR(write, 0664, NULL, write_store);
-
-static ssize_t reset_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	unsigned val;
-	int err;
-	struct usb3503_hubctl *hc = dev_get_drvdata(dev);
-
-	err = sscanf(buf, "%x", &val);
-	pr_info(HUB_TAG "%s: val=%x\n", __func__, val);
-
-	hc->reset_n(val);
-
-	return size;
-}
-static DEVICE_ATTR(reset, 0664, NULL, reset_store);
-#endif /* end of USB3503_SYSFS_DEBUG */
+#endif
 
 int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
+	usb3503_change_status(hc, 1);
 
-	hc->reset_n(0);
 	pr_info(HUB_TAG "suspended\n");
 
 	return 0;
@@ -340,12 +308,15 @@ int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 int usb3503_resume(struct i2c_client *client)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
+	usb3503_change_status(hc, 0);
 
+#if USB3503_I2C_CONTROL
 	if (hc->mode == USB3503_MODE_HUB)
 		usb3503_set_mode(hc, USB3503_MODE_HUB);
 
 	pr_info(HUB_TAG "resume mode=%s", (hc->mode == USB3503_MODE_HUB) ?
 		"hub" : "standny");
+#endif
 
 	return 0;
 }
@@ -357,6 +328,13 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct usb3503_platform_data *pdata;
 
 	pr_info(HUB_TAG "%s:%d\n", __func__, __LINE__);
+
+	hc = kzalloc(sizeof(struct usb3503_hubctl), GFP_KERNEL);
+	if (!hc) {
+		pr_err(HUB_TAG "private data alloc fail\n");
+		err = -ENOMEM;
+		goto exit;
+	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err = -ENODEV;
@@ -370,38 +348,53 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit;
 	}
 
-	hc = kzalloc(sizeof(struct usb3503_hubctl), GFP_KERNEL);
-	if (!hc) {
-		pr_err(HUB_TAG "private data alloc fail\n");
-		err = -ENOMEM;
-		goto exit;
-	}
+	hc->cur_dock_status = DOCK_STATE_UNKNOWN;
+	hc->new_dock_status = DOCK_STATE_UNKNOWN;
+	hc->usb_doc_det = pdata->usb_doc_det;
+
 	hc->i2c_dev = client;
 	hc->reset_n = pdata->reset_n;
+#if USB3503_I2C_CONTROL
 	hc->port_enable = pdata->port_enable;
 	if (pdata->initial_mode) {
 		usb3503_set_mode(hc, pdata->initial_mode);
 		hc->mode = pdata->initial_mode;
 	}
-	/* For HSIC to USB brige with CMC221
-	 * export the hub_set_mode and private data to board modem
-	 * it will be handled by PM scenaio.
-	 */
+
 	if (pdata->register_hub_handler)
 		pdata->register_hub_handler((void (*)(void))usb3503_set_mode,
 			(void *)hc);
+#endif
+
+	hc->workqueue = create_singlethread_workqueue(USB3503_I2C_NAME);
+	INIT_WORK(&hc->dock_work, usb3503_dock_worker);
+
+	hc->dock_irq = gpio_to_irq(pdata->usb_doc_det);
+	if (!hc->dock_irq) {
+		pr_err(HUB_TAG "Failed to get USB_DOCK_DET IRQ\n");
+		err = -ENODEV;
+		goto exit;
+	}
+	err = request_irq(hc->dock_irq, usb3503_dock_irq_thread,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING|IRQF_ONESHOT, "USB_DOCK_DET", hc);
+	if (err) {
+		pr_err(HUB_TAG "Failed to allocate an USB_DOCK_DET interrupt(%d)\n",
+				hc->dock_irq);
+		goto exit;
+	}
 
 	i2c_set_clientdata(client, hc);
 
+#if USB3503_I2C_CONTROL
 	err = device_create_file(&client->dev, &dev_attr_mode);
-#ifdef USB3503_SYSFS_DEBUG
-	err = device_create_file(&client->dev, &dev_attr_read);
-	err = device_create_file(&client->dev, &dev_attr_write);
-	err = device_create_file(&client->dev, &dev_attr_reset);
-#endif
 	pr_info(HUB_TAG "%s: probed on  %s mode\n", __func__,
 		(hc->mode == USB3503_MODE_HUB) ? "hub" : "standby");
+#endif
+
+	return 0;
+
 exit:
+	cancel_work_sync(&hc->dock_work);
 	return err;
 }
 
@@ -410,6 +403,8 @@ static int usb3503_remove(struct i2c_client *client)
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
 	pr_debug(HUB_TAG "%s\n", __func__);
+	free_irq(hc->dock_irq, hc->i2c_dev);
+	cancel_work_sync(&hc->dock_work);
 	kfree(hc);
 
 	return 0;
@@ -420,21 +415,11 @@ static const struct i2c_device_id usb3503_id[] = {
 	{ }
 };
 
-static void usb3503_shutdown(struct i2c_client *client)
-{
-	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
-
-	pr_err(HUB_TAG "%s:\n", __func__);
-	mdelay(10);
-	usb3503_set_mode(hc, USB3503_MODE_STANDBY);
-}
-
 static struct i2c_driver usb3503_driver = {
 	.probe = usb3503_probe,
 	.remove = usb3503_remove,
 	.suspend = usb3503_suspend,
 	.resume = usb3503_resume,
-	.shutdown = usb3503_shutdown,
 	.id_table = usb3503_id,
 	.driver = {
 		.name = USB3503_I2C_NAME,
@@ -452,7 +437,7 @@ static void __exit usb3503_exit(void)
 	pr_info(HUB_TAG "USB HUB driver exit\n");
 	i2c_del_driver(&usb3503_driver);
 }
-module_init(usb3503_init);
+late_initcall(usb3503_init);
 module_exit(usb3503_exit);
 
 MODULE_DESCRIPTION("USB3503 USB HUB driver");
