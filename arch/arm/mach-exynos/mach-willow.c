@@ -2241,7 +2241,20 @@ static void sensor_gpio_init(void){
     gpio_free(EXYNOS4_GPX3(6));
 }
 
-static struct i2c_board_info i2c_devs2[] __initdata = {
+static struct i2c_board_info i2c_devs2_DVT[] __initdata = {
+#ifdef CONFIG_VIDEO_TVOUT
+	{
+		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
+	},
+#endif
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {	//DVT
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    },
+#endif
+};
+
+static struct i2c_board_info i2c_devs2_MVT[] __initdata = {
 #ifdef CONFIG_VIDEO_TVOUT
 	{
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
@@ -2258,13 +2271,22 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 	},
 };
 
-static struct i2c_board_info i2c_devs4[] __initdata = {
-#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
-    {
-        I2C_BOARD_INFO("accelerometer", 0x38),
-    }
+static struct i2c_board_info i2c_devs4_DVT[] __initdata = {
+#ifdef CONFIG_INPUT_YAS_MAGNETOMETER
+	{
+        I2C_BOARD_INFO("geomagnetic", 0x2e),
+	},
 #endif
 };
+
+static struct i2c_board_info i2c_devs4_MVT[] __initdata = {
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {	//MVT
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    },
+#endif
+};
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
 static struct regulator *touch_ldo;
 
@@ -3528,13 +3550,19 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
 	s3c_i2c2_set_platdata(NULL);
-	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
+		i2c_register_board_info(2, i2c_devs2_DVT, ARRAY_SIZE(i2c_devs2_DVT));
+	else
+		i2c_register_board_info(2, i2c_devs2_MVT, ARRAY_SIZE(i2c_devs2_MVT));
 
 	s3c_i2c3_set_platdata(NULL);
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
-	i2c_register_board_info(4, i2c_devs4, ARRAY_SIZE(i2c_devs4));
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
+		i2c_register_board_info(4, i2c_devs4_DVT, ARRAY_SIZE(i2c_devs4_DVT));
+	else
+		i2c_register_board_info(4, i2c_devs4_MVT, ARRAY_SIZE(i2c_devs4_MVT));
 
 	s3c_i2c5_set_platdata(NULL);
 	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));

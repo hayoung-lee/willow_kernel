@@ -1049,7 +1049,9 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		if (get_user(p.vsync, (int __user *)arg))
 			ret = -EFAULT;
 		else {
-			s3cfb_set_global_interrupt(fbdev, p.vsync);
+			if (p.vsync)
+				s3cfb_set_global_interrupt(fbdev, 1);
+
 			s3cfb_set_vsync_interrupt(fbdev, p.vsync);
 		}
 		break;
