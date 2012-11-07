@@ -2247,12 +2247,6 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
 	},
 #endif
-
-#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
-    {
-        I2C_BOARD_INFO("accelerometer", 0x38),
-    }
-#endif
 };
 
 static struct i2c_board_info i2c_devs3[] __initdata = {
@@ -2265,10 +2259,10 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 };
 
 static struct i2c_board_info i2c_devs4[] __initdata = {
-#ifdef CONFIG_INPUT_YAS_MAGNETOMETER
-	{
-        I2C_BOARD_INFO("geomagnetic", 0x2e),
-	},
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    }
 #endif
 };
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
