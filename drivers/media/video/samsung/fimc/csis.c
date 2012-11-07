@@ -33,6 +33,8 @@ static s32 err_print_cnt_check=0;
 
 static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
+//#define CONFIG_MIPI_CSI_ADV_FEATURE
+
 static int s3c_csis_set_info(struct platform_device *pdev)
 {
 	s3c_csis[pdev->id] = (struct s3c_csis_info *)
@@ -76,6 +78,21 @@ static void s3c_csis_set_nr_lanes(struct platform_device *pdev, int lanes)
 		err("%d is not supported lane\n", lanes);
 
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_CONFIG);
+	printk("s3c_csis_set_nr_lanes =%x \n", cfg);
+	
+}
+
+static void s3c_csis_set_lntv(struct platform_device *pdev, int hsync_Lintv,int vsync_Lintv,int hsync_Eintv)
+{
+	u32 cfg;
+
+	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_CONFIG);
+
+	cfg |= hsync_Lintv << WILLOW_CONFIG_HSYNC_LINTV_SHIFT;
+	cfg |= vsync_Lintv << WILLOW_CONFIG_VSYNC_SINTV_SHIFT;
+	cfg |= hsync_Eintv << WILLOW_CONFIG_VSYNC_EINTV_SHIFT;
+
+	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_CONFIG);
 }
 
 static void s3c_csis_enable_interrupt(struct platform_device *pdev)
@@ -96,6 +113,7 @@ static void s3c_csis_enable_interrupt(struct platform_device *pdev)
 		S3C_CSIS_INTMSK_ERR_ID_ENABLE;
 
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTMSK);
+
 }
 
 static void s3c_csis_disable_interrupt(struct platform_device *pdev)
@@ -128,7 +146,9 @@ static void s3c_csis_phy_on(struct platform_device *pdev)
 
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_DPHYCTRL);
 	cfg |= S3C_CSIS_DPHYCTRL_ENABLE;
+//	cfg |= 0xf;
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_DPHYCTRL);
+
 }
 
 static void s3c_csis_phy_off(struct platform_device *pdev)
@@ -199,6 +219,7 @@ static void s3c_csis_set_resol(struct platform_device *pdev, int width, int heig
 	cfg |= height << S3C_CSIS_RESOL_VER_SHIFT;
 
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_RESOL);
+	
 }
 
 static void s3c_csis_set_hs_settle(struct platform_device *pdev, int settle)
@@ -231,7 +252,8 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 
 	s3c_csis_reset(pdev);
 	s3c_csis_set_nr_lanes(pdev, lanes);
-
+	//s3c_csis_set_lntv(pdev,30,0,0); // 60 ok // 66 ? // 30 ? // 15 ?
+		
 #ifdef CONFIG_MIPI_CSI_ADV_FEATURE
 	/* FIXME: how configure the followings with FIMC dynamically? */
 	s3c_csis_set_hs_settle(pdev, settle);	/* s5k6aa */
