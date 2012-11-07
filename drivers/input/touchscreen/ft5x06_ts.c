@@ -120,11 +120,13 @@ unsigned char touch_last_key_code; // TOUCH KEY PRESS/RELEASE
 #if defined(FEATURE_TOUCH_ALL_FILE_UPDATE)
 int check_suspend=0;
 extern void set_touch_autoCal(int Setvalue);
-void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_value);
+//void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_value);
 extern void s3c_i2c5_force_stop(void);
 extern void t10s_i2c_clockrate(int i2c_num);
 extern int s3c24xx_i2c_set(int num, int slave, int setfreq);
 #endif
+
+extern void set_touch_ic_check(int value);
 
 #if CFG_SUPPORT_TOUCH_KEY
 int tsp_keycodes[CFG_NUMOFKEYS] ={
@@ -281,42 +283,44 @@ int focaltech_touch_reset(int onoff)
 {
 	int err;
 	// touch gpb4
+	err = gpio_request(EXYNOS4_GPB(4), "focal_touch_reset");
+	if (err<0) {
+		printk("[FocalTech] Error (L:%d), %s() - gpio_request(focal_touch_reset) failed (err=%d)\n", __LINE__, __func__, err);
+		return err;
+	}else {
+		s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
 
-	if(onoff)
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_HIGH, "TOUCH_RESET");
-	else
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "TOUCH_RESET");		
-	if (err) {
-		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
-		//return err;
-	}
+		gpio_set_value(EXYNOS4_GPB(4), onoff);
+    }		
+	
 	gpio_free(EXYNOS4_GPB(4));
- 
 	return 0;
 }
+EXPORT_SYMBOL(focaltech_touch_reset);
 
 void focaltech_touch_on(void)
 {
 //	regulator_enable(t9_touch_ldo);
 	printk("[FocalTech] TS_POWER ON\n");
 	//s3c_i2c5_force_stop();
-   msleep(10);
+   mdelay(10);
 
 	//focaltech_interrupt_low_gpio();
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
    focaltech_touch_reset(0);
 #endif
-	msleep(200);
+	mdelay(200);
 
     regulator_enable(touch_ldo);
 	//Power On sequence need dealy	
 	//msleep(300);
 
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
-   msleep(20);
+   mdelay(20);
    focaltech_touch_reset(1);
 	focaltech_interrupt_init_gpio();
-	msleep(410);
+	mdelay(410);
 #else	
 	focaltech_touch_reset();
 #endif
@@ -327,21 +331,13 @@ void focaltech_touch_on(void)
 
 void focaltech_touch_off(void)
 {
-    int err;
+    //int err;
 	printk("[FocalTech] TS_POWER OFF\n");
 
 	//TS_RESET low
-#if  1
+
    focaltech_touch_reset(0);
-#else
-	err = gpio_request(EXYNOS4_GPB(4), "TOUCH_RESET");
-	if (err) {
-		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
-	}
-	gpio_direction_output(EXYNOS4_GPB(4), 1);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
-	gpio_free(EXYNOS4_GPB(4));
-#endif	
+
 //	printk("[FocalTech] TS_RESET Low\n");
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
    msleep(1);
@@ -2335,6 +2331,7 @@ int fts_ctpm_fw_upgrade_with_app_file(char * firmware_name)
 	return i_ret;
 }
 #if defined(FEATURE_TOUCH_ALL_FILE_UPDATE)
+#if 0
 static ssize_t ft5x0x_enable_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -2404,6 +2401,7 @@ static ssize_t ft5x0x_enable_store(struct device *dev,
 	mutex_unlock(&data->device_mode_mutex);
 	return num_read_chars;
 }
+#endif
 #endif
 
 static ssize_t ft5x0x_tpfwver_show(struct device *dev,
@@ -2634,7 +2632,7 @@ static ssize_t ft5x0x_rawdata_store(struct device *dev,
 
 #if defined(FEATURE_TOUCH_ALL_FILE_UPDATE)
 //static DEVICE_ATTR(touchcal, S_IRUGO|S_IWUSR|S_IWGRP |S_IWOTH, ft5x0x_enable_show, ft5x0x_enable_store);
-static DEVICE_ATTR(touchcal, S_IRUGO|S_IWUSR|S_IWGRP, ft5x0x_enable_show, ft5x0x_enable_store);
+//static DEVICE_ATTR(touchcal, S_IRUGO|S_IWUSR|S_IWGRP, ft5x0x_enable_show, ft5x0x_enable_store);
 #endif
 static DEVICE_ATTR(ftstpfwver, S_IRUGO|S_IWUSR, ft5x0x_tpfwver_show, ft5x0x_tpfwver_store);
 //upgrade from *.i
@@ -2646,7 +2644,7 @@ static DEVICE_ATTR(ftsrawdatashow, S_IRUGO|S_IWUSR, ft5x0x_rawdata_show, ft5x0x_
 
 static struct attribute *ft5x0x_attributes[] = {
 #if defined(FEATURE_TOUCH_ALL_FILE_UPDATE)
-	&dev_attr_touchcal.attr,
+	//&dev_attr_touchcal.attr,
 #endif	
 	&dev_attr_ftstpfwver.attr,
 	&dev_attr_ftsfwupdate.attr,
@@ -2711,6 +2709,13 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_create_singlethread;
 	}
 
+    uc_reg_value = ft5x0x_read_fw_ver();
+	if(uc_reg_value==0xA6)
+	{
+		err = -ESRCH;
+		goto exit_create_singlethread;
+	}
+	set_touch_ic_check(1);
 
 	err = request_irq(IRQ_EINT(4), ft5x0x_ts_interrupt, IRQF_TRIGGER_FALLING, "ft5x0x_ts", ft5x0x_ts);
 	if (err < 0) {
@@ -2799,7 +2804,6 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
     uc_host_fm_ver = fts_ctpm_get_i_file_ver();
     //get some register information
     printk("[FTS] ============== Touch Information Start ==============\n");
-    uc_reg_value = ft5x0x_read_fw_ver();
     printk("[FTS] Firmware version = 0x%x  host version=%x \n", uc_reg_value,uc_host_fm_ver);
     ft5x0x_read_reg(FT5X0X_REG_PERIODACTIVE, &uc_reg_value);
     printk("[FTS] report rate is %dHz.\n", uc_reg_value * 10);
@@ -2854,6 +2858,8 @@ exit_create_singlethread:
 	printk("==singlethread error =\n");
 	i2c_set_clientdata(client, NULL);
 	kfree(ft5x0x_ts);
+	set_touch_ic_check(0);
+	
 exit_alloc_data_failed:
 exit_check_functionality_failed:
 	return err;
@@ -2956,7 +2962,7 @@ static int __init ft5x0x_ts_init(void)
 {
 	int ret;
 	printk("==ft5x0x_ts_init==\n");
-
+	
 #ifdef  FIXED_TEMPORARY_SUSPEND_BUG
     suspend_flag = 0;
 #endif
@@ -2965,6 +2971,7 @@ static int __init ft5x0x_ts_init(void)
 
 	ret = i2c_add_driver(&ft5x0x_ts_driver);
 	printk("ret=%d\n",ret);
+
 	return ret;
 //	return i2c_add_driver(&ft5x0x_ts_driver);
 }

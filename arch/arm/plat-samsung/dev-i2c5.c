@@ -52,24 +52,16 @@ struct platform_device s3c_device_i2c5 = {
 
 static struct s3c2410_platform_i2c touch_100k_i2c_data __initdata = {
 	.flags		= 0,
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
 	.slave_addr	= 0x10,
-#else
-	.slave_addr	= (0x70>>1), // 0x10,
-#endif	
 	.frequency	= 95*1000,
-	.sda_delay	= 100,//S3C2410_IICLC_SDA_DELAY10,
+	.sda_delay	= 100,
 };
 
 static struct s3c2410_platform_i2c touch_300k_i2c_data __initdata = {
 	.flags		= 0,
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
 	.slave_addr	= 0x10,
-#else
-	.slave_addr	=(0x70>>1),// 0x10,
-#endif	
-	.frequency	= 300*1000,
-	.sda_delay	=  100,//S3C2410_IICLC_SDA_DELAY10,
+	.frequency	= 200*1000,
+	.sda_delay	=  100,
 };
 
 void __init s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd)
@@ -77,11 +69,7 @@ void __init s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd)
 	struct s3c2410_platform_i2c *npd;
 
 	if (!pd) {
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
-		pd = &default_i2c_data;
-#else		
-		pd = &touch_100k_i2c_data;
-#endif
+		pd = &touch_300k_i2c_data;
 		pd->bus_num = 5;
 	}
 

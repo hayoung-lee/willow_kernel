@@ -168,6 +168,16 @@ extern int brcm_wlan_init(void);
 #define CONFIG_CSI_D
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_I2C) || defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S)
+// focal 1, atmel 2
+int touch_ic_check =0;
+#define ATMEL_1664S_DEBUG
+#ifdef ATMEL_1664S_DEBUG
+#define ATMEL_log(fmt, arg...) 	printk(fmt, ##arg)
+#else
+#define ATMEL_log(fmt, arg...)
+#endif
+#endif
 
 #ifdef CONFIG_MACH_WILLOW
 #include <mach/willow_version.h>
@@ -1468,7 +1478,6 @@ static struct regulator_init_data __initdata max77686_ldo6_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
-		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2287,57 +2296,102 @@ static struct i2c_board_info i2c_devs4_MVT[] __initdata = {
 #endif
 };
 
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S) || defined(CONFIG_TOUCHSCREEN_FOCALTECH_I2C)
+int get_touch_ic_check(void)
+{
+	return touch_ic_check;
+}
+EXPORT_SYMBOL(get_touch_ic_check);
+
+void set_touch_ic_check(int value )
+{
+	touch_ic_check = value;
+}
+EXPORT_SYMBOL(set_touch_ic_check);
+#endif
+
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
-static struct regulator *touch_ldo;
+
+int touch_bootst_ctrl(int onoff)
+{
+	int err;
+	// touch gpb4
+
+	err = gpio_request(EXYNOS4212_GPM3(3), "tsp_bootst");
+	if (err<0) {
+		printk("[touch_bootst_ctrl] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
+		return err;
+	}else {
+		gpio_direction_output(EXYNOS4212_GPM3(3), onoff);
+    }		
+	
+	gpio_free(EXYNOS4212_GPM3(3));
+
+	return 0;
+}
+EXPORT_SYMBOL(touch_bootst_ctrl);
+
+extern int focaltech_touch_reset(int onoff);
 
 int touch_reset(int onoff)
 {
 	int err;
 
-	if(onoff)
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_HIGH, "TOUCH_RESET");
-	else
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "TOUCH_RESET");		
-	if (err) {
-		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
-	}
+	err = gpio_request(EXYNOS4_GPB(4), "EXYNOS4_GPB(4)");
+	if (err<0) {
+		printk("[touch_reset] Error (L:%d), %s() - gpio_request(EXYNOS4_GPB(4)) failed (err=%d)\n", __LINE__, __func__, err);
+		return err;
+	}else {
+		gpio_direction_output(EXYNOS4_GPB(4), onoff);
+    }		
 	gpio_free(EXYNOS4_GPB(4));
- 
+
 	return 0;
 }
 
 void touch_on(void)
 {
 	int err=0;
-	
-	printk("[ATMEL] TS_POWER ON\n");
+	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
+	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
 
-  //touch_ldo = regulator_get(NULL, "vdd_tsp");
-		
-	//regulator_enable(touch_ldo);
+	/* ------------ Power ON ------------
+	1. Reset Low
+	2. VDD 1.8   vdd_tsp_1v8 (LDO6)
+	3. AVDD 2.8V  ==> TSP3.0 enable  (vdd_tsp)LDO26
+	4. XVDD  GPM3_3
+	5. mdelay(5)
+	6. Reset High
+	*/
+
+	ATMEL_log("[ATMEL] TS_POWER ON___________\n");
 
 	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);  // Interrupt
 	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_UP);
+	touch_bootst_ctrl(0); // xvdd off 
+	touch_reset(0);
 
-    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
-    if(err) {
-        printk(KERN_ERR "failed to request 1664_reset\n");
-    }
-	mdelay(10);
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT); //reset
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	msleep(100);
+	err=	regulator_enable(tsp_vdd3v8);
+	if (err)
+		ATMEL_log("[ATMEL] _____ tsp_vdd3v8 err ..... \n");
+	
+	ATMEL_log("[ATMEL] tsp_vdd1v8 ON___________\n");
+	
+	err=	regulator_enable(tsp_vdd1v8);
+	if (err)
+		ATMEL_log("[ATMEL] _____ tsp_vdd1v8 err ..... \n");
+
 	mdelay(100);
-	gpio_set_value(EXYNOS4_GPB(4), 1);
+	
+	touch_reset(1);
 	mdelay(150);
+	ATMEL_log("[ATMEL] touch_reset ON 1___________\n");
 
-	gpio_free(EXYNOS4_GPB(4));
-	
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE); //interrupt
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_SFN(0xf));
+	regulator_put(tsp_vdd1v8);
+	regulator_put(tsp_vdd3v8);
 	mdelay(40);
-	
-	//regulator_put(touch_ldo);
 	
 }
 
@@ -2345,30 +2399,36 @@ void touch_on(void)
 void touch_off(void)
 {
 	int err=0;
+	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
+	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
+	
+   /*	    ------------ Power OFF ------------
+	1. XVDD 
+	2. AVDD 2.8V  ==> TSP3.0 enable
+	3. VDD 1.8 
+	4. mdelay(5)
+	5. Reset Low
+	*/
 
-	printk("[ATMEL] TS_POWER OFF\n");
-  //touch_ldo = regulator_get(NULL, "vdd_tsp");
+	touch_bootst_ctrl(0); // xvdd off 
 
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+	ATMEL_log("[ATMEL] TS_POWER OFF ___________\n");
+	
+	if (regulator_is_enabled(tsp_vdd3v8))
+		regulator_disable(tsp_vdd3v8);
+	mdelay(5);
 
-    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
-    if(err) {
-        printk(KERN_ERR "failed to request 1664_reset\n");
-    }
-		
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	if (regulator_is_enabled(tsp_vdd1v8))
+		regulator_disable(tsp_vdd1v8);
 
-	//if (regulator_is_enabled(touch_ldo))
-		//regulator_disable(touch_ldo);
-	gpio_free(EXYNOS4_GPB(4));
+	mdelay(10);
 
-	//if (regulator_is_enabled(touch_ldo))
-		//regulator_disable(touch_ldo);
+	touch_reset(0);
 
-	//regulator_put(touch_ldo);
+	mdelay(100);	
+
+	regulator_put(tsp_vdd1v8);	
+	regulator_put(tsp_vdd3v8);		
 
 }
 
@@ -2395,37 +2455,22 @@ static struct mxt_platform_data atmel1664_touch_platform_data = {
 };
 #endif
 
-int touch_bootst_ctrl(int onoff)
-{
-	int err;
-	// touch gpb4
-
-	if(onoff)
-		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_HIGH, "tsp_bootst");
-	else
-		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_LOW, "tsp_bootst");		
-	
-	if (err) {
-		printk("[ATMEL] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
-		//return err;
-	}
-	gpio_free(EXYNOS4212_GPM3(3));
-	return 0;
-}
-EXPORT_SYMBOL(touch_bootst_ctrl);
-
-
 static struct i2c_board_info i2c_devs5[] __initdata = {
-	{
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
+	{
+
         I2C_BOARD_INFO("ft5x0x_ts", (0x70>>1)),
+	},
 #endif
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
+	{
 		I2C_BOARD_INFO("atmel_1664", 0x4a),
 		.platform_data = &atmel1664_touch_platform_data,
 		.irq		= IRQ_EINT(4),
-#endif 
 	},
+#endif 
+
 };
 
 #ifdef CONFIG_INPUT_L3G4200D_GYR

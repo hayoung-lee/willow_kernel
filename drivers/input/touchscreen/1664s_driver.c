@@ -131,23 +131,23 @@ static int mxt_enabled;
 static bool g_debug_switch;
 #endif
 static u8 threshold;
-static int firm_status_data;
+//static int firm_status_data;
 
 /* ATMEL CONFIG STRUCTURE Start */
-static u8 firmware_latest[] = {0x5, 0x2};       /* version, build_version */
-static gen_commandprocessor_t6_config_t t6_config= {0, };
+//static u8 firmware_latest[] = {0x5, 0x2};       /* version, build_version */
+//static gen_commandprocessor_t6_config_t t6_config= {0, };
 static gen_powerconfig_t7_config_t t7_config = {0, };
 static gen_acquisitionconfig_t8_config_t t8_config = {0, };
 static touch_multitouchscreen_t9_config_t t9_config= {0, };
 static touch_keyarray_t15_config_t t15_config = {0, };
 static spt_comcconfig_t18_config_t t18_config = {0, };
-static spt_gpiopwm_t19_config_t t19_config={0, };
-static proci_gripfacesuppression_t20_config_t t20_config={0, };
-static procg_noisesuppression_t22_config_t t22_config={0, };
+//static spt_gpiopwm_t19_config_t t19_config={0, };
+//static proci_gripfacesuppression_t20_config_t t20_config={0, };
+//static procg_noisesuppression_t22_config_t t22_config={0, };
 static proci_onetouchgestureprocessor_t24 t24_config={0, };
 static spt_selftest_t25_config_t t25_config={0, };
 static proci_twotouchgestureprocessor_t27_config_t t27_config={0, };
-static spt_cteconfig_t28_config_t t28_config={0, };
+//static spt_cteconfig_t28_config_t t28_config={0, };
 static debug_diagnostic_t37_config_t t37_config={0, };
 static spt_userdata_t38_config_t t38_config ;
 static proci_gripsuppression_t40_config_t t40_config={0, };
@@ -155,8 +155,8 @@ static proci_touchsuppression_t42_config_t t42_config={0, };
 static spt_digitizer_t43_t t43_config={0, };
 static spt_cteconfig_t46_config_t t46_config={0, };
 static proci_stylus_t47_config_t t47_config={0, };
-static procg_noisesuppression_t48_config_t t48_config={0, };
-static touch_proximity_t52_config_t t52_config={0, };
+//static procg_noisesuppression_t48_config_t t48_config={0, };
+//static touch_proximity_t52_config_t t52_config={0, };
 static proci_adaptivethreshold_t55_config_t t55_config={0, };
 static proci_shieldless_t56_t t56_config={0, };
 static proc_extratouchscreendata_t57_t t57_config={0, };
@@ -170,6 +170,9 @@ static spt_serialdatacommand_t68_t t68_config={0, };
 /* for registers in runtime mode */
 struct mxt_runmode_registers_t runmode_regs = {0, };
 /* ATMEL CONFIG STRUCTURE END */
+
+extern void set_touch_ic_check(int value );
+extern int get_touch_ic_check(void);
 
 int atmel_tsp_config[]=
 {
@@ -1599,7 +1602,7 @@ int mxt_defconfig_settings(struct mxt_data *mxt,int config_num )
 
 
 #if DEBUG_INFO
-static u8       *object_type_name[60] = {
+static u8       *object_type_name[63] = {
 /*      [0]     = "Reserved",   */
 /*      [2]     = "T2 - Obsolete",      */
 /*      [3]     = "T3 - Obsolete",      */
@@ -1656,7 +1659,7 @@ static int read_mem(struct mxt_data *data, u16 reg, u8 len, u8 *buf)
         ret = i2c_transfer(data->client->adapter, msg, 2);
 
         if (ret < 0) {
-                pr_err("i2c failed ret = %d\n", ret);
+                printk("i2c failed ret = %d\n", ret);
                 return ret;
         }
         return ret == 2 ? 0 : -EIO;
@@ -1684,15 +1687,15 @@ static int __devinit mxt_reset(struct mxt_data *data)
         return write_mem(data, data->cmd_proc + CMD_RESET_OFFSET, 1, &buf);
 }
 
+#ifdef NOT_USED_1664S
 static int __devinit mxt_backup(struct mxt_data *data)
 {
         u8 buf = 0x55u;
         return write_mem(data, data->cmd_proc + CMD_BACKUP_OFFSET, 1, &buf);
 }
+#endif
 
-
-
-
+#ifdef NOT_USED_1664S
 static int write_config(struct mxt_data *data, u8 type, const u8 *cfg)
 {
         int ret;
@@ -1706,6 +1709,7 @@ static int write_config(struct mxt_data *data, u8 type, const u8 *cfg)
         else
                 return write_mem(data, address, size, cfg);
 }
+#endif
 
 static int check_instance(struct mxt_data *data, u8 object_type)
 {
@@ -1718,6 +1722,7 @@ static int check_instance(struct mxt_data *data, u8 object_type)
         return 0;
 }
 
+#ifdef NOT_USED_1664S
 static int init_write_config(struct mxt_data *data, u8 type, const u8 *cfg)
 {
         int ret;
@@ -1747,6 +1752,7 @@ static int init_write_config(struct mxt_data *data, u8 type, const u8 *cfg)
         return ret;
 }
 
+
 static int change_config(struct mxt_data *data,
                         u16 reg, u8 offeset, u8 change_value)
 {
@@ -1755,6 +1761,7 @@ static int change_config(struct mxt_data *data,
         value = change_value;
         return write_mem(data, reg+offeset, 1, &value);
 }
+#endif
 
 static u32 __devinit crc24(u32 crc, u8 byte1, u8 byte2)
 {
@@ -4364,6 +4371,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                 goto err_alloc_dev;
         }
 
+		//set_touch_ic_check(1);
+        printk("[ATEML]___mxt_probe _________________\n");
 				
 		data->input_dev = input_dev;
 		input_dev->name = "atmel_1664";
@@ -4402,6 +4411,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
         data->gpio_read_done = pdata->gpio_read_done;
 
+		 msleep(300);
+		 
         data->power_on();
 
         copy_data = data;
@@ -4780,6 +4791,15 @@ static struct i2c_driver mxt_i2c_driver = {
 
 static int __init mxt_init(void)
 {
+	msleep(500);
+	if(get_touch_ic_check()==1)
+	{
+		printk("[ATMEL]_____ft5x06 driver init  ............\n");
+		return 0;
+	}
+
+	printk("[ATEML]mxt_init _________________\n");
+	
 	return i2c_add_driver(&mxt_i2c_driver);
 }
 
