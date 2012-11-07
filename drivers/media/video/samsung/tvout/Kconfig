@@ -59,7 +59,7 @@ config HDMI_PHY_32N
 config ANALOG_TVENC
 	bool "Analog driver support."
 	depends on VIDEO_TVOUT && ARCH_EXYNOS4 && CPU_EXYNOS4210
-	default y
+	default n
 	---help---
 	  This is a analog TVENC driver for Samsung S5P platform.
 
