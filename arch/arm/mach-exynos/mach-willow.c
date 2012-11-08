@@ -148,7 +148,7 @@ extern int brcm_wlan_init(void);
 
 #define WILLOW_BOOT_NORMAL			1
 #define WILLOW_BOOT_RECOVERY		2
-#define WILLOW_BOOT_MMC_RECOVERY	3
+#define WILLOW_BOOT_HOTKEY_UPDATE	3
 #define WILLOW_BOOT_FACTORYTEST_L	4
 #define WILLOW_BOOT_FACTORYTEST_H	5
 #define REG_INFORM4            (S5P_INFORM4)
@@ -168,6 +168,16 @@ extern int brcm_wlan_init(void);
 #define CONFIG_CSI_D
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_I2C) || defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S)
+// focal 1, atmel 2
+int touch_ic_check =0;
+#define ATMEL_1664S_DEBUG
+#ifdef ATMEL_1664S_DEBUG
+#define ATMEL_log(fmt, arg...) 	printk(fmt, ##arg)
+#else
+#define ATMEL_log(fmt, arg...)
+#endif
+#endif
 
 #ifdef CONFIG_MACH_WILLOW
 #include <mach/willow_version.h>
@@ -513,15 +523,35 @@ static struct s3c_platform_camera mt9m113 = {
 #endif
 
 #ifdef CONFIG_VIDEO_AS0260
+int as0260_camera_eclk_ctrl(int ctrl)
+{
+	int err;
+	mdelay(50);
+
+	err = gpio_request(EXYNOS4_GPX0(1), "GPX0_1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
+
+	printk("AS0260 as0260_camera_eclk_ctrl Start ___________\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPX0(1), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(1), S3C_GPIO_OUTPUT);
+
+	gpio_set_value(EXYNOS4_GPX0(1), ctrl);
+	
+	return 0;
+}
+EXPORT_SYMBOL(as0260_camera_eclk_ctrl);
+
 void as0260_i2c_gpio_init(void)
 {
 	/* i2c scl, sda */
-#if	0 
 	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
 	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
 	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
 	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
-#endif
+
+	//as0260_camera_eclk_ctrl(0);
 }
 static void __init as0260_camera_config(void)
 {
@@ -551,17 +581,18 @@ int as0260_camera_reset(void)
 	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
 
 	gpio_set_value(EXYNOS4212_GPM1(4), 1);
-	mdelay(10);
+	mdelay(10);  // 10
 	gpio_set_value(EXYNOS4212_GPM1(4), 0);
-	mdelay(5);
+	mdelay(5);   // 5
 	gpio_set_value(EXYNOS4212_GPM1(4), 1);	
-	mdelay(15);
+	mdelay(35);  // 35
 	gpio_free(EXYNOS4212_GPM1(4));
 	
 	printk("AS0260 CAMERA_RESET END ____________\n");
 	return 0;
 }
 EXPORT_SYMBOL(as0260_camera_reset);
+
 
 int as0260_power_ctrl(int ctrl)
 {
@@ -595,27 +626,25 @@ int as0260_power_ctrl(int ctrl)
 
 		mdelay(10);
 
-		//if (!regulator_is_enabled(camera_vddc))
 		err=	regulator_enable(camera_vddc);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddc err ..... \n");
 
-		mdelay(150);
+		mdelay(100);  // 150
 
-		//if (!regulator_is_enabled(camera_vddi))
 		err=	regulator_enable(camera_vddi);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddi err ..... \n");
 		
-		mdelay(30);
+		mdelay(30);  // 30
 
-		//if (!regulator_is_enabled(camera_vdda))
 		err=	regulator_enable(camera_vdda);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(20);
+		mdelay(100);  //50
 
+		//as0260_camera_eclk_ctrl(1);
 	} else {
 		if (regulator_is_enabled(camera_vdda))
 			regulator_disable(camera_vdda);
@@ -629,6 +658,9 @@ int as0260_power_ctrl(int ctrl)
 			regulator_disable(camera_vddc);
 
 		mdelay(20);	
+
+		//as0260_camera_eclk_ctrl(0);
+		
 	}
 	regulator_put(camera_vddc);
 	regulator_put(camera_vddi);
@@ -637,14 +669,21 @@ int as0260_power_ctrl(int ctrl)
 	return 0;
 }
 
+#define MCLK_23MHZ
+
 static struct as0260_platform_data as0260_plat = {
-	.default_width =640, //1920,
-	.default_height = 480,//1080,
+	.default_width =1920,//640, //1920,
+	.default_height =1080,// 480,//1080,
 	.max_width = WILLOW_PREVIEW_MAX_W,//960,
 	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
+#ifdef  MCLK_23MHZ
+	.freq = 23000000,
+#else
 	.freq = 24000000,
+#endif	
 	.is_mipi = 1,
+	
 };
 
 static struct i2c_board_info as0260_i2c_info = {
@@ -663,7 +702,11 @@ static struct s3c_platform_camera as0260= {
 	.info		= &as0260_i2c_info,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
+#ifdef  MCLK_23MHZ
+	.clk_rate = 23000000,
+#else
+	.clk_rate = 24000000,
+#endif	
 	.line_length	= 1920,
 	.width		= 1920,//1920,
 	.height		= 1080,//,1080,
@@ -674,19 +717,8 @@ static struct s3c_platform_camera as0260= {
 		.height	= 1080,//1080,
 	},
 	.mipi_lanes	= 2,
-#if 0  
-	.mipi_settle	= 24,  // ok
-	.mipi_align	= 32, //ok
-#else
-#if 1 //OK
 	.mipi_settle	= 12,
 	.mipi_align	= 32,
-#else
-	.mipi_settle	= 6,
-	.mipi_align	= 32,
-#endif
-#endif
-
 
 	/* Polarity */
 	.inv_pclk	= 1, // 0 
@@ -703,7 +735,7 @@ static struct s3c_platform_camera as0260= {
 static struct i2c_gpio_platform_data i2c9_platdata = {
 	.scl_pin = EXYNOS4212_GPM4(0),
 	.sda_pin = EXYNOS4212_GPM4(1),
-	.udelay = 2,  //250Mhz
+	.udelay = 5,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
 	.scl_is_output_only = 0,
@@ -715,18 +747,16 @@ static struct platform_device s3c_device_i2c9= {
 	.dev.platform_data = &i2c9_platdata,
 };
 
+#if ! defined(CONFIG_VIDEO_AS0260) 
 static struct i2c_board_info i2c_devs9[] __initdata = {
 #if defined(CONFIG_VIDEO_MT9M113) 
 	{
 		I2C_BOARD_INFO("MT9M113", (0x78 >> 1)),
 	},
-#elif defined(CONFIG_VIDEO_AS0260) 
-	{
-		I2C_BOARD_INFO("AS0260", 0x90>>1),
-	},
-
-#endif
+#endif	
 };
+#endif
+
 #endif
 
 /* Interface setting */
@@ -909,8 +939,8 @@ static void willow_pm_restart(char mode, const char *cmd)
     if(strncmp(cmd,"recovery",7)==0){
       writel(WILLOW_BOOT_RECOVERY, S5P_INFORM5);
     }
-    else if(strncmp(cmd,"mmc_recovery",11)==0){
-      writel(WILLOW_BOOT_MMC_RECOVERY, S5P_INFORM5);
+    else if(strncmp(cmd,"hotkey_update",13)==0){
+      writel(WILLOW_BOOT_HOTKEY_UPDATE, S5P_INFORM5);
     }
     else if(strncmp(cmd,"FACTORYTEST_L",13)==0){
       writel(WILLOW_BOOT_FACTORYTEST_L, S5P_INFORM5);
@@ -1468,7 +1498,6 @@ static struct regulator_init_data __initdata max77686_ldo6_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
-		.boot_on 	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2241,7 +2270,20 @@ static void sensor_gpio_init(void){
     gpio_free(EXYNOS4_GPX3(6));
 }
 
-static struct i2c_board_info i2c_devs2[] __initdata = {
+static struct i2c_board_info i2c_devs2_DVT[] __initdata = {
+#ifdef CONFIG_VIDEO_TVOUT
+	{
+		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
+	},
+#endif
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {	//DVT
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    },
+#endif
+};
+
+static struct i2c_board_info i2c_devs2_MVT[] __initdata = {
 #ifdef CONFIG_VIDEO_TVOUT
 	{
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
@@ -2258,64 +2300,117 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 	},
 };
 
-static struct i2c_board_info i2c_devs4[] __initdata = {
-#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
-    {
-        I2C_BOARD_INFO("accelerometer", 0x38),
-    }
+static struct i2c_board_info i2c_devs4_DVT[] __initdata = {
+#ifdef CONFIG_INPUT_YAS_MAGNETOMETER
+	{
+        I2C_BOARD_INFO("geomagnetic", 0x2e),
+	},
 #endif
 };
+
+static struct i2c_board_info i2c_devs4_MVT[] __initdata = {
+#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
+    {	//MVT
+        I2C_BOARD_INFO("accelerometer", 0x38),
+    },
+#endif
+};
+
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S) || defined(CONFIG_TOUCHSCREEN_FOCALTECH_I2C)
+int get_touch_ic_check(void)
+{
+	return touch_ic_check;
+}
+EXPORT_SYMBOL(get_touch_ic_check);
+
+void set_touch_ic_check(int value )
+{
+	touch_ic_check = value;
+}
+EXPORT_SYMBOL(set_touch_ic_check);
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
-static struct regulator *touch_ldo;
+
+int touch_bootst_ctrl(int onoff)
+{
+	int err;
+	// touch gpb4
+
+	err = gpio_request(EXYNOS4212_GPM3(3), "tsp_bootst");
+	if (err<0) {
+		printk("[touch_bootst_ctrl] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
+		return err;
+	}else {
+		gpio_direction_output(EXYNOS4212_GPM3(3), onoff);
+    }		
+	
+	gpio_free(EXYNOS4212_GPM3(3));
+
+	return 0;
+}
+EXPORT_SYMBOL(touch_bootst_ctrl);
+
+extern int focaltech_touch_reset(int onoff);
 
 int touch_reset(int onoff)
 {
 	int err;
 
-	if(onoff)
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_HIGH, "TOUCH_RESET");
-	else
-		err = gpio_request_one(EXYNOS4_GPB(4), GPIOF_OUT_INIT_LOW, "TOUCH_RESET");		
-	if (err) {
-		printk("[FocalTech] Error (L:%d), %s() - gpio_request(GPIO_TS_RESET) failed (err=%d)\n", __LINE__, __func__, err);
-	}
+	err = gpio_request(EXYNOS4_GPB(4), "EXYNOS4_GPB(4)");
+	if (err<0) {
+		printk("[touch_reset] Error (L:%d), %s() - gpio_request(EXYNOS4_GPB(4)) failed (err=%d)\n", __LINE__, __func__, err);
+		return err;
+	}else {
+		gpio_direction_output(EXYNOS4_GPB(4), onoff);
+    }		
 	gpio_free(EXYNOS4_GPB(4));
- 
+
 	return 0;
 }
 
 void touch_on(void)
 {
 	int err=0;
-	
-	printk("[ATMEL] TS_POWER ON\n");
+	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
+	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
 
-  //touch_ldo = regulator_get(NULL, "vdd_tsp");
-		
-	//regulator_enable(touch_ldo);
+	/* ------------ Power ON ------------
+	1. Reset Low
+	2. VDD 1.8   vdd_tsp_1v8 (LDO6)
+	3. AVDD 2.8V  ==> TSP3.0 enable  (vdd_tsp)LDO26
+	4. XVDD  GPM3_3
+	5. mdelay(5)
+	6. Reset High
+	*/
+
+	ATMEL_log("[ATMEL] TS_POWER ON___________\n");
 
 	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);  // Interrupt
 	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_UP);
+	touch_bootst_ctrl(0); // xvdd off 
+	touch_reset(0);
 
-    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
-    if(err) {
-        printk(KERN_ERR "failed to request 1664_reset\n");
-    }
-	mdelay(10);
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT); //reset
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	msleep(100);
+	err=	regulator_enable(tsp_vdd3v8);
+	if (err)
+		ATMEL_log("[ATMEL] _____ tsp_vdd3v8 err ..... \n");
+	
+	ATMEL_log("[ATMEL] tsp_vdd1v8 ON___________\n");
+	
+	err=	regulator_enable(tsp_vdd1v8);
+	if (err)
+		ATMEL_log("[ATMEL] _____ tsp_vdd1v8 err ..... \n");
+
 	mdelay(100);
-	gpio_set_value(EXYNOS4_GPB(4), 1);
+	
+	touch_reset(1);
 	mdelay(150);
+	ATMEL_log("[ATMEL] touch_reset ON 1___________\n");
 
-	gpio_free(EXYNOS4_GPB(4));
-	
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE); //interrupt
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_SFN(0xf));
+	regulator_put(tsp_vdd1v8);
+	regulator_put(tsp_vdd3v8);
 	mdelay(40);
-	
-	//regulator_put(touch_ldo);
 	
 }
 
@@ -2323,30 +2418,36 @@ void touch_on(void)
 void touch_off(void)
 {
 	int err=0;
+	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
+	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
+	
+   /*	    ------------ Power OFF ------------
+	1. XVDD 
+	2. AVDD 2.8V  ==> TSP3.0 enable
+	3. VDD 1.8 
+	4. mdelay(5)
+	5. Reset Low
+	*/
 
-	printk("[ATMEL] TS_POWER OFF\n");
-  //touch_ldo = regulator_get(NULL, "vdd_tsp");
+	touch_bootst_ctrl(0); // xvdd off 
 
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+	ATMEL_log("[ATMEL] TS_POWER OFF ___________\n");
+	
+	if (regulator_is_enabled(tsp_vdd3v8))
+		regulator_disable(tsp_vdd3v8);
+	mdelay(5);
 
-    err = gpio_request(EXYNOS4_GPB(4), "1664_reset");
-    if(err) {
-        printk(KERN_ERR "failed to request 1664_reset\n");
-    }
-		
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	if (regulator_is_enabled(tsp_vdd1v8))
+		regulator_disable(tsp_vdd1v8);
 
-	//if (regulator_is_enabled(touch_ldo))
-		//regulator_disable(touch_ldo);
-	gpio_free(EXYNOS4_GPB(4));
+	mdelay(10);
 
-	//if (regulator_is_enabled(touch_ldo))
-		//regulator_disable(touch_ldo);
+	touch_reset(0);
 
-	//regulator_put(touch_ldo);
+	mdelay(100);	
+
+	regulator_put(tsp_vdd1v8);	
+	regulator_put(tsp_vdd3v8);		
 
 }
 
@@ -2373,37 +2474,22 @@ static struct mxt_platform_data atmel1664_touch_platform_data = {
 };
 #endif
 
-int touch_bootst_ctrl(int onoff)
-{
-	int err;
-	// touch gpb4
-
-	if(onoff)
-		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_HIGH, "tsp_bootst");
-	else
-		err = gpio_request_one(EXYNOS4212_GPM3(3), GPIOF_OUT_INIT_LOW, "tsp_bootst");		
-	
-	if (err) {
-		printk("[ATMEL] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
-		//return err;
-	}
-	gpio_free(EXYNOS4212_GPM3(3));
-	return 0;
-}
-EXPORT_SYMBOL(touch_bootst_ctrl);
-
-
 static struct i2c_board_info i2c_devs5[] __initdata = {
-	{
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
+	{
+
         I2C_BOARD_INFO("ft5x0x_ts", (0x70>>1)),
+	},
 #endif
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
+	{
 		I2C_BOARD_INFO("atmel_1664", 0x4a),
 		.platform_data = &atmel1664_touch_platform_data,
 		.irq		= IRQ_EINT(4),
-#endif 
 	},
+#endif 
+
 };
 
 #ifdef CONFIG_INPUT_L3G4200D_GYR
@@ -3108,10 +3194,14 @@ static void __set_flite_camera_config(struct exynos_platform_flite *data,
 
 static void __init smdk4x12_set_camera_flite_platdata(void)
 {
-	int flite0_cam_index = 0;
+	//int flite0_cam_index = 0;
 	int flite1_cam_index = 0;
 
-	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
+#ifdef CONFIG_VIDEO_AS0260
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &as0260;
+#endif
+
+//	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
 	__set_flite_camera_config(&exynos_flite1_default_data, 0, flite1_cam_index);
 }
 #endif
@@ -3528,13 +3618,19 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
 	s3c_i2c2_set_platdata(NULL);
-	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
+		i2c_register_board_info(2, i2c_devs2_DVT, ARRAY_SIZE(i2c_devs2_DVT));
+	else
+		i2c_register_board_info(2, i2c_devs2_MVT, ARRAY_SIZE(i2c_devs2_MVT));
 
 	s3c_i2c3_set_platdata(NULL);
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
-	i2c_register_board_info(4, i2c_devs4, ARRAY_SIZE(i2c_devs4));
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
+		i2c_register_board_info(4, i2c_devs4_DVT, ARRAY_SIZE(i2c_devs4_DVT));
+	else
+		i2c_register_board_info(4, i2c_devs4_MVT, ARRAY_SIZE(i2c_devs4_MVT));
 
 	s3c_i2c5_set_platdata(NULL);
 	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
