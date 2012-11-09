@@ -31,7 +31,7 @@
 #define FOR_DEBUGGING_TEST_DOWNLOADFW_BIN 0
 #define ITDEV   1
 #define SHOW_COORDINATE 0
-#define DEBUG_INFO     1
+#define DEBUG_INFO     0
 /*#######################################*/
 
 #define MXT_SW_RESET_TIME               300             /* msec */

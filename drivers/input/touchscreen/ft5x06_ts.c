@@ -69,6 +69,9 @@ static struct i2c_client *this_client;
 
 static struct regulator *touch_ldo;
 
+int check_touch_power=0;
+int check_used_touch_ldo=0;
+
 struct ts_event {
     u16 au16_x[CFG_MAX_TOUCH_POINTS];              //x coordinate
     u16 au16_y[CFG_MAX_TOUCH_POINTS];              //y coordinate
@@ -122,7 +125,7 @@ int check_suspend=0;
 extern void set_touch_autoCal(int Setvalue);
 //void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_value);
 extern void s3c_i2c5_force_stop(void);
-extern void t10s_i2c_clockrate(int i2c_num);
+//extern void t10s_i2c_clockrate(int i2c_num);
 extern int s3c24xx_i2c_set(int num, int slave, int setfreq);
 #endif
 
@@ -325,6 +328,9 @@ void focaltech_touch_on(void)
 	focaltech_touch_reset();
 #endif
 	check_touch_emergency_off=0;
+
+	check_touch_power=1;
+
 	printk("[FocalTech] INIT RESET ON\n");
 }
 
@@ -332,21 +338,25 @@ void focaltech_touch_on(void)
 void focaltech_touch_off(void)
 {
     //int err;
-	printk("[FocalTech] TS_POWER OFF\n");
+	if(check_touch_power==1)    
+	{
+			printk("[FocalTech] TS_POWER OFF\n");
 
-	//TS_RESET low
+			//TS_RESET low
 
-   focaltech_touch_reset(0);
+		   focaltech_touch_reset(0);
 
-//	printk("[FocalTech] TS_RESET Low\n");
+		//	printk("[FocalTech] TS_RESET Low\n");
 #if defined(FEATURE_TW_TOUCH_POWER_SEQ)
-   msleep(1);
-	focaltech_interrupt_low_gpio();
+		   msleep(1);
+			focaltech_interrupt_low_gpio();
 #endif
 
-	if (regulator_is_enabled(touch_ldo))
-		regulator_disable(touch_ldo);
-    check_touch_emergency_off=1;
+			if (regulator_is_enabled(touch_ldo))
+				regulator_disable(touch_ldo);
+		    check_touch_emergency_off=1;
+		check_touch_power=0;				
+	}
 }
 
 /***********************************************************************************************
@@ -2856,6 +2866,8 @@ exit_irq_request_failed:
 	destroy_workqueue(ft5x0x_ts->ts_workqueue);
 exit_create_singlethread:
 	printk("==singlethread error =\n");
+	s3c_i2c5_force_stop();
+	
 	i2c_set_clientdata(client, NULL);
 	kfree(ft5x0x_ts);
 	set_touch_ic_check(0);
@@ -2879,6 +2891,12 @@ static int __devexit ft5x0x_ts_remove(struct i2c_client *client)
 {
 	struct ft5x0x_ts_data *ft5x0x_ts;
 	printk("==ft5x0x_ts_remove=\n");
+
+	focaltech_touch_off();
+
+	if(check_used_touch_ldo==1)
+		regulator_put(touch_ldo);
+	
 	ft5x0x_ts = i2c_get_clientdata(client);
 	unregister_early_suspend(&ft5x0x_ts->early_suspend);
 //	free_irq(client->irq, ft5x0x_ts);
@@ -2890,6 +2908,7 @@ static int __devexit ft5x0x_ts_remove(struct i2c_client *client)
 	destroy_workqueue(ft5x0x_ts->ts_workqueue);
 	i2c_set_clientdata(client, NULL); 
 //	del_timer(&test_timer);
+
 	return 0;
 }
 
@@ -2962,13 +2981,19 @@ static int __init ft5x0x_ts_init(void)
 {
 	int ret;
 	printk("==ft5x0x_ts_init==\n");
+
+	check_used_touch_ldo=0;
+	check_touch_power=0;
 	
 #ifdef  FIXED_TEMPORARY_SUSPEND_BUG
     suspend_flag = 0;
 #endif
-    touch_ldo = regulator_get(NULL, "vdd_tsp");
-    focaltech_touch_on();
 
+    touch_ldo = regulator_get(NULL, "vdd_tsp");
+	ret=regulator_set_voltage(touch_ldo, 3000000, 3000000);
+
+    focaltech_touch_on();
+	check_used_touch_ldo=1;
 	ret = i2c_add_driver(&ft5x0x_ts_driver);
 	printk("ret=%d\n",ret);
 
