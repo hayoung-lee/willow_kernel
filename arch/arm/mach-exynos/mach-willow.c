@@ -626,23 +626,35 @@ int as0260_power_ctrl(int ctrl)
 
 		mdelay(10);
 
+		err=regulator_set_voltage(camera_vddc, 1900000, 1900000);
+		if (err)
+			printk("[AS0260] _____ camera_vddc enable  regulator_set_voltage err ..... \n");
+
 		err=	regulator_enable(camera_vddc);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddc err ..... \n");
 
 		mdelay(100);  // 150
 
+		err=regulator_set_voltage(camera_vddi, 1900000, 1900000);
+		if (err)
+			printk("[AS0260] _____ camera_vddi enable  regulator_set_voltage err ..... \n");
+		
 		err=	regulator_enable(camera_vddi);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddi err ..... \n");
 		
 		mdelay(30);  // 30
 
+		err=regulator_set_voltage(camera_vdda, 2900000, 2900000);
+		if (err)
+			printk("[AS0260] _____ camera_vdda enable  regulator_set_voltage err ..... \n");
+		
 		err=	regulator_enable(camera_vdda);
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(100);  //50
+		mdelay(50);  //50
 
 		//as0260_camera_eclk_ctrl(1);
 	} else {
@@ -678,7 +690,7 @@ static struct as0260_platform_data as0260_plat = {
 	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
 #ifdef  MCLK_23MHZ
-	.freq = 23000000,
+	.freq = 23000000,  //23000000
 #else
 	.freq = 24000000,
 #endif	
@@ -703,7 +715,7 @@ static struct s3c_platform_camera as0260= {
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
 #ifdef  MCLK_23MHZ
-	.clk_rate = 23000000,
+	.clk_rate = 23000000, //23000000
 #else
 	.clk_rate = 24000000,
 #endif	
@@ -735,7 +747,7 @@ static struct s3c_platform_camera as0260= {
 static struct i2c_gpio_platform_data i2c9_platdata = {
 	.scl_pin = EXYNOS4212_GPM4(0),
 	.sda_pin = EXYNOS4212_GPM4(1),
-	.udelay = 5,  //250Mhz
+	.udelay = 3,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
 	.scl_is_output_only = 0,
@@ -1192,6 +1204,9 @@ static struct regulator_consumer_supply max77686_buck4[] = {
 		REGULATOR_SUPPLY("vdd_g3d", "mali_dev.0"),
 };
 
+static struct regulator_consumer_supply max77686_buck6 =
+REGULATOR_SUPPLY("vdd_buck6", NULL);
+
 static struct regulator_consumer_supply max77686_buck7 =
 REGULATOR_SUPPLY("vdd_in235", NULL);
 
@@ -1373,6 +1388,23 @@ static struct regulator_init_data max77686_buck4_data = {
 	.consumer_supplies = max77686_buck4,
 };
 
+static struct regulator_init_data max77686_buck6_data = {
+	.constraints = {
+		.name = "vdd buck6",
+		.min_uV = 2000000,
+		.max_uV = 2000000,
+		.apply_uV	= 1,
+		.boot_on = 1,
+		//.always_on	= 1,
+		.state_mem = {
+			.disabled	= 1,
+			.enabled 	= 0,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck6,
+};
+
 static struct regulator_init_data max77686_buck7_data = {
 	.constraints = {
 		.name = "vdd_in235 range",
@@ -1480,9 +1512,9 @@ static struct regulator_init_data __initdata max77686_ldo5_data = {
 	.constraints	= {
 		.name		= "vdd_cam_io range",
 		.min_uV		= 1800000,
-		.max_uV		= 1800000,
+		.max_uV		= 1900000,
 		.apply_uV	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 		.state_mem	= {
 			.disabled	= 1,
 			.enabled	= 0,
@@ -1680,9 +1712,9 @@ static struct regulator_init_data __initdata max77686_ldo17_data = {
 	.constraints	= {
 		.name		= "vdd_cam range",
 		.min_uV		= 2800000,
-		.max_uV		= 2800000,
+		.max_uV		= 2900000,
 		.apply_uV	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 		.state_mem	= {
 			.disabled	= 1,
 			.enabled	= 0,
@@ -1731,9 +1763,9 @@ static struct regulator_init_data __initdata max77686_ldo21_data = {
 	.constraints	= {
 		.name		= "vdd_cam_core range",
 		.min_uV		= 1800000,
-		.max_uV		= 1800000,
+		.max_uV		= 1900000,
 		.apply_uV	= 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 		.state_mem	= {
 			.disabled	= 1,
 			.enabled	= 0,
@@ -1861,6 +1893,7 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_BUCK2, &max77686_buck2_data,},
 	{MAX77686_BUCK3, &max77686_buck3_data,},
 	{MAX77686_BUCK4, &max77686_buck4_data,},
+	{MAX77686_BUCK6, &max77686_buck6_data,},
 	{MAX77686_BUCK7, &max77686_buck7_data,},
 	{MAX77686_BUCK8, &max77686_buck8_data,},
 	{MAX77686_LDO1, &max77686_ldo1_data,},
@@ -1922,6 +1955,9 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
+
+	[MAX77686_BUCK6] = {MAX77686_BUCK6, MAX77686_OPMODE_NORMAL},
+
 	[MAX77686_BUCK7] = {MAX77686_BUCK7, MAX77686_OPMODE_NORMAL},
 	[MAX77686_BUCK8] = {MAX77686_BUCK8, MAX77686_OPMODE_NORMAL},
 };
@@ -2369,85 +2405,137 @@ int touch_reset(int onoff)
 	return 0;
 }
 
+void touch_i2c_init(void)
+{
+		s3c_gpio_cfgall_range(EXYNOS4_GPB(2), 2,
+			S3C_GPIO_SFN(3), S3C_GPIO_PULL_UP);
+}
+
+void touch_interrupt_init(void)
+{
+	int gpio;
+
+	/* TOUCH_INT: XEINT_4 */
+	gpio = EXYNOS4_GPX0(4);
+	gpio_request(gpio, "TOUCH_INT");
+	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+}
+
+void touch_interrupt_low_gpio(void)
+{
+    // Touch_int gpx0_4
+	int gpio;
+
+	gpio = EXYNOS4_GPX0(4);
+	gpio_request(gpio, "TOUCH_INT");
+	s3c_gpio_cfgpin(gpio, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+}
+
 void touch_on(void)
 {
 	int err=0;
 	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
-	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
+	struct regulator *tsp_vdd3v3 = regulator_get(NULL, "vdd_tsp");
 
 	/* ------------ Power ON ------------
 	1. Reset Low
 	2. VDD 1.8   vdd_tsp_1v8 (LDO6)
 	3. AVDD 2.8V  ==> TSP3.0 enable  (vdd_tsp)LDO26
 	4. XVDD  GPM3_3
-	5. mdelay(5)
+	5. mdelay(1)
 	6. Reset High
+	7. HW Reset Time 300 <
 	*/
-
+	
 	ATMEL_log("[ATMEL] TS_POWER ON___________\n");
+	/* touch reset pin */
+	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4_GPB(4), 0);
 
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);  // Interrupt
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_UP);
-	touch_bootst_ctrl(0); // xvdd off 
-	touch_reset(0);
+	/* touch xvdd en pin */
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4212_GPM3(3), 0);
 
-	msleep(100);
-	err=	regulator_enable(tsp_vdd3v8);
-	if (err)
-		ATMEL_log("[ATMEL] _____ tsp_vdd3v8 err ..... \n");
-	
+	//err=regulator_set_voltage(tsp_vdd3v3, 3300000, 3300000);
+	//if (err)
+		//ATMEL_log("[ATMEL] _____ regulator_set_voltage tsp_vdd3v3 err ..... \n");
+	//touch_bootst_ctrl(0); // xvdd off 
+	//touch_reset(0);
+	//msleep(50);
+
 	ATMEL_log("[ATMEL] tsp_vdd1v8 ON___________\n");
-	
 	err=	regulator_enable(tsp_vdd1v8);
 	if (err)
 		ATMEL_log("[ATMEL] _____ tsp_vdd1v8 err ..... \n");
-
-	mdelay(100);
-	
-	touch_reset(1);
-	mdelay(150);
-	ATMEL_log("[ATMEL] touch_reset ON 1___________\n");
-
 	regulator_put(tsp_vdd1v8);
-	regulator_put(tsp_vdd3v8);
-	mdelay(40);
-	
-}
 
+	ATMEL_log("[ATMEL] tsp_vdd3v3 ON___________\n");
+	err=	regulator_enable(tsp_vdd3v3);
+	if (err)
+		ATMEL_log("[ATMEL] _____ tsp_vdd3v8 err ..... \n");
+	regulator_put(tsp_vdd3v3);
+
+	/* enable touch xvdd */
+	//gpio_set_value(EXYNOS4212_GPM3(3), 1);
+
+	/* reset ic */
+	mdelay(1);
+	gpio_set_value(EXYNOS4_GPB(4), 1);
+	
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+
+	/* HW RESET Time  */
+	msleep(300);
+
+}
 
 void touch_off(void)
 {
-	int err=0;
+	//int err=0;
 	struct regulator *tsp_vdd1v8 = regulator_get(NULL, "vdd_tsp_1v8");    
-	struct regulator *tsp_vdd3v8 = regulator_get(NULL, "vdd_tsp");
-	
+	struct regulator *tsp_vdd3v3 = regulator_get(NULL, "vdd_tsp");
+
    /*	    ------------ Power OFF ------------
-	1. XVDD 
-	2. AVDD 2.8V  ==> TSP3.0 enable
-	3. VDD 1.8 
-	4. mdelay(5)
-	5. Reset Low
+	1. AVDD 2.8V  ==> TSP3.0 enable 
+	2. VDD 1.8 
+	3. mdelay(10);
+	4. touch interrupt pin 
+	5. touch reset pin
+	6. touch xvdd en pin 
 	*/
 
-	touch_bootst_ctrl(0); // xvdd off 
+	//touch_bootst_ctrl(0); // xvdd off 
 
 	ATMEL_log("[ATMEL] TS_POWER OFF ___________\n");
 	
-	if (regulator_is_enabled(tsp_vdd3v8))
-		regulator_disable(tsp_vdd3v8);
-	mdelay(5);
+	if (regulator_is_enabled(tsp_vdd3v3))
+		regulator_force_disable(tsp_vdd3v3);
+	regulator_put(tsp_vdd3v3);		
 
 	if (regulator_is_enabled(tsp_vdd1v8))
-		regulator_disable(tsp_vdd1v8);
+		regulator_force_disable(tsp_vdd1v8);
+	regulator_put(tsp_vdd1v8);	
 
 	mdelay(10);
 
-	touch_reset(0);
+	/* touch interrupt pin */
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);
+	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
 
-	mdelay(100);	
+	/* touch reset pin */
+	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4_GPB(4), 0);
 
-	regulator_put(tsp_vdd1v8);	
-	regulator_put(tsp_vdd3v8);		
+	/* touch xvdd en pin */
+	//s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
+	//s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
+	//gpio_set_value(EXYNOS4212_GPM3(3), 0);
 
 }
 
