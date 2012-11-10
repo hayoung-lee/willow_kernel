@@ -27,9 +27,7 @@ MODULES = alps-input.o hscdtd007a_i2c.o bma150_i2c.o
 # Kernel Root Directory
 #ROOTDIR = $(ANDROID_R)/kernel-beagleboard-xm
 #ROOTDIR = $(MY_WORK)/kernel
-#ROOTDIR = 'pwd'../../../..
-ROOTDIR = /home/cyjeon/project/willow/willow_kernel/
-
+ROOTDIR = $('pwd'../../../..)
 
 ##############################################
 
@@ -58,7 +56,7 @@ obj-y := $(MODULES)
 
 else
 
-include $(ROOTDIR)/.config
+include $(ROOTDIR).config
 
 all: modules
 
