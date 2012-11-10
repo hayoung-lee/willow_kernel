@@ -681,6 +681,7 @@ int as0260_power_ctrl(int ctrl)
 	return 0;
 }
 
+//#define MCLK_22MHZ
 #define MCLK_23MHZ
 
 static struct as0260_platform_data as0260_plat = {
@@ -689,8 +690,10 @@ static struct as0260_platform_data as0260_plat = {
 	.max_width = WILLOW_PREVIEW_MAX_W,//960,
 	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
-#ifdef  MCLK_23MHZ
-	.freq = 23000000,  //23000000
+#if defined(MCLK_22MHZ)
+	.freq = 22000000,  //23000000
+#elif defined(MCLK_23MHZ)
+	.freq = 23500000,  //23000000
 #else
 	.freq = 24000000,
 #endif	
@@ -714,8 +717,11 @@ static struct s3c_platform_camera as0260= {
 	.info		= &as0260_i2c_info,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
-#ifdef  MCLK_23MHZ
-	.clk_rate = 23000000, //23000000
+
+#if defined(MCLK_22MHZ)
+	.clk_rate = 22000000, 
+#elif defined(MCLK_23MHZ)
+	.clk_rate = 23500000, 
 #else
 	.clk_rate = 24000000,
 #endif	
@@ -747,7 +753,7 @@ static struct s3c_platform_camera as0260= {
 static struct i2c_gpio_platform_data i2c9_platdata = {
 	.scl_pin = EXYNOS4212_GPM4(0),
 	.sda_pin = EXYNOS4212_GPM4(1),
-	.udelay = 3,  //250Mhz
+	.udelay = 2,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
 	.scl_is_output_only = 0,
@@ -2460,9 +2466,6 @@ void touch_on(void)
 	s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
 	gpio_set_value(EXYNOS4212_GPM3(3), 0);
 
-	//err=regulator_set_voltage(tsp_vdd3v3, 3300000, 3300000);
-	//if (err)
-		//ATMEL_log("[ATMEL] _____ regulator_set_voltage tsp_vdd3v3 err ..... \n");
 	//touch_bootst_ctrl(0); // xvdd off 
 	//touch_reset(0);
 	//msleep(50);
@@ -2473,6 +2476,10 @@ void touch_on(void)
 		ATMEL_log("[ATMEL] _____ tsp_vdd1v8 err ..... \n");
 	regulator_put(tsp_vdd1v8);
 
+	//err=regulator_set_voltage(tsp_vdd3v3, 3300000, 3300000);
+	//if (err)
+		//ATMEL_log("[ATMEL] _____ regulator_set_voltage tsp_vdd3v3 err ..... \n");
+
 	ATMEL_log("[ATMEL] tsp_vdd3v3 ON___________\n");
 	err=	regulator_enable(tsp_vdd3v3);
 	if (err)
@@ -2480,7 +2487,7 @@ void touch_on(void)
 	regulator_put(tsp_vdd3v3);
 
 	/* enable touch xvdd */
-	//gpio_set_value(EXYNOS4212_GPM3(3), 1);
+	gpio_set_value(EXYNOS4212_GPM3(3), 1);
 
 	/* reset ic */
 	mdelay(1);
@@ -2533,9 +2540,9 @@ void touch_off(void)
 	gpio_set_value(EXYNOS4_GPB(4), 0);
 
 	/* touch xvdd en pin */
-	//s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
-	//s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
-	//gpio_set_value(EXYNOS4212_GPM3(3), 0);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
+	gpio_set_value(EXYNOS4212_GPM3(3), 0);
 
 }
 
