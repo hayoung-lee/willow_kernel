@@ -2345,10 +2345,10 @@ static struct i2c_board_info i2c_devs4_DVT[] __initdata = {
 };
 
 static struct i2c_board_info i2c_devs4_MVT[] __initdata = {
-#ifdef CONFIG_INPUT_YAS_ACCELEROMETER
-    {	//MVT
-        I2C_BOARD_INFO("accelerometer", 0x38),
-    },
+#ifdef CONFIG_INPUT_ALPS
+	{
+		I2C_BOARD_INFO("accsns_i2c", 0x38),
+	}
 #endif
 };
 
@@ -2619,13 +2619,27 @@ static struct isl29023_i2c_platform_data isl29023_pdata = {
 	.irq_gpio = EXYNOS4_GPX2(2),
 };
 
-static struct i2c_board_info i2c_devs7[] __initdata = {
+static struct i2c_board_info i2c_devs7_DVT[] __initdata = {
 	{
 		I2C_BOARD_INFO("isl29023", 0x44),
 		//.irq = IRQ_EINT_GROUP(19,4),
 		.platform_data = &isl29023_pdata,
 	},
 };
+
+static struct i2c_board_info i2c_devs7_MVT[] __initdata = {
+	{
+		I2C_BOARD_INFO("isl29023", 0x44),
+		//.irq = IRQ_EINT_GROUP(19,4),
+		.platform_data = &isl29023_pdata,
+	},
+#ifdef CONFIG_INPUT_ALPS
+	{
+		I2C_BOARD_INFO("hscd_i2c", 0x0c),
+	},
+#endif
+};
+
 #endif
 
 #ifdef CONFIG_HAPTIC_ISA1200
@@ -3706,19 +3720,19 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
 	s3c_i2c2_set_platdata(NULL);
-	if(willow_get_hw_version() == WILLOW_HW_DVT)
-		i2c_register_board_info(2, i2c_devs2_DVT, ARRAY_SIZE(i2c_devs2_DVT));
-	else
+	if(willow_get_hw_version() == WILLOW_HW_MVT)
 		i2c_register_board_info(2, i2c_devs2_MVT, ARRAY_SIZE(i2c_devs2_MVT));
+	else
+		i2c_register_board_info(2, i2c_devs2_DVT, ARRAY_SIZE(i2c_devs2_DVT));
 
 	s3c_i2c3_set_platdata(NULL);
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
-	if(willow_get_hw_version() == WILLOW_HW_DVT)
-		i2c_register_board_info(4, i2c_devs4_DVT, ARRAY_SIZE(i2c_devs4_DVT));
-	else
+	if(willow_get_hw_version() == WILLOW_HW_MVT)
 		i2c_register_board_info(4, i2c_devs4_MVT, ARRAY_SIZE(i2c_devs4_MVT));
+	else
+		i2c_register_board_info(4, i2c_devs4_DVT, ARRAY_SIZE(i2c_devs4_DVT));
 
 	s3c_i2c5_set_platdata(NULL);
 	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
@@ -3727,7 +3741,10 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
 
 	//i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
-	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+	if(willow_get_hw_version() == WILLOW_HW_MVT)
+		i2c_register_board_info(7, i2c_devs7_MVT, ARRAY_SIZE(i2c_devs7_MVT));
+	else
+		i2c_register_board_info(7, i2c_devs7_DVT, ARRAY_SIZE(i2c_devs7_DVT));
 
 #if defined(CONFIG_HAPTIC_ISA1200) || defined(CONFIG_USBHUB_USB3503)
 #ifdef CONFIG_HAPTIC_ISA1200
