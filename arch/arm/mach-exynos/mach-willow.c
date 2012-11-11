@@ -2569,14 +2569,15 @@ static struct mxt_platform_data atmel1664_touch_platform_data = {
 };
 #endif
 
-static struct i2c_board_info i2c_devs5[] __initdata = {
+static struct i2c_board_info i2c_devs5_DVT[] __initdata = {
 #ifdef CONFIG_TOUCHSCREEN_FOCALTECH_I2C
 	{
-
         I2C_BOARD_INFO("ft5x0x_ts", (0x70>>1)),
 	},
 #endif
+};
 
+static struct i2c_board_info i2c_devs5_MVT[] __initdata = {
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
 	{
 		I2C_BOARD_INFO("atmel_1664", 0x4a),
@@ -2584,7 +2585,6 @@ static struct i2c_board_info i2c_devs5[] __initdata = {
 		.irq		= IRQ_EINT(4),
 	},
 #endif 
-
 };
 
 #ifdef CONFIG_INPUT_L3G4200D_GYR
@@ -3727,22 +3727,25 @@ static void __init willow_machine_init(void)
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
 	s3c_i2c2_set_platdata(NULL);
-	if(willow_get_hw_version() == WILLOW_HW_MVT)
-		i2c_register_board_info(2, i2c_devs2_MVT, ARRAY_SIZE(i2c_devs2_MVT));
-	else
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
 		i2c_register_board_info(2, i2c_devs2_DVT, ARRAY_SIZE(i2c_devs2_DVT));
+	else
+		i2c_register_board_info(2, i2c_devs2_MVT, ARRAY_SIZE(i2c_devs2_MVT));
 
 	s3c_i2c3_set_platdata(NULL);
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
-	if(willow_get_hw_version() == WILLOW_HW_MVT)
-		i2c_register_board_info(4, i2c_devs4_MVT, ARRAY_SIZE(i2c_devs4_MVT));
-	else
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
 		i2c_register_board_info(4, i2c_devs4_DVT, ARRAY_SIZE(i2c_devs4_DVT));
+	else
+		i2c_register_board_info(4, i2c_devs4_MVT, ARRAY_SIZE(i2c_devs4_MVT));
 
 	s3c_i2c5_set_platdata(NULL);
-	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
+		i2c_register_board_info(5, i2c_devs5_DVT, ARRAY_SIZE(i2c_devs5_DVT));
+	else
+		i2c_register_board_info(4, i2c_devs5_MVT, ARRAY_SIZE(i2c_devs5_MVT));
 
 	s3c_i2c6_set_platdata(NULL);
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
