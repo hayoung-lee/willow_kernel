@@ -3758,7 +3758,8 @@ static void __init willow_machine_init(void)
 	isa1200_init();
 #endif
 #ifdef CONFIG_USBHUB_USB3503
-    usb3503_init();
+	if(willow_get_hw_version() >= WILLOW_HW_MVT)
+		usb3503_init();
 #endif
 	i2c_register_board_info(8, i2c_devs8, ARRAY_SIZE(i2c_devs8));
 #endif
