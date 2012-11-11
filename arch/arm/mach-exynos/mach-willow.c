@@ -3745,7 +3745,7 @@ static void __init willow_machine_init(void)
 	if(willow_get_hw_version() == WILLOW_HW_DVT)
 		i2c_register_board_info(5, i2c_devs5_DVT, ARRAY_SIZE(i2c_devs5_DVT));
 	else
-		i2c_register_board_info(4, i2c_devs5_MVT, ARRAY_SIZE(i2c_devs5_MVT));
+		i2c_register_board_info(5, i2c_devs5_MVT, ARRAY_SIZE(i2c_devs5_MVT));
 
 	s3c_i2c6_set_platdata(NULL);
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
