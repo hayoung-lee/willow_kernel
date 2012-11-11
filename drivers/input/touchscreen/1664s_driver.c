@@ -133,6 +133,8 @@ static bool g_debug_switch;
 static u8 threshold;
 //static int firm_status_data;
 
+#define TOUCH_CAL_VER 2
+
 /* ATMEL CONFIG STRUCTURE Start */
 //static u8 firmware_latest[] = {0x5, 0x2};       /* version, build_version */
 //static gen_commandprocessor_t6_config_t t6_config= {0, };
@@ -174,6 +176,9 @@ struct mxt_runmode_registers_t runmode_regs = {0, };
 extern void set_touch_ic_check(int value );
 extern int get_touch_ic_check(void);
 
+extern void touch_s3c_i2c5_set_platdata(struct s3c2410_platform_i2c *pd, int check_value);
+
+
 int atmel_tsp_config[]=
 {
 #if 0
@@ -202,6 +207,7 @@ int atmel_tsp_config[]=
 	RESERVED_T255,
 #else
 	DEBUG_DIAGNOSTIC_T37,
+	SPT_SERIALDATACOMMAND_T68,
 	SPT_USERDATA_T38,
 	GEN_POWERCONFIG_T7,
 	GEN_ACQUISITIONCONFIG_T8,
@@ -221,6 +227,9 @@ int atmel_tsp_config[]=
 	PROCI_EXTRATOUCHSCREENDATA_T57,
 	SPT_TIMER_T61,
 	PROCG_NOISESUPPRESSION_T62,
+	PROCI_ACTIVESTYLUS_T63,	
+	PROCI_LENSBENDING_T65,
+	SPT_GOLDENREFERENCES_T66,
 	RESERVED_T255,
 #endif	
 };
@@ -288,13 +297,19 @@ int mxt_GEN_POWERCONFIG_T7(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             GEN_POWERCONFIG_T7, &obj_size, &obj_addr);
-	printk("mxt_GEN_POWERCONFIG_T7 obj_size=%d obj_addr=%d OBJECT_SIZE=4   OBJECT_ADDRESS=455 \n",obj_size,obj_addr );
+	//printk("mxt_GEN_POWERCONFIG_T7 obj_size=%d obj_addr=%d OBJECT_SIZE=4   OBJECT_ADDRESS=455 \n",obj_size,obj_addr );
 	memset(&t7_config, 0, sizeof(t7_config));
-
+#if TOUCH_CAL_VER==1
 	t7_config.nIDLEACQINT=255;
 	t7_config.nACTVACQINT=255;
-	t7_config.nACTV2IDLETO=5;
-	t7_config.nCFG=0;
+	t7_config.nACTV2IDLETO=5;  // 5
+	t7_config.nCFG=0; // 0
+#elif  TOUCH_CAL_VER==2
+	t7_config.nIDLEACQINT=255;
+	t7_config.nACTVACQINT=255;
+	t7_config.nACTV2IDLETO=64;  // 5
+	t7_config.nCFG=3; // 0
+#endif
 
 	error = mxt_write_block(client,
 			obj_addr, obj_size, (u8 *)&t7_config);
@@ -317,22 +332,22 @@ int mxt_GEN_ACQUISITIONCONFIG_T8(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             GEN_ACQUISITIONCONFIG_T8, &obj_size, &obj_addr);
-	printk("mxt_GEN_ACQUISITIONCONFIG_T8 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=459 \n",obj_size,obj_addr );
+	//printk("mxt_GEN_ACQUISITIONCONFIG_T8 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=459 \n",obj_size,obj_addr );
 	memset(&t8_config, 0, sizeof(t8_config));
 
-#if 0
-	t8_config.nCHRGTIME=150;
+#if TOUCH_CAL_VER==1
+	t8_config.nCHRGTIME=100;  // 100
 	t8_config.nATCHDRIFT=0;
-	t8_config.nTCHDRIFT=5;
-	t8_config.nDRIFTST=1;
+	t8_config.nTCHDRIFT=20;
+	t8_config.nDRIFTST=20;
 	t8_config.nTCHAUTOCAL=0;
 	t8_config.nSYNC=0;
 	t8_config.nATCHCALST=0;
-	t8_config.nATCHCALSTHR=35;
+	t8_config.nATCHCALSTHR=1;
 	t8_config.nATCHFRCCALTHR=0;
 	t8_config.nATCHFRCCALRATIO=0;
-#else
-	t8_config.nCHRGTIME=100;
+#elif  TOUCH_CAL_VER==2
+	t8_config.nCHRGTIME=120;  // 100
 	t8_config.nATCHDRIFT=0;
 	t8_config.nTCHDRIFT=20;
 	t8_config.nDRIFTST=20;
@@ -365,7 +380,7 @@ int mxt_TOUCH_MULTITOUCHSCREEN_T9(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             TOUCH_MULTITOUCHSCREEN_T9, &obj_size, &obj_addr);
-	printk("mxt_TOUCH_MULTITOUCHSCREEN_T9 obj_size=%d obj_addr=%d  OBJECT_SIZE=36 OBJECT_ADDRESS=469  \n",obj_size,obj_addr );
+	//printk("mxt_TOUCH_MULTITOUCHSCREEN_T9 obj_size=%d obj_addr=%d  OBJECT_SIZE=36 OBJECT_ADDRESS=469  \n",obj_size,obj_addr );
 	memset(&t9_config, 0, sizeof(t9_config));
 #if 0
 	t9_config.nCTRL=139;
@@ -409,20 +424,20 @@ int mxt_TOUCH_MULTITOUCHSCREEN_T9(struct mxt_data *mxt)
 	t9_config.nXSIZE=32;
 	t9_config.nYSIZE=52;
 	t9_config.nAKSCFG=0;
-	t9_config.nBLEN=123;
-	t9_config.nTCHTHR=40;
+	t9_config.nBLEN=150; //	t9_config.nBLEN=123;
+	t9_config.nTCHTHR=60;  // 	t9_config.nTCHTHR=40;
 	t9_config.nTCHDI=2;
-	t9_config.nORIENT=5;
-	t9_config.nMRGTIMEOUT=0;
-	t9_config.nMOVHYSTI=131;
+	t9_config.nORIENT=3;  // 	t9_config.nORIENT=5;  x and y change
+	t9_config.nMRGTIMEOUT=20;  // 	t9_config.nMRGTIMEOUT=0;
+	t9_config.nMOVHYSTI=0; // 	t9_config.nMOVHYSTI=131;
 	t9_config.nMOVHYSTN=0;
 	t9_config.nMOVFILTER=0;
-	t9_config.nNUMTOUCH=16;
+	t9_config.nNUMTOUCH=10;  // 	t9_config.nNUMTOUCH=16;
 	t9_config.nMRGHYST=20;
 	t9_config.nMRGTHR=20;
-	t9_config.nAMPHYST=20;
-	t9_config.nXRANGE=1279;
-	t9_config.nYRANGE=799;
+	t9_config.nAMPHYST=0;  //	t9_config.nAMPHYST=20;
+	t9_config.nXRANGE=799; //
+	t9_config.nYRANGE=1279;
 	t9_config.nXLOCLIP=0;
 	t9_config.nXHICLIP=0;
 	t9_config.nYLOCLIP=0;
@@ -431,11 +446,11 @@ int mxt_TOUCH_MULTITOUCHSCREEN_T9(struct mxt_data *mxt)
 	t9_config.nXEDGEDIST=0;
 	t9_config.nYEDGECTRL=0;
 	t9_config.nYEDGEDIST=0;
-	t9_config.nJUMPLIMIT=15;
-	t9_config.nTCHHYST=25;
+	t9_config.nJUMPLIMIT=20; // 	t9_config.nJUMPLIMIT=15;
+	t9_config.nTCHHYST=15; //	t9_config.nTCHHYST=25;
 	t9_config.nXPITCH=0;
 	t9_config.nYPITCH=0;
-	t9_config.nNEXTTCHDI=2;
+	t9_config.nNEXTTCHDI=0;  //	t9_config.nNEXTTCHDI=2;
 	t9_config.nCFG=0;
 #endif
 	error = mxt_write_block(client, obj_addr,
@@ -469,21 +484,9 @@ int mxt_TOUCH_KEYARRAY_T15(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             TOUCH_KEYARRAY_T15, &obj_size, &obj_addr);
-	printk("mxt_TOUCH_KEYARRAY_T15 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=541\n",obj_size,obj_addr );
+	//printk("mxt_TOUCH_KEYARRAY_T15 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=541\n",obj_size,obj_addr );
 	memset(&t15_config, 0, sizeof(t15_config));
-#if 0
-	t15_config.nCTRL=0;
-	t15_config.nXORIGIN=0;
-	t15_config.nYORIGIN=0;
-	t15_config.nXSIZE=0;
-	t15_config.nYSIZE=0;
-	t15_config.nAKSCFG=0;
-	t15_config.nBLEN=0;
-	t15_config.nTCHTHR=0;
-	t15_config.nTCHDI=0;
-	t15_config.nRESERVED[0]=0;
-	t15_config.nRESERVED[1]=0;
-#else
+#if TOUCH_CAL_VER==1
 	t15_config.nCTRL=0;
 	t15_config.nXORIGIN=8;
 	t15_config.nYORIGIN=51;
@@ -493,6 +496,18 @@ int mxt_TOUCH_KEYARRAY_T15(struct mxt_data *mxt)
 	t15_config.nBLEN=123;
 	t15_config.nTCHTHR=40;
 	t15_config.nTCHDI=2;
+	t15_config.nRESERVED[0]=0;
+	t15_config.nRESERVED[1]=0;
+#elif TOUCH_CAL_VER==2
+	t15_config.nCTRL=0;
+	t15_config.nXORIGIN=0;
+	t15_config.nYORIGIN=0;
+	t15_config.nXSIZE=0;
+	t15_config.nYSIZE=0;
+	t15_config.nAKSCFG=0;
+	t15_config.nBLEN=0;
+	t15_config.nTCHTHR=0;
+	t15_config.nTCHDI=0;
 	t15_config.nRESERVED[0]=0;
 	t15_config.nRESERVED[1]=0;
 #endif
@@ -517,13 +532,13 @@ int mxt_SPT_COMMSCONFIG_T18(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_COMMSCONFIG_T18, &obj_size, &obj_addr);
-	printk("mxt_SPT_COMMSCONFIG_T18 obj_size=%d obj_addr=%d  OBJECT_SIZE=2  OBJECT_ADDRESS=552 \n",obj_size,obj_addr );
+	//printk("mxt_SPT_COMMSCONFIG_T18 obj_size=%d obj_addr=%d  OBJECT_SIZE=2  OBJECT_ADDRESS=552 \n",obj_size,obj_addr );
 	memset(&t18_config, 0, sizeof(t18_config));
-#if 0
-	t18_config.nCTRL=0;
-	t18_config.nCOMMAND=0;
-#else
+#if TOUCH_CAL_VER==1
 	t18_config.nCTRL=4;
+	t18_config.nCOMMAND=0;
+#elif TOUCH_CAL_VER==2
+	t18_config.nCTRL=0;
 	t18_config.nCOMMAND=0;
 #endif
 	error = mxt_write_block(client, obj_addr,
@@ -547,7 +562,7 @@ int mxt_PROCI_ONETOUCHGESTUREPROCESSOR_T24(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_ONETOUCHGESTUREPROCESSOR_T24, &obj_size, &obj_addr);
-	printk("PROCI_ONETOUCHGESTUREPROCESSOR_T24 obj_size=%d obj_addr=%d OBJECT_SIZE=19  OBJECT_ADDRESS=554 \n",obj_size,obj_addr );
+	//printk("PROCI_ONETOUCHGESTUREPROCESSOR_T24 obj_size=%d obj_addr=%d OBJECT_SIZE=19  OBJECT_ADDRESS=554 \n",obj_size,obj_addr );
 	memset(&t24_config, 0, sizeof(t24_config));
 
 #if 0
@@ -599,24 +614,24 @@ int mxt_SPT_SELFTEST_T25(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_SELFTEST_T25, &obj_size, &obj_addr);
-	printk("mxt_SPT_SELFTEST_T25 obj_size=%d obj_addr=%d   OBJECT_SIZE=15  OBJECT_ADDRESS=592\n",obj_size,obj_addr );
+	//printk("mxt_SPT_SELFTEST_T25 obj_size=%d obj_addr=%d   OBJECT_SIZE=15  OBJECT_ADDRESS=592\n",obj_size,obj_addr );
 	memset(&t25_config, 0, sizeof(t25_config));
 
-#if 0
+#if TOUCH_CAL_VER==1
 	t25_config.nCTRL=0;
 	t25_config.nCMD=0;
-	t25_config.nUPSIGLIM[0]=0;
-	t25_config.nLOSIGLIM[0]=0;
+	t25_config.nUPSIGLIM[0]=28000;
+	t25_config.nLOSIGLIM[0]=20000;
 	t25_config.nUPSIGLIM[1]=0;
 	t25_config.nLOSIGLIM[1]=0;
 	t25_config.nUPSIGLIM[2]=0;
 	t25_config.nLOSIGLIM[2]=0;
 	t25_config.nPINDWELLUS=0;
-#else
+#elif TOUCH_CAL_VER==2
 	t25_config.nCTRL=0;
 	t25_config.nCMD=0;
-	t25_config.nUPSIGLIM[0]=28000;
-	t25_config.nLOSIGLIM[0]=20000;
+	t25_config.nUPSIGLIM[0]=0;
+	t25_config.nLOSIGLIM[0]=0;
 	t25_config.nUPSIGLIM[1]=0;
 	t25_config.nLOSIGLIM[1]=0;
 	t25_config.nUPSIGLIM[2]=0;
@@ -645,7 +660,7 @@ int mxt_PROCI_TWOTOUCHGESTUREPROCESSOR_T27(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_TWOTOUCHGESTUREPROCESSOR_T27, &obj_size, &obj_addr);
-	printk("PROCI_TWOTOUCHGESTUREPROCESSOR_T27 obj_size=%d obj_addr=%d   OBJECT_SIZE=7  OBJECT_ADDRESS=607\n",obj_size,obj_addr );
+	//printk("PROCI_TWOTOUCHGESTUREPROCESSOR_T27 obj_size=%d obj_addr=%d   OBJECT_SIZE=7  OBJECT_ADDRESS=607\n",obj_size,obj_addr );
 	memset(&t27_config, 0, sizeof(t27_config));
 
 	error = mxt_write_block(client, obj_addr,
@@ -675,10 +690,11 @@ int mxt_SPT_USERDATA_T38(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_USERDATA_T38, &obj_size, &obj_addr);
-	printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=64 OBJECT_ADDRESS=391\n",obj_size,obj_addr );
+	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=64 OBJECT_ADDRESS=391\n",obj_size,obj_addr );
 	memset(&t38_config, 0, sizeof(t38_config));
 
-
+	t38_config.nDATA[0]=TOUCH_CAL_VER;
+	
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t38_config);
 
@@ -691,6 +707,35 @@ int mxt_SPT_USERDATA_T38(struct mxt_data *mxt)
 	return 0;
 }
 
+
+int mxt_SPT_USERDATA_T38_read(struct mxt_data *mxt)
+
+{
+	struct i2c_client *client = mxt->client;
+	u16 obj_addr=0, obj_size=0;
+	int error=0;
+
+    get_object_info(copy_data,
+            SPT_USERDATA_T38, &obj_size, &obj_addr);
+	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=64 OBJECT_ADDRESS=391\n",obj_size,obj_addr );
+	memset(&t38_config, 0, sizeof(t38_config));
+
+	t38_config.nDATA[0]=TOUCH_CAL_VER;
+	
+	error = mxt_write_block(client, obj_addr,
+			obj_size, (u8 *)&t38_config);
+
+	if (error < 0) {
+		dev_err(&client->dev, "[TSP] mxt_write_block failed! "
+				"(%s, %d)\n", __func__, __LINE__);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+
+
 int mxt_DEBUG_DIAGNOSTIC_T37(struct mxt_data *mxt)
 
 {
@@ -700,7 +745,7 @@ int mxt_DEBUG_DIAGNOSTIC_T37(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             DEBUG_DIAGNOSTIC_T37, &obj_size, &obj_addr);
-	printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=130 OBJECT_ADDRESS=172\n",obj_size,obj_addr );
+	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=130 OBJECT_ADDRESS=172\n",obj_size,obj_addr );
 	memset(&t37_config, 0, sizeof(t37_config));
 
 
@@ -724,15 +769,21 @@ int mxt_PROCI_GRIPSUPPRESSION_T40(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_GRIPSUPPRESSION_T40, &obj_size, &obj_addr);
-	printk("mxt_PROCI_GRIPSUPPRESSION_T40 obj_size=%d obj_addr=%d  OBJECT_SIZE=5 OBJECT_ADDRESS=621 \n",obj_size,obj_addr );
+	//printk("mxt_PROCI_GRIPSUPPRESSION_T40 obj_size=%d obj_addr=%d  OBJECT_SIZE=5 OBJECT_ADDRESS=621 \n",obj_size,obj_addr );
 	memset(&t40_config, 0, sizeof(t40_config));
 
-#if 1
+#if TOUCH_CAL_VER==1
 	t40_config.nCTRL=0;
 	t40_config.nXLOGRIP=20;
 	t40_config.nXHIGRIP=20;
 	t40_config.nYLOGRIP=20;
 	t40_config.nYHIGRIP=20;
+#elif  TOUCH_CAL_VER==2
+	t40_config.nCTRL=0;
+	t40_config.nXLOGRIP=0;
+	t40_config.nXHIGRIP=0;
+	t40_config.nYLOGRIP=0;
+	t40_config.nYHIGRIP=0;
 #endif
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t40_config);
@@ -758,21 +809,10 @@ int mxt_PROCI_TOUCHSUPPRESSION_T42(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_TOUCHSUPPRESSION_T42, &obj_size, &obj_addr);
-	printk("mxt_PROCI_TOUCHSUPPRESSION_T42 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=631 \n",obj_size,obj_addr );
+	//printk("mxt_PROCI_TOUCHSUPPRESSION_T42 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=631 \n",obj_size,obj_addr );
 	memset(&t42_config, 0, sizeof(t42_config));
 
-#if 0
-	t42_config.nCTRL=0;
-	t42_config.nAPPRTHR=42;
-	t42_config.nMAXAPPRAREA=50;
-	t42_config.nMAXTCHAREA=50;
-	t42_config.nSUPSTRENGTH=127;
-	t42_config.nSUPEXTTO=0;
-	t42_config.nMAXNUMTCHS=0;
-	t42_config.nSHAPESTRENGTH=0;
-	t42_config.nSUPDIST=5;
-	t42_config.nDISTHYST=5;
-#else
+#if TOUCH_CAL_VER==1
 	t42_config.nCTRL=32;
 	t42_config.nAPPRTHR=20;
 	t42_config.nMAXAPPRAREA=0;
@@ -782,6 +822,17 @@ int mxt_PROCI_TOUCHSUPPRESSION_T42(struct mxt_data *mxt)
 	t42_config.nMAXNUMTCHS=17;
 	t42_config.nSHAPESTRENGTH=0;
 	t42_config.nSUPDIST=3;
+	t42_config.nDISTHYST=0;
+#elif  TOUCH_CAL_VER==2
+	t42_config.nCTRL=0;
+	t42_config.nAPPRTHR=0;
+	t42_config.nMAXAPPRAREA=0;
+	t42_config.nMAXTCHAREA=0;
+	t42_config.nSUPSTRENGTH=0;
+	t42_config.nSUPEXTTO=0;
+	t42_config.nMAXNUMTCHS=0;
+	t42_config.nSHAPESTRENGTH=0;
+	t42_config.nSUPDIST=0;
 	t42_config.nDISTHYST=0;
 #endif
 	error = mxt_write_block(client, obj_addr,
@@ -809,15 +860,26 @@ int mxt_SPT_DIGITIZER_T43(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_DIGITIZER_T43, &obj_size, &obj_addr);
-	printk("mxt_SPT_DIGITIZER_T43 obj_size=%d obj_addr=%d   OBJECT_SIZE=12 OBJECT_ADDRESS=651\n",obj_size,obj_addr );
+	//printk("mxt_SPT_DIGITIZER_T43 obj_size=%d obj_addr=%d   OBJECT_SIZE=12 OBJECT_ADDRESS=651\n",obj_size,obj_addr );
 	memset(&t43_config, 0, sizeof(t43_config));
 
-#if 1
+#if TOUCH_CAL_VER==1
 	t43_config.nCTRL=0;
 	t43_config.nHIDIDLERATE=128;
 	t43_config.nXLENGTH=137;
 	t43_config.nYLENGTH=221;
 	t43_config.nRWKRATE=128;
+	t43_config.nHEIGHTSCALE=0;
+	t43_config.nHEIGHTOFFSET=0;
+	t43_config.nWIDTHSCALE=0;
+	t43_config.nWIDTHOFFSET=0;
+	t43_config.nRESERVED=0;
+#elif  TOUCH_CAL_VER==2
+	t43_config.nCTRL=0;
+	t43_config.nHIDIDLERATE=0;
+	t43_config.nXLENGTH=0;
+	t43_config.nYLENGTH=0;
+	t43_config.nRWKRATE=0;
 	t43_config.nHEIGHTSCALE=0;
 	t43_config.nHEIGHTOFFSET=0;
 	t43_config.nWIDTHSCALE=0;
@@ -845,21 +907,10 @@ int mxt_SPT_CTECONFIG_T46(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_CTECONFIG_T46, &obj_size, &obj_addr);
-	printk("mxt_SPT_CTECONFIG_T46 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=663 \n",obj_size,obj_addr );
+	//printk("mxt_SPT_CTECONFIG_T46 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=663 \n",obj_size,obj_addr );
 	memset(&t46_config, 0, sizeof(t46_config));
 
-#if 0
-	t46_config.nCTRL=4;
-	t46_config.nMODE=0;
-	t46_config.nIDLESYNCSPERX=24;
-	t46_config.nACTVSYNCSPERX=24;
-	t46_config.nADCSPERSYNC=0;
-	t46_config.nPULSESPERADC=0;
-	t46_config.nXSLEW=1;
-	t46_config.nSYNCDELAY=0;
-	t46_config.nXVOLTAGE=0;
-	t46_config.nADCCTRL=15;
-#else
+#if TOUCH_CAL_VER==1
 	t46_config.nCTRL=0;
 	t46_config.nMODE=0;
 	t46_config.nIDLESYNCSPERX=8;
@@ -870,6 +921,17 @@ int mxt_SPT_CTECONFIG_T46(struct mxt_data *mxt)
 	t46_config.nSYNCDELAY=0;
 	t46_config.nXVOLTAGE=0;
 	t46_config.nADCCTRL=15;
+#elif  TOUCH_CAL_VER==2
+	t46_config.nCTRL=4;
+	t46_config.nMODE=0;
+	t46_config.nIDLESYNCSPERX=16;
+	t46_config.nACTVSYNCSPERX=24;
+	t46_config.nADCSPERSYNC=0;
+	t46_config.nPULSESPERADC=0;
+	t46_config.nXSLEW=2;
+	t46_config.nSYNCDELAY=0;
+	t46_config.nXVOLTAGE=0;
+	t46_config.nADCCTRL=0;
 #endif
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t46_config);
@@ -892,24 +954,10 @@ int mxt_PROCI_STYLUS_T47(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_STYLUS_T47, &obj_size, &obj_addr);
-	printk("mxt_PROCI_STYLUS_T47 obj_size=%d obj_addr=%d  OBJECT_SIZE=22  OBJECT_ADDRESS=674 \n",obj_size,obj_addr );
+	//printk("mxt_PROCI_STYLUS_T47 obj_size=%d obj_addr=%d  OBJECT_SIZE=22  OBJECT_ADDRESS=674 \n",obj_size,obj_addr );
 	memset(&t47_config, 0, sizeof(t47_config));
 
-#if 0
-	t47_config.nCTRL=73;
-	t47_config.nCONTMIN=35;
-	t47_config.nCONTMAX=60;
-	t47_config.nSTABILITY=10;
-	t47_config.nMAXTCHAREA=2;
-	t47_config.nAMPLTHR=30;
-	t47_config.nSTYSHAPE=0;
-	t47_config.nHOVERSUP=120;
-	t47_config.nCONFTHR=1;
-	t47_config.nSYNCSPERX=24;
-	t47_config.nXPOSADJ=0;
-	t47_config.nYPOSADJ=0;
-	t47_config.nCFG=15;
-#else
+#if TOUCH_CAL_VER==1
 	t47_config.nCTRL=0;
 	t47_config.nCONTMIN=20;
 	t47_config.nCONTMAX=35;
@@ -920,6 +968,20 @@ int mxt_PROCI_STYLUS_T47(struct mxt_data *mxt)
 	t47_config.nHOVERSUP=120;
 	t47_config.nCONFTHR=3;
 	t47_config.nSYNCSPERX=16;
+	t47_config.nXPOSADJ=0;
+	t47_config.nYPOSADJ=0;
+	t47_config.nCFG=0;
+#elif  TOUCH_CAL_VER==2
+	t47_config.nCTRL=0;
+	t47_config.nCONTMIN=0;
+	t47_config.nCONTMAX=0;
+	t47_config.nSTABILITY=0;
+	t47_config.nMAXTCHAREA=0;
+	t47_config.nAMPLTHR=0;
+	t47_config.nSTYSHAPE=0;
+	t47_config.nHOVERSUP=0;
+	t47_config.nCONFTHR=0;
+	t47_config.nSYNCSPERX=0;
 	t47_config.nXPOSADJ=0;
 	t47_config.nYPOSADJ=0;
 	t47_config.nCFG=0;
@@ -949,7 +1011,7 @@ int mxt_PROCI_ADAPTIVETHRESHOLD_T55(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_ADAPTIVETHRESHOLD_T55, &obj_size, &obj_addr);
-	printk("ADAPTIVE_T55 obj_size=%d obj_addr=%d OBJECT_SIZE=7  OBJECT_ADDRESS=718\n",obj_size,obj_addr );
+	//printk("ADAPTIVE_T55 obj_size=%d obj_addr=%d OBJECT_SIZE=7  OBJECT_ADDRESS=718\n",obj_size,obj_addr );
 	memset(&t55_config, 0, sizeof(t55_config));
 
 	t55_config.nCTRL=0;
@@ -983,58 +1045,10 @@ int mxt_PROCI_SHIELDLESS_T56(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_SHIELDLESS_T56, &obj_size, &obj_addr);
-	printk("mxt_PROCI_SHIELDLESS_T56 obj_size=%d obj_addr=%d   OBJECT_SIZE=51 OBJECT_ADDRESS=732\n",obj_size,obj_addr );
+	//printk("mxt_PROCI_SHIELDLESS_T56 obj_size=%d obj_addr=%d   OBJECT_SIZE=51 OBJECT_ADDRESS=732\n",obj_size,obj_addr );
 	memset(&t56_config, 0, sizeof(t56_config));
 
-#if 0
-	t56_config.nCTRL=0;
-	t56_config.nCOMMAND=0;
-	t56_config.nOPTINT=0;
-	t56_config.nINTTIME=55;
-	t56_config.nINTDELAY[0]=27;
-	t56_config.nINTDELAY[1]=27;
-	t56_config.nINTDELAY[2]=27;
-	t56_config.nINTDELAY[3]=27;
-	t56_config.nINTDELAY[4]=27;
-	t56_config.nINTDELAY[5]=27;
-	t56_config.nINTDELAY[6]=27;
-	t56_config.nINTDELAY[7]=27;
-	t56_config.nINTDELAY[8]=27;
-	t56_config.nINTDELAY[9]=26;
-	t56_config.nINTDELAY[10]=26;
-	t56_config.nINTDELAY[11]=26;
-	t56_config.nINTDELAY[12]=26;
-	t56_config.nINTDELAY[13]=26;
-	t56_config.nINTDELAY[14]=25;
-	t56_config.nINTDELAY[15]=25;
-	t56_config.nINTDELAY[16]=25;
-	t56_config.nINTDELAY[17]=24;
-	t56_config.nINTDELAY[18]=24;
-	t56_config.nINTDELAY[19]=24;
-	t56_config.nINTDELAY[20]=23;
-	t56_config.nINTDELAY[21]=23;
-	t56_config.nINTDELAY[22]=23;
-	t56_config.nINTDELAY[23]=23;
-	t56_config.nINTDELAY[24]=22;
-	t56_config.nINTDELAY[25]=22;
-	t56_config.nINTDELAY[26]=22;
-	t56_config.nINTDELAY[27]=21;
-	t56_config.nINTDELAY[28]=21;
-	t56_config.nINTDELAY[29]=21;
-	t56_config.nINTDELAY[30]=21;
-	t56_config.nINTDELAY[31]=21;
-	t56_config.nMULTICUTGC=0;
-	t56_config.nGCLIMIT=0;
-	t56_config.nNCNCL=0;
-	t56_config.nTOUCHBIAS=0;
-	t56_config.nBASESCALE=0;
-	t56_config.nSHIFTLIMIT=0;
-	t56_config.nYLONOISEMUL=0;
-	t56_config.nYLONOISEDIV=0;
-	t56_config.nYHINOISEMUL=0;
-	t56_config.nYHINOISEDIV=0;
-	t56_config.nNCNCLMANIDX=0;
-#else
+#if TOUCH_CAL_VER==1
 	t56_config.nCTRL=2;
 	t56_config.nCOMMAND=0;
 	t56_config.nOPTINT=1;
@@ -1081,6 +1095,54 @@ int mxt_PROCI_SHIELDLESS_T56(struct mxt_data *mxt)
 	t56_config.nYLONOISEDIV=0;
 	t56_config.nYHINOISEMUL=0;
 	t56_config.nYHINOISEDIV=0;
+#elif  TOUCH_CAL_VER==2
+	t56_config.nCTRL=0;
+	t56_config.nCOMMAND=0;
+	t56_config.nOPTINT=0;
+	t56_config.nINTTIME=0;
+	t56_config.nINTDELAY[0]=0;
+	t56_config.nINTDELAY[1]=0;
+	t56_config.nINTDELAY[2]=0;
+	t56_config.nINTDELAY[3]=0;
+	t56_config.nINTDELAY[4]=0;
+	t56_config.nINTDELAY[5]=0;
+	t56_config.nINTDELAY[6]=0;
+	t56_config.nINTDELAY[7]=0;
+	t56_config.nINTDELAY[8]=0;
+	t56_config.nINTDELAY[9]=0;
+	t56_config.nINTDELAY[10]=0;
+	t56_config.nINTDELAY[11]=0;
+	t56_config.nINTDELAY[12]=0;
+	t56_config.nINTDELAY[13]=0;
+	t56_config.nINTDELAY[14]=0;
+	t56_config.nINTDELAY[15]=0;
+	t56_config.nINTDELAY[16]=0;
+	t56_config.nINTDELAY[17]=0;
+	t56_config.nINTDELAY[18]=0;
+	t56_config.nINTDELAY[19]=0;
+	t56_config.nINTDELAY[20]=0;
+	t56_config.nINTDELAY[21]=0;
+	t56_config.nINTDELAY[22]=0;
+	t56_config.nINTDELAY[23]=0;
+	t56_config.nINTDELAY[24]=0;
+	t56_config.nINTDELAY[25]=0;
+	t56_config.nINTDELAY[26]=0;
+	t56_config.nINTDELAY[27]=0;
+	t56_config.nINTDELAY[28]=0;
+	t56_config.nINTDELAY[29]=0;
+	t56_config.nINTDELAY[30]=0;
+	t56_config.nINTDELAY[31]=0;
+	t56_config.nMULTICUTGC=0;
+	t56_config.nGCLIMIT=0;
+	t56_config.nNCNCL=0;
+	t56_config.nTOUCHBIAS=0;
+	t56_config.nBASESCALE=0;
+	t56_config.nSHIFTLIMIT=0;
+	t56_config.nYLONOISEMUL=0;
+	t56_config.nYLONOISEDIV=0;
+	t56_config.nYHINOISEMUL=0;
+	t56_config.nYHINOISEDIV=0;
+	t56_config.nNCNCLMANIDX=0;
 #endif 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t56_config);
@@ -1102,7 +1164,7 @@ int mxt_SPT_GENERICDATA_T57(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_EXTRATOUCHSCREENDATA_T57, &obj_size, &obj_addr);
-	printk("SPT_GENERICDATA_T57 obj_size=%d obj_addr=%d  OBJECT_SIZE=3  OBJECT_ADDRESS=783 \n",obj_size,obj_addr );
+	//printk("SPT_GENERICDATA_T57 obj_size=%d obj_addr=%d  OBJECT_SIZE=3  OBJECT_ADDRESS=783 \n",obj_size,obj_addr );
 	memset(&t57_config, 0, sizeof(t57_config));
 
 	error = mxt_write_block(client, obj_addr,
@@ -1131,7 +1193,7 @@ int mxt_SPT_TIMER_T61(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_TIMER_T61, &obj_size, &obj_addr);
-	printk("SPT_TIMER_T61 obj_size=%d obj_addr=%d OBJECT_SIZE=5  OBJECT_ADDRESS=789 \n",obj_size,obj_addr );
+	//printk("SPT_TIMER_T61 obj_size=%d obj_addr=%d OBJECT_SIZE=5  OBJECT_ADDRESS=789 \n",obj_size,obj_addr );
 	memset(&t61_config, 0, sizeof(t61_config));
 
 	t61_config.nCTRL=0;
@@ -1164,87 +1226,10 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCG_NOISESUPPRESSION_T62, &obj_size, &obj_addr);
-	printk("mxt_PROCG_NOISESUPPRESSION_T62 obj_size=%d obj_addr=%d OBJECT_SIZE=74  OBJECT_ADDRESS=799 \n",obj_size,obj_addr );
+	//printk("mxt_PROCG_NOISESUPPRESSION_T62 obj_size=%d obj_addr=%d OBJECT_SIZE=74  OBJECT_ADDRESS=799 \n",obj_size,obj_addr );
 	memset(&t62_config, 0, sizeof(t62_config));
 
-#if 0
-	t62_config.nCTRL=0;
-	t62_config.nCALCFG1=0;
-	t62_config.nCALCFG2=0;
-	t62_config.nCALCFG3=31;
-	t62_config.nCFG1=2;
-	t62_config.nRESERVED1=0;
-	t62_config.nRESERVED2=0;
-	t62_config.nBASEFREQ=0;
-	t62_config.nMAXSELFREQ=25;
-	t62_config.nFREQ[0]=16;
-	t62_config.nFREQ[1]=20;
-	t62_config.nFREQ[2]=10;
-	t62_config.nFREQ[3]=25;
-	t62_config.nFREQ[4]=12;
-	t62_config.nHOPCNT=5;
-	t62_config.nRESERVED3=0;
-	t62_config.nHOPCNTPER=10;
-	t62_config.nHOPEVALTO=5;
-	t62_config.nHOPST=5;
-	t62_config.nNLGAIN=176;
-	t62_config.nMINNLTHR=45;
-	t62_config.nINCNLTHR=0;
-	t62_config.nADCSPERXTHR=48;
-	t62_config.nNLTHRMARGIN=15;
-	t62_config.nMAXADCSPERX=63;
-	t62_config.nACTVADCSVLDNOD=6;
-	t62_config.nIDLEADCSVLDNOD=6;
-	t62_config.nMINGCLIMIT=4;
-	t62_config.nMAXGCLIMIT=64;
-	t62_config.nRESERVED[0]=0;
-	t62_config.nRESERVED[1]=0;
-	t62_config.nRESERVED[2]=0;
-	t62_config.nRESERVED[3]=0;
-	t62_config.nRESERVED[4]=0;
-
-	t62_config.nBLEN[0]=100;
-	t62_config.nTCHTHR[0]=60;
-	t62_config.nTCHDI[0]=2;
-	t62_config.nMOVHYSTI[0]=5;
-	t62_config.nMOVHYSTN[0]=1;
-	t62_config.nMOVFILTER[0]=65;
-	t62_config.nNUMTOUCH[0]=10;
-	t62_config.nMRGHYST[0]=20;
-	t62_config.nMRGTHR[0]=30;
-	t62_config.nXLOCLIP[0]=0;
-	t62_config.nXHICLIP[0]=0;
-	t62_config.nYLOCLIP[0]=0;
-	t62_config.nYHICLIP[0]=0;
-	t62_config.nXEDGECTRL[0]=0;
-	t62_config.nXEDGEDIST[0]=0;
-	t62_config.nYEDGECTRL[0]=0;
-	t62_config.nYEDGEDIST[0]=0;
-	t62_config.nJUMPLIMIT[0]=32;
-	t62_config.nTCHHYST[0]=15;
-	t62_config.nNEXTTCHDI[0]=0;
-
-	t62_config.nBLEN[1]=0;
-	t62_config.nTCHTHR[1]=0;
-	t62_config.nTCHDI[1]=0;
-	t62_config.nMOVHYSTI[1]=0;
-	t62_config.nMOVHYSTN[1]=0;
-	t62_config.nMOVFILTER[1]=0;
-	t62_config.nNUMTOUCH[1]=0;
-	t62_config.nMRGHYST[1]=0;
-	t62_config.nMRGTHR[1]=0;
-	t62_config.nXLOCLIP[1]=0;
-	t62_config.nXHICLIP[1]=0;
-	t62_config.nYLOCLIP[1]=0;
-	t62_config.nYHICLIP[1]=0;
-	t62_config.nXEDGECTRL[1]=0;
-	t62_config.nXEDGEDIST[1]=0;
-	t62_config.nYEDGECTRL[1]=0;
-	t62_config.nYEDGEDIST[1]=0;
-	t62_config.nJUMPLIMIT[1]=0;
-	t62_config.nTCHHYST[1]=0;
-	t62_config.nNEXTTCHDI[1]=0;
-#else
+#if TOUCH_CAL_VER==1
 	t62_config.nCTRL=126;
 	t62_config.nCALCFG1=11;
 	t62_config.nCALCFG2=0;
@@ -1300,7 +1285,83 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	t62_config.nJUMPLIMIT[0]=0;
 	t62_config.nTCHHYST[0]=0;
 	t62_config.nNEXTTCHDI[0]=0;
+#elif  TOUCH_CAL_VER==2
+	t62_config.nCTRL=0;
+	t62_config.nCALCFG1=0;
+	t62_config.nCALCFG2=0;
+	t62_config.nCALCFG3=0;
+	t62_config.nCFG1=0;
+	t62_config.nRESERVED1=0;
+	t62_config.nRESERVED2=0;
+	t62_config.nBASEFREQ=0;
+	t62_config.nMAXSELFREQ=0;
+	t62_config.nFREQ[0]=0;
+	t62_config.nFREQ[1]=0;
+	t62_config.nFREQ[2]=0;
+	t62_config.nFREQ[3]=0;
+	t62_config.nFREQ[4]=0;
+	t62_config.nHOPCNT=0;
+	t62_config.nRESERVED3=0;
+	t62_config.nHOPCNTPER=0;
+	t62_config.nHOPEVALTO=0;
+	t62_config.nHOPST=0;
+	t62_config.nNLGAIN=0;
+	t62_config.nMINNLTHR=0;
+	t62_config.nINCNLTHR=0;
+	t62_config.nADCSPERXTHR=0;
+	t62_config.nNLTHRMARGIN=0;
+	t62_config.nMAXADCSPERX=0;
+	t62_config.nACTVADCSVLDNOD=0;
+	t62_config.nIDLEADCSVLDNOD=0;
+	t62_config.nMINGCLIMIT=0;
+	t62_config.nMAXGCLIMIT=0;
+	t62_config.nRESERVED[0]=0;
+	t62_config.nRESERVED[1]=0;
+	t62_config.nRESERVED[2]=0;
+	t62_config.nRESERVED[3]=0;
+	t62_config.nRESERVED[4]=0;
 
+	t62_config.nBLEN[0]=0;
+	t62_config.nTCHTHR[0]=0;
+	t62_config.nTCHDI[0]=0;
+	t62_config.nMOVHYSTI[0]=0;
+	t62_config.nMOVHYSTN[0]=0;
+	t62_config.nMOVFILTER[0]=0;
+	t62_config.nNUMTOUCH[0]=0;
+	t62_config.nMRGHYST[0]=0;
+	t62_config.nMRGTHR[0]=0;
+	t62_config.nXLOCLIP[0]=0;
+	t62_config.nXHICLIP[0]=0;
+	t62_config.nYLOCLIP[0]=0;
+	t62_config.nYHICLIP[0]=0;
+	t62_config.nXEDGECTRL[0]=0;
+	t62_config.nXEDGEDIST[0]=0;
+	t62_config.nYEDGECTRL[0]=0;
+	t62_config.nYEDGEDIST[0]=0;
+	t62_config.nJUMPLIMIT[0]=0;
+	t62_config.nTCHHYST[0]=0;
+	t62_config.nNEXTTCHDI[0]=0;
+
+	t62_config.nBLEN[1]=0;
+	t62_config.nTCHTHR[1]=0;
+	t62_config.nTCHDI[1]=0;
+	t62_config.nMOVHYSTI[1]=0;
+	t62_config.nMOVHYSTN[1]=0;
+	t62_config.nMOVFILTER[1]=0;
+	t62_config.nNUMTOUCH[1]=0;
+	t62_config.nMRGHYST[1]=0;
+	t62_config.nMRGTHR[1]=0;
+	t62_config.nXLOCLIP[1]=0;
+	t62_config.nXHICLIP[1]=0;
+	t62_config.nYLOCLIP[1]=0;
+	t62_config.nYHICLIP[1]=0;
+	t62_config.nXEDGECTRL[1]=0;
+	t62_config.nXEDGEDIST[1]=0;
+	t62_config.nYEDGECTRL[1]=0;
+	t62_config.nYEDGEDIST[1]=0;
+	t62_config.nJUMPLIMIT[1]=0;
+	t62_config.nTCHHYST[1]=0;
+	t62_config.nNEXTTCHDI[1]=0;
 #endif
 
 	error = mxt_write_block(client, obj_addr,
@@ -1323,7 +1384,7 @@ int mxt_PROCI_ACTIVESTYLUS_T63(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_ACTIVESTYLUS_T63, &obj_size, &obj_addr);
-	printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
+	//printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
 	memset(&t63_config, 0, sizeof(t63_config));
 
 	t63_config.nCTRL  =0;
@@ -1364,7 +1425,7 @@ int mxt_PROCI_LENSBENDING_T65(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             PROCI_LENSBENDING_T65, &obj_size, &obj_addr);
-	printk("mxt_PROCI_LENSBENDING_T65 obj_size=%d obj_addr=%d OBJECT_SIZE=17  OBJECT_ADDRESS=897 \n",obj_size,obj_addr );
+	//printk("mxt_PROCI_LENSBENDING_T65 obj_size=%d obj_addr=%d OBJECT_SIZE=17  OBJECT_ADDRESS=897 \n",obj_size,obj_addr );
 	memset(&t65_config, 0, sizeof(t65_config));
 
 	error = mxt_write_block(client, obj_addr,
@@ -1387,7 +1448,7 @@ int mxt_SPT_GOLDENREFERENCES_T66(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_GOLDENREFERENCES_T66, &obj_size, &obj_addr);
-	printk("mxt_SPT_GOLDENREFERENCES_T66 obj_size=%d obj_addr=%d OBJECT_SIZE=5  OBJECT_ADDRESS=914 \n",obj_size,obj_addr );
+	//printk("mxt_SPT_GOLDENREFERENCES_T66 obj_size=%d obj_addr=%d OBJECT_SIZE=5  OBJECT_ADDRESS=914 \n",obj_size,obj_addr );
 	memset(&t66_config, 0, sizeof(t66_config));
 
 	error = mxt_write_block(client, obj_addr,
@@ -1410,7 +1471,7 @@ int mxt_SPT_SERIALDATACOMMAND_T68(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_SERIALDATACOMMAND_T68, &obj_size, &obj_addr);
-	printk("SPT_SERIALDATACOMMAND_T68 obj_size=%d obj_addr=%d OBJECT_SIZE=73 ADDRESS=318 \n",obj_size,obj_addr );
+	//printk("SPT_SERIALDATACOMMAND_T68 obj_size=%d obj_addr=%d OBJECT_SIZE=73 ADDRESS=318 \n",obj_size,obj_addr );
 	memset(&t68_config, 0, sizeof(t68_config));
 
 	error = mxt_write_block(client, obj_addr,
@@ -1427,7 +1488,7 @@ int mxt_SPT_SERIALDATACOMMAND_T68(struct mxt_data *mxt)
 
 int mxt_config_settings(struct mxt_data *mxt)
 {
-	printk("[TSP] mxt_config_settings  \n");
+	//printk("[TSP] mxt_config_settings  \n");
 
 	if (mxt_GEN_POWERCONFIG_T7(mxt) < 0)
 	{
@@ -1491,6 +1552,26 @@ int mxt_config_settings(struct mxt_data *mxt)
 		printk("[TSP] mxt_PROCG_NOISESUPPRESSION_T62 error  \n");
 		return -1;
 	}
+	if (mxt_PROCI_ACTIVESTYLUS_T63(mxt) < 0)
+	{
+		printk("[TSP] mxt_PROCI_ACTIVESTYLUS_T63 error  \n");
+		return -1;
+	}	
+	if (mxt_PROCI_LENSBENDING_T65(mxt) < 0)
+	{
+		printk("[TSP] mxt_PROCI_LENSBENDING_T65 error  \n");
+		return -1;
+	}	
+	if (mxt_SPT_GOLDENREFERENCES_T66(mxt) < 0)
+	{
+		printk("[TSP] mxt_SPT_GOLDENREFERENCES_T66 error  \n");
+		return -1;
+	}		
+	if (mxt_SPT_SERIALDATACOMMAND_T68(mxt) < 0)
+	{
+		printk("[TSP] mxt_SPT_SERIALDATACOMMAND_T68 error  \n");
+		return -1;
+	}			
 	return 0;
 }
 
@@ -1687,13 +1768,11 @@ static int __devinit mxt_reset(struct mxt_data *data)
         return write_mem(data, data->cmd_proc + CMD_RESET_OFFSET, 1, &buf);
 }
 
-#ifdef NOT_USED_1664S
 static int __devinit mxt_backup(struct mxt_data *data)
 {
         u8 buf = 0x55u;
         return write_mem(data, data->cmd_proc + CMD_BACKUP_OFFSET, 1, &buf);
 }
-#endif
 
 #ifdef NOT_USED_1664S
 static int write_config(struct mxt_data *data, u8 type, const u8 *cfg)
@@ -2221,9 +2300,9 @@ static void report_input_data(struct mxt_data *data)
                         input_mt_slot(data->input_dev, i);
                         input_mt_report_slot_state(data->input_dev,
                                         MT_TOOL_FINGER, false);
-#if DEBUG_INFO
-					        printk("[ATMEL]_______report_input_data release slot =%d \n",i);
-#endif
+//#if DEBUG_INFO
+					        //printk("[ATMEL]_______report_input_data release slot =%d \n",i);
+//#endif
                 } else {
                         input_mt_slot(data->input_dev, i);
                         input_mt_report_slot_state(data->input_dev,
@@ -2235,9 +2314,9 @@ static void report_input_data(struct mxt_data *data)
                         input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR,
                                         data->fingers[i].z);
                         input_report_abs(data->input_dev, ABS_MT_PRESSURE,data->fingers[i].w);
-#if DEBUG_INFO
-					        printk("[ATMEL]_______report_input_data x=%d, y=%d w=%d\n",data->fingers[i].x,data->fingers[i].y,data->fingers[i].w);
-#endif
+//#if DEBUG_INFO
+					        //printk("[ATMEL]_______report_input_data x=%d, y=%d w=%d\n",data->fingers[i].x,data->fingers[i].y,data->fingers[i].w);
+//#endif
                 }
                 #ifdef _SUPPORT_SHAPE_TOUCH_
                 input_report_abs(data->input_dev, ABS_MT_COMPONENT,
@@ -2272,12 +2351,14 @@ static void report_input_data(struct mxt_data *data)
                         break;
                 }
 #else
+#if 0
                 if (data->fingers[i].state == MXT_STATE_PRESS)
                         pr_info("P: id[%d],w=%d\n"
                                 , i, data->fingers[i].w);
                 else if (data->fingers[i].state == MXT_STATE_RELEASE)
                         pr_info("R: id[%d],mc=%d\n"
                                 , i, data->fingers[i].mcount);
+#endif								
 #endif
                 if (data->fingers[i].state == MXT_STATE_RELEASE) {
                         data->fingers[i].state = MXT_STATE_INACTIVE;
@@ -2324,7 +2405,8 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
         u8 value;
         int error;
         u8 object_type, instance;
-
+		 //int temp_x=0 , temp_y=0;
+		
         do {
 
                 touch_message_flag = 0;
@@ -2445,6 +2527,10 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                                 data->fingers[id].y =
                                         (((msg[3] << 4) | (msg[4] & 0xF))
                                         >> data->y_dropbits);
+
+									//temp_x=((msg[2] << 4) | (msg[4] >> 4));
+									//temp_y=((msg[3] << 4) | (msg[4] & 0xF));									
+									//printk("[ATMEL] temp_x=%d temp_y=%d\n",temp_x,temp_y);
 
                                 data->finger_mask |= 1U << id;
 
@@ -4328,6 +4414,10 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
         bool ta_status = 0;
 #endif
         u8 **tsp_config;
+		/* Touch config Version Check */
+		u16 obj_address = 0;
+		u8 value = 0;
+		u16 size;
 
         touch_is_pressed = 0;
 #if TOUCH_BOOSTER
@@ -4411,10 +4501,12 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
         data->gpio_read_done = pdata->gpio_read_done;
 
-		 msleep(300);
+		msleep(100);
 		 
-        data->power_on();
-
+       data->power_on();
+		touch_s3c_i2c5_set_platdata(NULL,0);
+		msleep(200);		
+		
         copy_data = data;
 
         if (client->addr == MXT_APP_LOW)
@@ -4509,7 +4601,16 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                 goto err_backup;
 #else
 
-#if 0
+    get_object_info(data, SPT_USERDATA_T38,
+    	&size, &obj_address);
+
+	read_mem(data, obj_address, 1, &value);
+	printk("[ATMEL]   obj_address=%d  Touch Config Version =%d \n",obj_address,value);
+	
+	if(value!=TOUCH_CAL_VER && value!=0xFF) // 0xFF Test 
+	{
+		printk("[ATMEL] Touch Config wrtie ....   Start  ................\n");	
+
         for (i = 0; atmel_tsp_config[i] != RESERVED_T255; i++) {
                 ret = mxt_defconfig_settings(data, atmel_tsp_config[i]);
 
@@ -4517,12 +4618,22 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				printk("[ATMEL] mxt_defconfig_settings error  +++++ \n");
 							
         }
-#endif
-#if 0
-        data->x_dropbits = (255 &0xc) << 1;
+	}
+
+#if 1
+#if 1
+        data->x_dropbits = 0;//(255 &0xc) << 1;
                //!(tsp_config[i][20] & 0xC)) << 1;
-        data->y_dropbits =(0 &0xc) << 1;
+        data->y_dropbits =2;//(0 &0xc) << 1;
                //!(tsp_config[i][22] & 0xC)) << 1;
+#else
+        data->x_dropbits =(!(tsp_config[i][22] & 0xC)) << 1;  
+               //!(tsp_config[i][20] & 0xC)) << 1;
+        data->y_dropbits =(!(tsp_config[i][20] & 0xC)) << 1;
+               //!(tsp_config[i][22] & 0xC)) << 1;
+#endif
+		printk("[ATMEL]  x_dropbits=%d  y_dropbits=%d \n", data->x_dropbits,data->y_dropbits);
+
 #else
         data->x_dropbits = (0 &0xc) << 1;
                //!(tsp_config[i][20] & 0xC)) << 1;
@@ -4530,7 +4641,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                //!(tsp_config[i][22] & 0xC)) << 1;
 #endif               
 		//mxt_config_settings(data);
-        //ret = mxt_backup(data);
+        ret = mxt_backup(data);
         if (ret)
                 goto err_backup;
 #endif

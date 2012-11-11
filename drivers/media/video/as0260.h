@@ -50,7 +50,7 @@ enum as0260_i2c_size {
 };
 
 #define POLL_DELAY 50
-#define INIT_DELAY 30
+#define INIT_DELAY 10
 //#define OUT_FORMAT 0x4011
 //#define OUT_FORMAT 0x4010 Not OK
 #define OUT_FORMAT 0x4010
@@ -751,6 +751,62 @@ struct as0260_reg as0260_320p20_regs[] =
 	{0xC95A, 0x002F,2}, 		//cam_stat_ae_initial_window_yend = 47
 	
 };
+
+struct as0260_reg as0260_176p20_regs[] =
+{
+	{0x098E, 0xCA12,2},      // LOGICAL_ADDRESS_ACCESS [CAM_SYSCTL_PLL_ENABLE]
+	{0xCA12, 0x01,1},      //cam_sysctl_pll_enable = 1
+	{0xCA13, 0x00,0},      //cam_sysctl_pll_enable = 1
+	
+	{0xCA14, 0x022B,2}, 		//cam_sysctl_pll_divider_m_n = 555                 
+	{0xCA16, 0x0070,2}, 		//cam_sysctl_pll_divider_p = 112                   
+	{0xCA18, 0x7F7C,2}, 		//cam_sysctl_pll_divider_p4_p5_p6 = 32636          
+	{0xCA1C, 0x8043,2}, 		//cam_port_output_control = 32835                  
+	{0xCA1E, 0x0008,2}, 		//cam_port_porch = 8                               
+	{0xCA20, 0x0B00,2}, 		//cam_port_mipi_timing_t_hs_zero = 2816            
+	{0xCA22, 0x0005,2}, 		//cam_port_mipi_timing_t_hs_exit_hs_trail = 5      
+	{0xCA24, 0x0A01,2}, 		//cam_port_mipi_timing_t_clk_post_clk_pre = 2561   
+	{0xCA26, 0x0515,2}, 		//cam_port_mipi_timing_t_clk_trail_clk_zero = 1301 
+	{0xCA28, 0x0004,2}, 		//cam_port_mipi_timing_t_lpx = 4                   
+	{0xCA2A, 0x0709,2}, 		//cam_port_mipi_timing_init_timing = 1801          
+	{0xCA2C, 0x0000,2}, 		//cam_port_mipi_timing_t_hs_pre = 0   
+
+	{0xC800, 0x0020,2}, 		//cam_sensor_cfg_y_addr_start = 32
+	{0xC802, 0x0100,2}, 		//cam_sensor_cfg_x_addr_start = 256
+	{0xC804, 0x045D,2}, 		//cam_sensor_cfg_y_addr_end = 1117
+	{0xC806, 0x06AD,2}, 		//cam_sensor_cfg_x_addr_end = 1709
+	{0xC808, 0x03278AC4,4}, 		//cam_sensor_cfg_pixclk = 52923076
+	{0xC80C, 0x0001,2}, 		//cam_sensor_cfg_row_speed = 1
+	{0xC80E, 0x06A4,2}, 		//cam_sensor_cfg_fine_integ_time_min = 1700
+	{0xC810, 0x130F,2}, 		//cam_sensor_cfg_fine_integ_time_max = 4879
+	{0xC812, 0x026D,2}, 		//cam_sensor_cfg_frame_length_lines = 621
+	{0xC814, 0x1631,2}, 		//cam_sensor_cfg_line_length_pck = 5681
+	{0xC816, 0x01D9,2}, 		//cam_sensor_cfg_fine_correction = 473
+	{0xC818, 0x021B,2}, 		//cam_sensor_cfg_cpipe_last_row = 539
+	{0xC820, 0x0010,2}, 		//cam_sensor_cfg_reg_0_data = 16
+	{0xC830, 0x0012,2}, 		//cam_sensor_control_read_mode = 18
+	{0xC858, 0x0000,2}, 		//cam_crop_window_xoffset = 0
+	{0xC85A, 0x0000,2}, 		//cam_crop_window_yoffset = 0
+	{0xC85C, 0x02D0,2}, 		//cam_crop_window_width = 720
+	{0xC85E, 0x0218,2}, 		//cam_crop_window_height = 536
+	{0xC86C, 0x0140,2}, 		//cam_output_width = 320
+	{0xC86E, 0x00F0,2}, 		//cam_output_height = 240
+
+	{0xc870,OUT_FORMAT,2},
+
+	{0xC87C, 0x00,1}, 		//cam_aet_aemode = 0
+	{0xC88E, 0x1E00,2}, 		//cam_aet_max_frame_rate = 7680
+	{0xC890, 0x1E00,2}, 		//cam_aet_min_frame_rate = 7680
+	{0xC94C, 0x0000,2}, 		//cam_stat_awb_clip_window_xstart = 0
+	{0xC94E, 0x0000,2}, 		//cam_stat_awb_clip_window_ystart = 0
+	{0xC950, 0x013F,2}, 		//cam_stat_awb_clip_window_xend = 319
+	{0xC952, 0x00EF,2}, 		//cam_stat_awb_clip_window_yend = 239
+	{0xC954, 0x0000,2}, 		//cam_stat_ae_initial_window_xstart = 0
+	{0xC956, 0x0000,2}, 		//cam_stat_ae_initial_window_ystart = 0
+	{0xC958, 0x003F,2}, 		//cam_stat_ae_initial_window_xend = 63
+	{0xC95A, 0x002F,2}, 		//cam_stat_ae_initial_window_yend = 47
+};
+
 
 #endif
 #if defined(FEATURE_TW_CAMERA_FPS_25)
