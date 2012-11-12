@@ -301,6 +301,12 @@ static int __init alps_init(void)
     struct input_dev *idev;
     int ret;
 
+    #include <mach/willow_version.h>
+    if(g_willow_hw_version==WILLOW_HW_DVT){
+        printk("alps_init : Not use! alps input device not used DVT device!\n");
+        return -1;
+    }
+
     ret = platform_driver_register(&alps_driver);
     if (ret)
         goto out_region;
