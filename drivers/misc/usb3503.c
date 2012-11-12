@@ -169,8 +169,6 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 	} else {
 		pm_runtime_put(&s5p_device_ohci.dev);
 		pm_runtime_put(&s5p_device_ehci.dev);
-		s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
-		hc->reset_n(0);
 	}
 }
 
