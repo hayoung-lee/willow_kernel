@@ -168,7 +168,8 @@ static int battery_get_property(struct power_supply *battery,
 				}
 #else
 				if(gpio_get_value(data->pdata->chg) == 0) { // low is charging
-					if(fg_read_soc() >= FULL_SOC || fg_read_vcell() >= FULL_VCELL) {
+					if((fg_read_soc() >= FULL_SOC || fg_read_vcell() >= FULL_VCELL)
+						&& (data->ta_in && !data->usb_in)) {
 						val->intval = POWER_SUPPLY_STATUS_FULL;
 						gpio_set_value(data->pdata->cen, 1); // off
 					} else if(data->ta_in) {
@@ -208,7 +209,7 @@ static int battery_get_property(struct power_supply *battery,
 #endif
 			break;
 		case POWER_SUPPLY_PROP_TECHNOLOGY:
-			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+			val->intval = POWER_SUPPLY_TECHNOLOGY_LIPO;
 			break;
 		default:
 			return -EINVAL;
@@ -301,7 +302,7 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 
 #ifdef BATTERY_DEBUG
 	if (g_debug_enable) {
-		printk("%s() [BATTERY] dc=[%s], usb=[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
+		printk("[BATTERY] %s() dc=[%s], usb=[%s]\n", __FUNCTION__, ta_in ? "L" : "H", usb_in ? "L" : "H");
 	}
 #endif
 
@@ -499,6 +500,7 @@ static void max8903_work(struct work_struct *work)
 {
 	struct max8903_data* data;
 	static int msg_update_cnt =0;
+	static int old_soc = 0;
 	int soc = fg_read_soc();
 
 	data = container_of(work, struct max8903_data, work.work);
@@ -511,12 +513,17 @@ static void max8903_work(struct work_struct *work)
 	else if(data->usb_in)
 		power_supply_changed(&data->usb);
 #else
-	if(LOW_SOC >= soc || FULL_SOC <= soc)
+	if(old_soc != soc)
 		g_update_need = true;
 
-	if(g_update_need || msg_update_cnt > 58) {
-		if(g_update_need)
-			g_update_need = false;
+	if(g_update_need) {
+#ifdef BATTERY_DEBUG
+		if ( g_debug_enable ) {
+			printk("[*NOTIFY] old_soc=%d soc=%d \n", old_soc , soc);
+		}
+#endif
+		g_update_need = false;
+		old_soc = soc;
 		if(data->ta_in && data->usb_in)
 			power_supply_changed(&data->usb);
 		else if(data->ta_in)
@@ -527,7 +534,7 @@ static void max8903_work(struct work_struct *work)
 #endif
 
 	if ( msg_update_cnt > 58 ) {
-		printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+		printk("[BATTERY] old_soc=%d soc=%d, vcell=%duV, dc=%s, usb=%s\n", old_soc, soc, fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
 		msg_update_cnt = 0;
 	} else {
 		msg_update_cnt++;
@@ -535,7 +542,7 @@ static void max8903_work(struct work_struct *work)
 
 #ifdef BATTERY_DEBUG
 	if ( g_debug_enable ) {
-		printk("[BATTERY] soc=%d, vcell=%duV, dc=%s, usb=%s\n", fg_read_soc(), fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
+		printk("[BATTERY] old_soc=%d soc=%d, vcell=%duV, dc=%s, usb=%s\n", old_soc, soc, fg_read_vcell(), data->ta_in ? "true" : "false", data->usb_in ? "true" : "false");
 	}
 #endif
 
