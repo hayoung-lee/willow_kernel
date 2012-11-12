@@ -162,8 +162,8 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 		hc->cur_dock_status = hc->new_dock_status;
 
 	if (hc->cur_dock_status == DOCK_STATE_ATTACHED) {
-		hc->reset_n(1);
-		s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+		hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
 		pm_runtime_get_sync(&s5p_device_ehci.dev);
 		pm_runtime_get_sync(&s5p_device_ohci.dev);
 	} else {
