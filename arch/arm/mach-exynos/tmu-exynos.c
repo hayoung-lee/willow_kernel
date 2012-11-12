@@ -845,9 +845,9 @@ static int exynos_tmu_init(struct tmu_info *info)
 	*/
 	mdelay(1);
 
-	te_temp = __raw_readl(S5P_PMU_PS_HOLD_CONTROL);
+	te_temp = __raw_readl(S5P_PS_HOLD_CONTROL);
 	te_temp |= S5P_PS_HOLD_EN;
-	__raw_writel(te_temp, S5P_PMU_PS_HOLD_CONTROL);
+	__raw_writel(te_temp, S5P_PS_HOLD_CONTROL);
 
 	/*LEV0 LEV1 LEV2 interrupt enable */
 	__raw_writel(INTEN_RISE0 | INTEN_RISE1 | INTEN_RISE2,	\
