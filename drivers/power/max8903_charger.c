@@ -209,7 +209,7 @@ static int battery_get_property(struct power_supply *battery,
 #endif
 			break;
 		case POWER_SUPPLY_PROP_TECHNOLOGY:
-			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+			val->intval = POWER_SUPPLY_TECHNOLOGY_LIPO;
 			break;
 		default:
 			return -EINVAL;
