@@ -30,6 +30,7 @@
 #define ARM_LOCK_FLAG			3
 
 extern unsigned int exynos_result_of_asv;
+extern unsigned int exynos_armclk_max;
 extern unsigned int exynos_special_flag;
 extern bool exynos_dynamic_ema;
 

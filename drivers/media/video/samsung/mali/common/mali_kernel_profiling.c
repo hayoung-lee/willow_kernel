@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -140,7 +140,7 @@ inline _mali_osk_errcode_t _mali_profiling_start(u32 * limit)
 inline void _mali_profiling_add_counter(u32 event_id, u32 data0)
 {
 #if MALI_TRACEPOINTS_ENABLED
-	_mali_osk_profiling_add_counter(event_id, data0);
+	_mali_osk_profiling_add_counter(event_id, data0);	
 #endif
 }
 
@@ -178,7 +178,7 @@ inline _mali_osk_errcode_t _mali_profiling_add_event(u32 event_id, u32 data0, u3
 #if MALI_TRACEPOINTS_ENABLED
 /*
  * The following code uses a bunch of magic numbers taken from the userspace
- * side of the DDK; they are re-used here verbatim. They are taken from the
+ * side of the DDK; they are re-used here verbatim. They are taken from the 
  * file mali_instrumented_counter_types.h.
  */
 #define MALI_GLES_COUNTER_OFFSET   1000
@@ -205,7 +205,7 @@ _mali_osk_errcode_t _mali_ukk_transfer_sw_counters(_mali_uk_sw_counters_s *args)
 	{
 		gator_counter_value = (args->id - MALI_GLES_COUNTER_OFFSET) + GATOR_GLES_COUNTER_OFFSET;
 	}
-	else
+	else 
 	{
 		/* Pass it straight through; gator will ignore it anyway. */
 		gator_counter_value = args->id;

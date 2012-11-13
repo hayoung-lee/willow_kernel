@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -162,7 +162,7 @@ int transfer_sw_counters_wrapper(struct mali_session_data *session_data, _mali_u
     _mali_osk_errcode_t err;
 
     MALI_CHECK_NON_NULL(uargs, -EINVAL);
-
+    
     kargs.ctx = session_data;
 
     if (0 != copy_from_user(&kargs, uargs, sizeof(_mali_uk_sw_counters_s)))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -43,6 +43,10 @@ int mali_max_job_runtime = WATCHDOG_MSECS_DEFAULT;
 
 #if MALI_TIMELINE_PROFILING_ENABLED
 int mali_boot_profiling = 0;
+#endif
+
+#ifdef MALI_REBOOTNOTIFIER
+extern _mali_osk_atomic_t mali_shutdown_state;
 #endif
 
 /* Subsystem entrypoints: */
@@ -1216,6 +1220,12 @@ static void mali_core_subsystem_schedule(mali_core_subsystem * subsystem)
 	mali_core_renderunit *core, *tmp;
 	mali_core_session *session;
 	mali_core_job *job;
+#ifdef MALI_REBOOTNOTIFIER
+	if (_mali_osk_atomic_read(&mali_shutdown_state) > 0) {
+		MALI_DEBUG_PRINT(3, ("Core: mali already under shutdown process!!")) ;
+		return;
+	}
+#endif
 
 	MALI_DEBUG_PRINT(5, ("Core: subsystem_schedule: %s\n", subsystem->name )) ;
 

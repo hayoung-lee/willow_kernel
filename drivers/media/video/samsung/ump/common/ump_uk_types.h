@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -48,6 +48,9 @@ typedef enum
 #ifdef CONFIG_ION_EXYNOS
 	_UMP_IOC_ION_IMPORT,
 #endif
+#ifdef CONFIG_DMA_SHARED_BUFFER
+	_UMP_IOC_DMABUF_IMPORT,
+#endif
 }_ump_uk_functions;
 
 typedef enum
@@ -94,6 +97,15 @@ typedef struct _ump_uk_ion_import_s
 	u32 size;                               /**< Input and output. Requested size; input. Returned size; output */
 	ump_uk_alloc_constraints constraints;   /**< Only input to Devicedriver */
 } _ump_uk_ion_import_s;
+#endif
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+struct ump_uk_dmabuf {
+	void		*ctx;
+	int		fd;
+	size_t		size;
+	uint32_t	secure_id;
+};
 #endif
 
 /**

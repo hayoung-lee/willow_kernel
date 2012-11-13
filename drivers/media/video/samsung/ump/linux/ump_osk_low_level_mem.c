@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
- *
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- *
+ * 
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -27,7 +27,6 @@
 #include <linux/slab.h>
 
 #include <asm/memory.h>
-#include <asm/uaccess.h>			/* to verify pointers from user space */
 #include <asm/cacheflush.h>
 #include <linux/dma-mapping.h>
 
@@ -194,11 +193,17 @@ _mali_osk_errcode_t _ump_osk_mem_mapregion_map( ump_memory_allocation * descript
 	struct vm_area_struct *vma;
 	_mali_osk_errcode_t retval;
 
-	if (NULL == descriptor) return _MALI_OSK_ERR_FAULT;
+	if (NULL == descriptor)	{
+		MSG_ERR(("descriptor is NULL in _ump_osk_mem_mapregion_map()"));
+		return _MALI_OSK_ERR_FAULT;
+	}
 
 	vma = (struct vm_area_struct*)descriptor->process_mapping_info;
 
-	if (NULL == vma ) return _MALI_OSK_ERR_FAULT;
+	if (NULL == vma) {
+		MSG_ERR(("vma is NULL in _ump_osk_mem_mapregion_map()"));
+		return _MALI_OSK_ERR_FAULT;
+	}
 
 	retval = remap_pfn_range( vma, ((u32)descriptor->mapping) + offset, (*phys_addr) >> PAGE_SHIFT, size, vma->vm_page_prot) ? _MALI_OSK_ERR_FAULT : _MALI_OSK_ERR_OK;;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -689,7 +689,7 @@ static _mali_osk_errcode_t subsystem_mali200_start_job(mali_core_job * job, mali
 	_mali_osk_write_mem_barrier();
 
 
-	trace_printk("SPI_GPU_PP%u Start\n", core->core_number);
+	pr_debug("SPI_GPU_PP%u Start\n", core->core_number);
 #if MALI_TIMELINE_PROFILING_ENABLED
 	_mali_profiling_add_event(MALI_PROFILING_EVENT_TYPE_SINGLE | MALI_PROFILING_MAKE_EVENT_CHANNEL_PP(core->core_number) | MALI_PROFILING_EVENT_REASON_SINGLE_HW_FLUSH, job200->user_input.frame_builder_id, job200->user_input.flush_id, 0, 0, 0); 
 	_mali_profiling_add_event(MALI_PROFILING_EVENT_TYPE_START|MALI_PROFILING_MAKE_EVENT_CHANNEL_PP(core->core_number), job200->pid, job200->tid,
@@ -852,9 +852,9 @@ static int subsystem_mali200_irq_handler_bottom_half(struct mali_core_renderunit
 #if MALI_STATE_TRACKING
 		_mali_osk_atomic_inc(&job->session->jobs_ended);
 #endif
-
-        trace_printk("SPI_GPU_PP%u Idle\n", core->core_number);
-
+		
+		pr_debug("SPI_GPU_PP%u Idle\n", core->core_number);
+             
 		return JOB_STATUS_END_SUCCESS; /* reschedule */
 	}
 	/* Overall SW watchdog timeout or (time to do hang checking and progress detected)? */
@@ -913,10 +913,15 @@ static int subsystem_mali200_irq_handler_bottom_half(struct mali_core_renderunit
 			u32 bus_error = mali_core_renderunit_register_read(core, MALI200_REG_ADDR_MGMT_BUS_ERROR_STATUS);
 
 			MALI_PRINT(("Bus error status: 0x%08X\n", bus_error));
+			if (bus_error & 0x01) MALI_PRINT(("Bus write error from id 0x%02x\n", (bus_error>>2) & 0x0F));
+			if (bus_error & 0x02) MALI_PRINT(("Bus read error from id 0x%02x\n", (bus_error>>6) & 0x0F));
+			if (0 == (bus_error & 0x03)) MALI_PRINT(("Bus error but neither read or write was set as the error reason\n"));
+			/*
 			MALI_DEBUG_PRINT_IF(1, (bus_error & 0x01), ("Bus write error from id 0x%02x\n", (bus_error>>2) & 0x0F));
 			MALI_DEBUG_PRINT_IF(1, (bus_error & 0x02), ("Bus read error from id 0x%02x\n", (bus_error>>6) & 0x0F));
 			MALI_DEBUG_PRINT_IF(1, (0 == (bus_error & 0x03)), ("Bus error but neither read or write was set as the error reason\n"));
 			(void)bus_error;
+			*/
 		}
 
 #if MALI_STATE_TRACKING

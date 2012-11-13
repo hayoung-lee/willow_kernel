@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -1219,6 +1219,7 @@ static _mali_osk_errcode_t mali_kernel_memory_mmu_interrupt_handler_upper_half(v
 		MALI_ERROR(_MALI_OSK_ERR_FAULT); /* no bits set, we are sharing the IRQ line and someone else caused the interrupt */
 	}
 
+
 	mali_mmu_register_write(mmu, MALI_MMU_REGISTER_INT_MASK, 0);
 
 	mali_mmu_register_read(mmu, MALI_MMU_REGISTER_STATUS);
@@ -1447,7 +1448,7 @@ void mali_kernel_mmu_force_bus_reset(void * input_mmu)
 
 static void mali_kernel_memory_mmu_interrupt_handler_bottom_half(void * data)
 {
-	mali_kernel_memory_mmu *mmu;
+	mali_kernel_memory_mmu * mmu;
 	u32 raw, fault_address, status;
 	mali_core_renderunit *core;
 

@@ -44,6 +44,8 @@
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
 
+unsigned int exynos_armclk_max;
+
 struct asv_judge_table exynos4x12_limit[] = {
 	/* HPM, IDS */
 	{  0,   0},		/* Reserved Group */
@@ -233,6 +235,9 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 
 	/* Store PKG_ID */
 	asv_info->pkg_id = tmp;
+
+	if (samsung_rev() < EXYNOS4412_REV_2_0)
+		exynos_armclk_max = 1400000;
 
 	if ((tmp >> EMA_OFFSET) & EMA_MASK)
 		exynos_dynamic_ema = true;

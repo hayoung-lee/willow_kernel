@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -686,8 +686,8 @@ _mali_osk_errcode_t _mali_ukk_profiling_clear(_mali_uk_profiling_clear_s *args);
  */
 _mali_osk_errcode_t _mali_ukk_profiling_get_config(_mali_uk_profiling_get_config_s *args);
 
-/** @brief Transfer software counters from user to kernel space
- *
+/** @brief Transfer software counters from user to kernel space 
+ * 
  * @param args see _mali_uk_transfer_sw_counters_s in "mali_uk_types.h"
  */
 _mali_osk_errcode_t _mali_ukk_transfer_sw_counters(_mali_uk_sw_counters_s *args);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -243,7 +243,7 @@ static void os_allocator_release(void * ctx, void * handle)
 
 static mali_physical_memory_allocation_result os_allocator_allocate_page_table_block(void * ctx, mali_page_table_block * block)
 {
-	int allocation_order = 11; /* _MALI_OSK_CPU_PAGE_SIZE << 11 */
+	int allocation_order = 11; /* _MALI_OSK_CPU_PAGE_SIZE << 6 */
 	void *virt = NULL;
 	u32 size = _MALI_OSK_CPU_PAGE_SIZE << allocation_order;
 	os_allocator * info;

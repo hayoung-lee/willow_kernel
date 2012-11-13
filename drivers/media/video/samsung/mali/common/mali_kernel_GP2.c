@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -638,7 +638,7 @@ static _mali_osk_errcode_t subsystem_maligp_start_job(mali_core_job * job, mali_
 		jobgp->user_input.perf_counter_src0 = counter_table[7];
 	}
 	if( counter_table[8] != 0xFFFFFFFF ) {
-		jobgp->user_input.perf_counter_flag |= _MALI_PERFORMANCE_COUNTER_FLAG_SRC1_ENABLE;
+		jobgp->user_input.perf_counter_flag |= _MALI_PERFORMANCE_COUNTER_FLAG_SRC1_ENABLE; 
 		jobgp->user_input.perf_counter_src1 = counter_table[8];
 	}
 #endif
@@ -730,7 +730,7 @@ static _mali_osk_errcode_t subsystem_maligp_start_job(mali_core_job * job, mali_
 										startcmd);
 	_mali_osk_write_mem_barrier();
 
-	trace_printk("SPI_GPU_GP Start\n");
+	pr_debug("SPI_GPU_GP Start\n");
 #if MALI_TIMELINE_PROFILING_ENABLED
 	_mali_profiling_add_event(MALI_PROFILING_EVENT_TYPE_SINGLE | MALI_PROFILING_MAKE_EVENT_CHANNEL_GP(core->core_number) | MALI_PROFILING_EVENT_REASON_SINGLE_HW_FLUSH,
 	                          jobgp->user_input.frame_builder_id, jobgp->user_input.flush_id, 0, 0, 0);
@@ -949,7 +949,7 @@ static int subsystem_maligp_irq_handler_bottom_half(mali_core_renderunit* core)
 #if MALI_STATE_TRACKING
 		_mali_osk_atomic_inc(&job->session->jobs_ended);
 #endif
-		trace_printk("SPI_GPU_GP Idle\n");
+		pr_debug("SPI_GPU_GP Idle\n");
 		return JOB_STATUS_END_SUCCESS; /* core idle */
 	}
 	/* sw watchdog timeout handling or time to do hang checking ? */

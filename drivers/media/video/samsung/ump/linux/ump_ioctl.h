@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
- *
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- *
+ * 
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -19,7 +19,7 @@ extern "C"
 #include <linux/types.h>
 #include <linux/ioctl.h>
 
-#include <ump_uk_types.h>
+#include "../common/ump_uk_types.h"
 
 #ifndef __user
 #define __user
@@ -42,6 +42,11 @@ extern "C"
 #define UMP_IOC_MSYNC     _IOW(UMP_IOCTL_NR,  _UMP_IOC_MSYNC, _ump_uk_size_get_s)
 #ifdef CONFIG_ION_EXYNOS
 #define UMP_IOC_ION_IMPORT  _IOW(UMP_IOCTL_NR,  _UMP_IOC_ION_IMPORT, _ump_uk_ion_import_s)
+#endif
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+#define UMP_IOC_DMABUF_IMPORT  _IOW(UMP_IOCTL_NR,  _UMP_IOC_DMABUF_IMPORT,\
+					struct ump_uk_dmabuf)
 #endif
 
 #ifdef __cplusplus

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -356,7 +356,7 @@ int mali_sysfs_register(struct mali_dev *device, dev_t dev, const char *mali_dev
 			debugfs_create_file("state_dump", 0400, mali_debugfs_dir, NULL, &mali_seq_internal_state_fops);
 #endif
 
-			debugfs_create_file("memory_usage", 0400, mali_debugfs_dir, NULL, &memory_usage_fops);
+			debugfs_create_file("memory_usage", 0444, mali_debugfs_dir, NULL, &memory_usage_fops);
 		}
 	}
 

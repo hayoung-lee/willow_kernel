@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -20,6 +20,7 @@ typedef enum
 	_MALI_DEVICE_SUSPEND,                         /* Suspend */
 	_MALI_DEVICE_RESUME,                          /* Resume */
 	_MALI_DEVICE_MAX_POWER_STATES,                /* Maximum power states */
+	_MALI_DEVICE_SHUTDOWN,			      /* Power off states*/
 } _mali_device_power_states;
 
 /* Number of DVFS events */

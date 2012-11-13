@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -156,7 +156,7 @@ void mali_regulator_set_voltage(int min_uV, int max_uV)
 		return;
 	}
 	MALI_DEBUG_PRINT(2, ("= regulator_set_voltage: %d, %d \n",min_uV, max_uV));
-
+	
 #if MALI_TIMELINE_PROFILING_ENABLED
     _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
                                MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
@@ -166,7 +166,7 @@ void mali_regulator_set_voltage(int min_uV, int max_uV)
 
 	regulator_set_voltage(g3d_regulator,min_uV,max_uV);
 	voltage = regulator_get_voltage(g3d_regulator);
-
+	
 #if MALI_TIMELINE_PROFILING_ENABLED
     _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
                                MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |

@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
- *
+ * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- *
+ * 
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -90,7 +90,7 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 #endif
 static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma);
 
-#ifdef CONFIG_VIDEO_MALI400MP
+#ifdef CONFIG_VIDEO_MALI400MP_R2P3
 extern int map_errcode( _mali_osk_errcode_t err );
 #endif
 
@@ -178,7 +178,7 @@ int ump_kernel_device_initialize(void)
 	}
 	else
 	{
-		debugfs_create_file("memory_usage", 0400, ump_debugfs_dir, NULL, &ump_memory_usage_fops);
+		debugfs_create_file("memory_usage", 0444, ump_debugfs_dir, NULL, &ump_memory_usage_fops);
 	}
 
 	if (0 == ump_major)
@@ -351,7 +351,12 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 			err = ump_ion_import_wrapper((u32 __user *)argument, session_data);
 			break;
 #endif
-
+#ifdef CONFIG_DMA_SHARED_BUFFER
+		case UMP_IOC_DMABUF_IMPORT:
+			err = ump_dmabuf_import_wrapper((u32 __user *)argument,
+							session_data);
+			break;
+#endif
 		case UMP_IOC_RELEASE:
 			err = ump_release_wrapper((u32 __user *)argument, session_data);
 			break;
@@ -373,7 +378,7 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 	return err;
 }
 
-#ifndef CONFIG_VIDEO_MALI400MP
+#ifndef CONFIG_VIDEO_MALI400MP 
 int map_errcode( _mali_osk_errcode_t err )
 {
     switch(err)
