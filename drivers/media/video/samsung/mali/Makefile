@@ -77,12 +77,12 @@ OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB ?= 6
 USING_PROFILING ?= 0
 USING_TRACEPOINTS ?= 0
 USING_MALI_MAJOR_PREDEFINE = 1
-USING_MALI_DVFS_ENABLED ?= 0
+USING_MALI_DVFS_ENABLED ?= 1
 TIMESTAMP ?= default
 BUILD ?= release 
 USING_MALI_PMM_EARLYSUSPEND ?= 0
 #USING_KERNEL_WITH_DMA_ALLOC_PHYS_PAGE ?= 0
-CONFIG_MALI_MEM_SIZE ?= 64
+CONFIG_MALI_MEM_SIZE ?= 512
 
 #config validtion check
 ifeq ($(USING_OS_MEMORY),1)
@@ -275,7 +275,7 @@ ifeq ($(PANIC_ON_WATCHDOG_TIMEOUT),1)
 endif
 
 # Get subversion revision number, fall back to 0000 if no svn info is available
-SVN_REV:=$(shell ((svnversion | grep -qv exported && echo -n 'Revision: ' && svnversion) || git svn info | sed -e 's/$$$$/M/' | grep '^Revision: ' || echo ${MALI_RELEASE_NAME}) 2>/dev/null | sed -e 's/^Revision: //')
+SVN_REV:=$(shell ((svnversion | grep -E "^[0-9]+" && echo -n 'Revision: ' && svnversion) || git svn info | sed -e 's/$$$$/M/' | grep '^Revision: ' || echo ${MALI_RELEASE_NAME}) 2>/dev/null | sed -e 's/^Revision: //')
 
 EXTRA_CFLAGS += -DSVN_REV=$(SVN_REV)
 EXTRA_CFLAGS += -DSVN_REV_STRING=\"$(SVN_REV)\"
