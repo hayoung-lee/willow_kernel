@@ -56,6 +56,11 @@
 #include "atags.h"
 #include "tcm.h"
 
+#ifdef CONFIG_MACH_WILLOW
+#include <mach/willow_version.h>
+extern WILLOW_HW_VERSION willow_get_hw_version( void );
+#endif
+
 #ifndef MEM_SIZE
 #define MEM_SIZE	(16*1024*1024)
 #endif
@@ -989,6 +994,10 @@ static const char *hwcap_str[] = {
 static int c_show(struct seq_file *m, void *v)
 {
 	int i;
+
+#ifdef CONFIG_MACH_WILLOW
+	system_rev = willow_get_hw_version();
+#endif
 
 	seq_printf(m, "Processor\t: %s rev %d (%s)\n",
 		   cpu_name, read_cpuid_id() & 15, elf_platform);
