@@ -45,21 +45,21 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R1  - Power management 1 */
 	0x0000,     /* R2  - Power management 2 */
 	0x0000,     /* R3  - Power management 3 */
-	0x0052,     /* R4  - Audio Interface, Main Mic ADC data appears in right phase of LRC */
+	0x0002,     /* R4  - Audio Interface, Main Mic ADC data appears in right phase of LRC */
 	0x0000,     /* R5  - Companding control */
-	0x0140,     /* R6  - Clock Gen control */
-	0x0000,     /* R7  - Additional control */
+	0x0000,     /* R6  - Clock Gen control */
+	0x0180,     /* R7  - Additional control */
 	0x0000,     /* R8  - GPIO Control */
 	0x0000,     /* R9  - Jack Detect Control 1 */
-	0x0000,     /* R10 - DAC Control */
-	0x00FF,     /* R11 - Left DAC digital Vol */
-	0x00FF,     /* R12 - Right DAC digital vol */
+	0x0048,     /* R10 - DAC Control */
+	0x01FD,     /* R11 - Left DAC digital Vol */
+	0x01FD,     /* R12 - Right DAC digital vol */
 	0x0000,     /* R13 - Jack Detect Control 2 */
-	0x0100,     /* R14 - ADC Control */
-	0x00FF,     /* R15 - Left ADC Digital Vol */
-	0x00FF,     /* R16 - Right ADC Digital Vol */
+	0x01A0,     /* R14 - ADC Control */
+	0x01F5,     /* R15 - Left ADC Digital Vol */
+	0x01F5,     /* R16 - Right ADC Digital Vol */
 	0x0000,     /* R17 */
-	0x012C,     /* R18 - EQ1 - low shelf */
+	0x006C,     /* R18 - EQ1 - low shelf */
 	0x002C,     /* R19 - EQ2 - peak 1 */
 	0x002C,     /* R20 - EQ3 - peak 2 */
 	0x002C,     /* R21 - EQ4 - peak 3 */
@@ -86,23 +86,23 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R42 - OUT4 to ADC */
 	0x0000,     /* R43 - Beep control */
 	0x0033,     /* R44 - Input ctrl */
-	0x0010,     /* R45 - Left INP PGA gain ctrl */
-	0x0010,     /* R46 - Right INP PGA gain ctrl */
+	0x013A,     /* R45 - Left INP PGA gain ctrl */
+	0x017A,     /* R46 - Right INP PGA gain ctrl */
 	0x0100,     /* R47 - Left ADC BOOST ctrl */
 	0x0100,     /* R48 - Right ADC BOOST ctrl */
 	0x0002,     /* R49 - Output ctrl */
-	0x0001,     /* R50 - Left mixer ctrl */
-	0x0001,     /* R51 - Right mixer ctrl */
-	0x0039,     /* R52 - LOUT1 (HP) volume ctrl */
-	0x0039,     /* R53 - ROUT1 (HP) volume ctrl */
-	0x0039,     /* R54 - LOUT2 (SPK) volume ctrl */
-	0x0039,     /* R55 - ROUT2 (SPK) volume ctrl */
-	0x0001,     /* R56 - OUT3 mixer ctrl */
-	0x0001,     /* R57 - OUT4 (MONO) mix ctrl */
+	0x0008,     /* R50 - Left mixer ctrl */
+	0x0000,     /* R51 - Right mixer ctrl */
+	0x0175,     /* R52 - LOUT1 (HP) volume ctrl */
+	0x0175,     /* R53 - ROUT1 (HP) volume ctrl */
+	0x0134,     /* R54 - LOUT2 (SPK) volume ctrl */
+	0x0134,     /* R55 - ROUT2 (SPK) volume ctrl */
+	0x0041,     /* R56 - OUT3 mixer ctrl */
+	0x0041,     /* R57 - OUT4 (MONO) mix ctrl */
 	0x0001,     /* R58 */
 	0x0000,     /* R59 */
 	0x0004,     /* R60 - OUTPUT ctrl */
-	0x0000,     /* R61 - BIAS CTRL */
+	0x0100,     /* R61 - BIAS CTRL */
 	0x0180,     /* R62 */
 	0x0000      /* R63 */
 };
