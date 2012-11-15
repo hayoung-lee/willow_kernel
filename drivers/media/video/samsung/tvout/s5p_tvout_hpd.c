@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/poll.h>
+#include <linux/switch.h>
 
 #include <plat/tvout.h>
 #include <linux/delay.h>
@@ -83,6 +84,10 @@ static struct miscdevice hpd_misc_device = {
 	&hpd_fops,
 };
 
+struct switch_dev switch_hdmi_detection = {
+    .name = "hdmi",
+};
+
 static void s5p_hpd_kobject_uevent(void)
 {
 	char env_buf[120];
@@ -122,6 +127,7 @@ static void s5p_hpd_kobject_uevent(void)
 			HPDIFPRINTK("online event\n");
 			kobject_uevent_env(&(hpd_misc_device.this_device->kobj), KOBJ_CHANGE, envp);
 			on_start_process = true;
+			switch_set_state(&switch_hdmi_detection, 1);
 		}
 		last_uevent_state = HPD_HI;
 	} else {
@@ -132,6 +138,7 @@ static void s5p_hpd_kobject_uevent(void)
 			HPDIFPRINTK("offline event\n");
 			kobject_uevent_env(&(hpd_misc_device.this_device->kobj), KOBJ_CHANGE, envp);
 			on_stop_process = true;
+			switch_set_state(&switch_hdmi_detection, 0);
 		}
 		last_uevent_state = HPD_LO;
 	}
@@ -403,6 +410,11 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 	struct s5p_platform_hpd *pdata;
 	int ret;
 
+	if (switch_dev_register(&switch_hdmi_detection)) {
+		printk(KERN_WARNING "%s : Failed to register switch device\n", __func__);
+		return -EBUSY;
+	}
+
 	if (misc_register(&hpd_misc_device)) {
 		printk(KERN_WARNING " Couldn't register device 10, %d.\n",
 			HPD_MINOR);
@@ -447,6 +459,7 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	if (ret) {
 		printk(KERN_ERR  "failed to install hpd irq\n");
+		switch_dev_unregister(&switch_hdmi_detection);
 		misc_deregister(&hpd_misc_device);
 		return -EIO;
 	}
@@ -533,6 +546,7 @@ static int __init s5p_hpd_init(void)
 
 static void __exit s5p_hpd_exit(void)
 {
+	switch_dev_unregister(&switch_hdmi_detection);
 	misc_deregister(&hpd_misc_device);
 }
 
