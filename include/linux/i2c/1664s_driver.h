@@ -434,7 +434,7 @@ typedef struct {
 	uint8_t nADCSPERSYNC;
 	uint8_t nPULSESPERADC;
 	uint8_t nXSLEW;
-	uint8_t nSYNCDELAY;
+	uint16_t nSYNCDELAY;
 	uint8_t nXVOLTAGE;
 	uint8_t nADCCTRL;
 } __packed spt_cteconfig_t46_config_t;
@@ -613,7 +613,7 @@ typedef struct {
  	uint8_t  nMAXSELFREQ ;
  	uint8_t  nFREQ[5] ;
  	uint8_t  nHOPCNT ;
- 	uint8_t  nRESERVED3 ;
+ 	uint8_t  nALTMAXSELFREQ ;
  	uint8_t  nHOPCNTPER ;
  	uint8_t  nHOPEVALTO ;
  	uint8_t  nHOPST ;
