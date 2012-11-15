@@ -2235,6 +2235,17 @@ int fimc_streamon_capture(void *fh)
 #endif
 	cap->irq = 0;
 
+#if 1
+	s3c_csis_stop(CSI_CH_1);
+
+	if(willow_capture_status==0)
+		ret=v4l2_subdev_call(cam->sd, video, s_stream, 1);  //preview
+	else if(willow_capture_status==1)
+				ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
+
+	fimc_hwset_reset(ctrl);
+
+#endif
 	fimc_hwset_enable_irq(ctrl, 0, 1);
 
 	if ((cam->id != CAMERA_WB) && (cam->id != CAMERA_WB_B)) {
@@ -2285,6 +2296,7 @@ int fimc_streamon_capture(void *fh)
 					cap->fmt.pixelformat);
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
+#if 0
 #if 1
 				if(willow_capture_status==0)
 					ret=v4l2_subdev_call(cam->sd, video, s_stream, 1);  //preview
@@ -2292,6 +2304,7 @@ int fimc_streamon_capture(void *fh)
 							ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
 #else
 				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
+#endif
 #endif
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",

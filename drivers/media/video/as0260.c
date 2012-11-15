@@ -120,7 +120,8 @@ enum AS0260_frame_size {
 		AS0260_PREVIEW_VGA,            /* 640x480 */
 		AS0260_PREVIEW_1M,          /* 1280x720 */
 		AS0260_PREVIEW_1P3M,          /* 1280x960 */
-		AS0260_PREVIEW_2M,         /* 1920x1280*/
+		AS0260_PREVIEW_1P5M,  /* 1440x1080 */
+		AS0260_PREVIEW_2M,         /* 1920x1080*/
 };
 
 static struct as0260_enum_framesize as0260_framesize_list[] = {
@@ -129,6 +130,7 @@ static struct as0260_enum_framesize as0260_framesize_list[] = {
         {AS0260_PREVIEW_VGA,         640,  480 },
         {AS0260_PREVIEW_1M,         1280, 720 },
         {AS0260_PREVIEW_1P3M,         1280, 960 },
+        {AS0260_PREVIEW_1P5M,         1440, 1080 },        
         {AS0260_PREVIEW_2M,         1920, 1080 },
 };
 
@@ -379,8 +381,76 @@ int as0260_32_write_reg(struct v4l2_subdev *sd,u16 cmd, u32 val)
 	//printk("[AS0260] ____init Reg cmd =%x %x data %x %x \n", buf[0],buf[1],buf[2],buf[3]);
 	return 0;
 }
+#if 0 
+static int write_mem(struct v4l2_subdev *sd, u16 reg, u8 len, const u8 *buf)
+{
+		struct i2c_client *client = v4l2_get_subdevdata(sd);
+        int ret;
+        u8 tmp[len + 2];
 
+        //put_unaligned_le16(cpu_to_le16(reg), tmp);
+		tmp[0]=reg>>8;
+		tmp[1]=reg & 0xff;		
+		memcpy(tmp + 2, buf, len);
 
+        ret = i2c_master_send(client, tmp, sizeof(tmp));
+
+        if (ret < 0)
+                return ret;
+
+        return ret == sizeof(tmp) ? 0 : -EIO;
+}
+
+static int write_block(struct v4l2_subdev *sd,
+	struct as0260_reg const *reg_tbl, int num_of_items_in_table) {
+
+    u8 tmp[(num_of_items_in_table*2) + 10];
+	int i=0,j=0,cnt_tmp=0;
+	u16 address_temp=0;
+
+	address_temp=reg_tbl->waddr;
+	memset(tmp,0,sizeof(tmp));
+	
+	do{
+		
+		if(reg_tbl->len==1)
+			tmp[i++] = reg_tbl->wdata;
+		else if(reg_tbl->len==2)
+		{
+
+			tmp[i++] = reg_tbl->wdata>>8;
+			tmp[i++] = reg_tbl->wdata&0xff;
+		}
+		else if(reg_tbl->len==4)
+		{
+			tmp[i++] = reg_tbl->wdata>>24;
+			tmp[i++] = reg_tbl->wdata>>16;
+			tmp[i++] = reg_tbl->wdata>>8;			
+			tmp[i++] = reg_tbl->wdata &0xff;
+		}
+
+		reg_tbl++;
+
+		j++;
+	}while(j<num_of_items_in_table);
+	for(j=0;j<i;j++)
+	{
+
+		if(cnt_tmp<10)
+		{
+			printk("   0x%x ",tmp[j]);
+			cnt_tmp++;
+		}
+		else
+		{
+			printk("\n");
+			cnt_tmp=0;
+		}
+	}
+	//write_mem(sd, address_temp,i,tmp);
+	return 0;
+}
+#endif
 static int as0260_i2c_w_write_regs(struct v4l2_subdev *sd,
 	struct as0260_reg const *reg_tbl, int num_of_items_in_table) {
 	int i;
@@ -718,10 +788,12 @@ int changestate(struct v4l2_subdev *sd,SYSTEM_STATE_E state_d, HOST_COMMAND_E cm
 
 	u16 buf16=0;
 	int i=0;
+	//msleep(10);
 
 	err=as0260_i2c_write_reg_8(client, 0xdc00, state_d);  
 	err=as0260_i2c_write_reg_16(client, 0x0080, 0x8000 | cmd_d);  
 	do {
+		msleep(11);
 		as0260_i2c_16_read(client, 0x0080,&buf16);
 		if (0 == (buf16 & cmd_d))
 		{
@@ -729,7 +801,6 @@ int changestate(struct v4l2_subdev *sd,SYSTEM_STATE_E state_d, HOST_COMMAND_E cm
 			return 1;		
 		}
 		i++;		
-		msleep(10);
 	}while(i++<10);
 
 	return 0;	
@@ -930,7 +1001,7 @@ static struct v4l2_queryctrl as0260_controls[] = {
 	},
 };
 
-
+#if 0
 static ssize_t as0260_regread_store(struct device *dev,
 					struct device_attribute *attr,
 						const char *buf, size_t count)
@@ -1028,7 +1099,6 @@ static ssize_t as0260_regwrite_store(struct device *dev,
 	}
 	return count;
 }
-
 static DEVICE_ATTR(regread, S_IRUGO|S_IWUSR, as0260_regread_show, as0260_regread_store);
 static DEVICE_ATTR(regwrite, S_IRUGO|S_IWUSR, NULL, as0260_regwrite_store);
 
@@ -1041,7 +1111,7 @@ static struct attribute *as0260_attributes[] = {
 static struct attribute_group as0260_attribute_group = {
 	.attrs = as0260_attributes
 };
-
+#endif
 
 static int as0260_set_resolution_reg(struct v4l2_subdev *sd,int index)
 {
@@ -1051,43 +1121,30 @@ static int as0260_set_resolution_reg(struct v4l2_subdev *sd,int index)
 	as0260_info(&client->dev,"[AS0260] ______________________ as0260_set_resolution_reg=%d \n",index);
 	switch(index)
 	{
-#if defined(FEATURE_TW_CAMERA_FPS_20)
 		case AS0260_PREVIEW_QCIIF:
-			err =as0260_i2c_w_write_regs(sd,&as0260_176p20_regs[0], ARRAY_SIZE(as0260_176p20_regs));
+			err =as0260_i2c_w_write_regs(sd,&as0260_176[0], ARRAY_SIZE(as0260_176));
 			break;
-
 		case AS0260_PREVIEW_QVGA:
-			err =as0260_i2c_w_write_regs(sd,&as0260_320p20_regs[0], ARRAY_SIZE(as0260_320p20_regs));
+			err =as0260_i2c_w_write_regs(sd,&as0260_320[0], ARRAY_SIZE(as0260_320));
 			break;
 		case AS0260_PREVIEW_VGA:
-			err =as0260_i2c_w_write_regs(sd,&as0260_640p20_regs[0], ARRAY_SIZE(as0260_640p20_regs));
+			err =as0260_i2c_w_write_regs(sd,&as0260_640[0], ARRAY_SIZE(as0260_640));
 			break;	
 		case AS0260_PREVIEW_1M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_720p20_regs[0], ARRAY_SIZE(as0260_720p20_regs));
+			err =as0260_i2c_w_write_regs(sd,&as0260_720[0], ARRAY_SIZE(as0260_720));
 			
 		case AS0260_PREVIEW_1P3M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_960p20_regs[0], ARRAY_SIZE(as0260_960p20_regs));
+			err =as0260_i2c_w_write_regs(sd,&as0260_960[0], ARRAY_SIZE(as0260_960));
+			//err=	write_block(sd,&as0260_960[0], ARRAY_SIZE(as0260_960));
 			break;		
-		case AS0260_PREVIEW_2M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_1080p20_regs[0], ARRAY_SIZE(as0260_1080p20_regs));
-			break;		
-#else
-		case AS0260_PREVIEW_QVGA:
-			err =as0260_i2c_w_write_regs(sd,&as0260_320p30_regs[0], ARRAY_SIZE(as0260_320p30_regs));
-			break;
-		case AS0260_PREVIEW_VGA:
-			err =as0260_i2c_w_write_regs(sd,&as0260_640p30_regs[0], ARRAY_SIZE(as0260_640p30_regs));
-			break;	
-		case AS0260_PREVIEW_1M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_720p30_regs[0], ARRAY_SIZE(as0260_720p30_regs));
-			
-		case AS0260_PREVIEW_1P3M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_960p30_regs[0], ARRAY_SIZE(as0260_960p30_regs));
-			break;		
-		case AS0260_PREVIEW_2M:
-			err =as0260_i2c_w_write_regs(sd,&as0260_1080p30_regs[0], ARRAY_SIZE(as0260_640p30_regs));
+#if !defined(FEATURE_TW_CAMERA_FPS28_MCLK24_PCLK92_H)
+		case AS0260_PREVIEW_1P5M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_1440[0], ARRAY_SIZE(as0260_1440));
 			break;		
 #endif			
+		case AS0260_PREVIEW_2M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_1080[0], ARRAY_SIZE(as0260_1080));
+			break;		
 	}
 
 	return err;
@@ -1101,22 +1158,31 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 #endif
 	struct as0260_state *state = to_state(sd);
 	//u32 read_value=0;
-
+	//u16 buf16=0;
+	
 #ifdef AS0260_DEBUG
 	as0260_info(&client->dev, "[AS0260] %s: ________set_Preview_start\n", __func__);
 #endif
-	msleep(200);
+	msleep(150);
+	//as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
 
 	as0260_set_resolution_reg(sd,state->framesize_index);
-	msleep(10);
+	//as0260_i2c_w_write_regs(sd,&as0260_low_init_regs[0], ARRAY_SIZE(as0260_low_init_regs));
+	//err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
+	//msleep(5);
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	if(err==0)
 	{
-		msleep(10);
+
 		as0260_set_resolution_reg(sd,state->framesize_index);
-		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-		//as0260_i2c_w_write_regs(sd,&as0260_init_low_regs[0], ARRAY_SIZE(as0260_init_regs));
-		//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+		//as0260_i2c_w_write_regs(sd,&as0260_low_init_regs[0], ARRAY_SIZE(as0260_low_init_regs));
+		err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
+		msleep(10);
+		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+
+		//as0260_set_resolution_reg(sd,state->framesize_index);
+		//err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+		
 		as0260_info(&client->dev, "as0260_set_resolution_reg \n");
 		//as0260_set_resolution_reg(sd,state->framesize_index);
 		//msleep(10);
@@ -1229,23 +1295,32 @@ static int as0260_set_capture_start(struct v4l2_subdev *sd)
 	int err=0;
 	struct as0260_state *state = to_state(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	//u16 buf16=0;
 
 #if 1
 	//msleep(5);
-	err=as0260_set_resolution_reg(sd,state->framesize_index);
 	as0260_info(&client->dev,"[AS0260] _______________as0260_set_capture_start index=%d \n",state->framesize_index);
+	err=as0260_set_resolution_reg(sd,state->framesize_index);
+	//err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(1);	
+	//as0260_i2c_w_write_regs(sd,&as0260_low_init_regs[0], ARRAY_SIZE(as0260_low_init_regs));
+
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-	msleep(100);
-	
+
 	if(err==0)
 	{
 		as0260_set_resolution_reg(sd,state->framesize_index);
-		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+		//as0260_i2c_w_write_regs(sd,&as0260_low_init_regs[0], ARRAY_SIZE(as0260_low_init_regs));
+		err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
+		msleep(10);
+		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
 	//printk(" as0260_set_capture_start  state->req_fmt.width=%d state->req_fmt.height %d index \n",
 	//	state->req_fmt.width,state->req_fmt.height ,state->framesize_index);
-	msleep(400);
+	msleep(300);
 #endif
+	//as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
+
 	return err;
 }
 
@@ -1676,7 +1751,9 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 
 	as0260_i2c_16_read(client, 0x001c,&buf16);
 	as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
-		
+
+#if 1
+	err=as0260_set_resolution_reg(sd,AS0260_PREVIEW_1P3M);
 	err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
 	msleep(10);
 
@@ -1685,6 +1762,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	if(err==0)
 	{
 		msleep(20);
+		err=as0260_set_resolution_reg(sd,AS0260_PREVIEW_1P3M);
 		as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
 		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
@@ -1692,6 +1770,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	//refresh(sd);
 
 	backup_client=client;
+	as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
 
 #if 0//#if !defined(AS0260_DEBUG)
 	//err=as0260_i2c_write_reg_32(client, reg_tbl->waddr, reg_tbl->wdata);
@@ -1778,7 +1857,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	*/
 	//err=as0260_i2c_write_reg_16(client, 0x3070, 2);  // test pattern
 #endif
-
+#endif
 	as0260_info(&client->dev," 	as0260_init d_width=%d d_height=%d c_width=%d c_height=%d \n", \
 		state->default_width,state->default_height,state->capture_width,state->capture_height );
 
@@ -1799,6 +1878,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	return 0;
 }
 
+#if defined(AS0260_NOT_USE)
 static int as0260_s_power(struct v4l2_subdev *sd, int on)
 {
 	//struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1810,7 +1890,6 @@ static int as0260_s_power(struct v4l2_subdev *sd, int on)
 
 	return 0;
 }
-#if defined(AS0260_NOT_USE)
 static int as0260_sleep(struct v4l2_subdev *sd)
 {
 	//struct i2c_client *client = v4l2_get_subdevdata(sd);

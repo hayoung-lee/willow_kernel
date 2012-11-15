@@ -594,6 +594,28 @@ int as0260_camera_reset(void)
 EXPORT_SYMBOL(as0260_camera_reset);
 
 
+int as0260_camera_reset_ctrl(int ctrl)
+{
+	int err;
+	mdelay(50);
+
+	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
+
+	printk("AS0260 CAMERA_RESET START___________\n");
+
+	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+
+
+	gpio_set_value(EXYNOS4212_GPM1(4), ctrl);
+	gpio_free(EXYNOS4212_GPM1(4));
+	
+	printk("AS0260 CAMERA_RESET END ____________\n");
+	return 0;
+}
+
 int as0260_power_ctrl(int ctrl)
 {
 	int err=0;
@@ -626,7 +648,7 @@ int as0260_power_ctrl(int ctrl)
 
 		mdelay(10);
 
-		err=regulator_set_voltage(camera_vddc, 1900000, 1900000);
+		err=regulator_set_voltage(camera_vddc, 1850000, 1850000);
 		if (err)
 			printk("[AS0260] _____ camera_vddc enable  regulator_set_voltage err ..... \n");
 
@@ -634,9 +656,9 @@ int as0260_power_ctrl(int ctrl)
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddc err ..... \n");
 
-		mdelay(100);  // 150
+		mdelay(150);  // 150
 
-		err=regulator_set_voltage(camera_vddi, 1900000, 1900000);
+		err=regulator_set_voltage(camera_vddi, 1850000, 1850000);
 		if (err)
 			printk("[AS0260] _____ camera_vddi enable  regulator_set_voltage err ..... \n");
 		
@@ -644,9 +666,9 @@ int as0260_power_ctrl(int ctrl)
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vddi err ..... \n");
 		
-		mdelay(30);  // 30
+		mdelay(35);  // 30
 
-		err=regulator_set_voltage(camera_vdda, 2900000, 2900000);
+		err=regulator_set_voltage(camera_vdda, 2850000, 2850000);
 		if (err)
 			printk("[AS0260] _____ camera_vdda enable  regulator_set_voltage err ..... \n");
 		
@@ -654,7 +676,7 @@ int as0260_power_ctrl(int ctrl)
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(50);  //50
+		mdelay(70);  //50
 
 		//as0260_camera_eclk_ctrl(1);
 	} else {
@@ -671,6 +693,7 @@ int as0260_power_ctrl(int ctrl)
 
 		mdelay(20);	
 
+		as0260_camera_reset_ctrl(0);
 		//as0260_camera_eclk_ctrl(0);
 		
 	}
@@ -681,8 +704,12 @@ int as0260_power_ctrl(int ctrl)
 	return 0;
 }
 
-//#define MCLK_22MHZ
-#define MCLK_23MHZ
+///#define MCLK_20MHZ
+#define MCLK_22MHZ
+//#define MCLK_23MHZ
+//#define MCLK_48MHZ
+
+//#define FEATURE_CAMERA_MIPI_1_LANE
 
 static struct as0260_platform_data as0260_plat = {
 	.default_width =1920,//640, //1920,
@@ -690,10 +717,15 @@ static struct as0260_platform_data as0260_plat = {
 	.max_width = WILLOW_PREVIEW_MAX_W,//960,
 	.max_height =WILLOW_PREVIEW_MAX_H,
 	.pixelformat = V4L2_PIX_FMT_UYVY,
-#if defined(MCLK_22MHZ)
+
+#if defined(MCLK_20MHZ)
+	.freq = 20000000,  
+#elif defined(MCLK_22MHZ)
 	.freq = 22000000,  //23000000
 #elif defined(MCLK_23MHZ)
-	.freq = 23500000,  //23000000
+	.freq = 23200000,  //23000000
+#elif defined(MCLK_48MHZ)
+	.freq = 24000000,
 #else
 	.freq = 24000000,
 #endif	
@@ -717,11 +749,13 @@ static struct s3c_platform_camera as0260= {
 	.info		= &as0260_i2c_info,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
-
+//	.srclk_name	= "mout_epll",
 #if defined(MCLK_22MHZ)
 	.clk_rate = 22000000, 
 #elif defined(MCLK_23MHZ)
-	.clk_rate = 23500000, 
+	.clk_rate = 23600000, 
+#elif defined(MCLK_48MHZ)
+	.clk_rate = 48000000,
 #else
 	.clk_rate = 24000000,
 #endif	
@@ -734,10 +768,15 @@ static struct s3c_platform_camera as0260= {
 		.width	= 1920,//1920,
 		.height	= 1080,//1080,
 	},
+#if defined(FEATURE_CAMERA_MIPI_1_LANE)
+	.mipi_lanes	= 1,
+	.mipi_settle = 12,
+	.mipi_align = 24,
+#else
 	.mipi_lanes	= 2,
 	.mipi_settle	= 12,
 	.mipi_align	= 32,
-
+#endif
 	/* Polarity */
 	.inv_pclk	= 1, // 0 
 	.inv_vsync	= 1, // 1 
@@ -3916,6 +3955,7 @@ static void __init willow_machine_init(void)
 	as0260_camera_config();
 	//as0260_power_ctrl(0);
 	//smdk4x12_cam1_reset(1);
+	as0260_camera_reset_ctrl(0);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
 
