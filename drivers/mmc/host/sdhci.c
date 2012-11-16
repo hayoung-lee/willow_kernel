@@ -2239,6 +2239,11 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 		host->flags &= ~SDHCI_NEEDS_RETUNING;
 	}
 
+	if (host->mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME) {
+		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+		pr_info("%s : Enter WIFI suspend\n", __func__);
+	}
+
 	ret = mmc_suspend_host(host->mmc);
 	if (ret)
 		return ret;
@@ -2553,6 +2558,9 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_DRIVER_TYPE_C;
 	if (caps[1] & SDHCI_DRIVER_TYPE_D)
 		mmc->caps |= MMC_CAP_DRIVER_TYPE_D;
+
+	if (mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME)
+		mmc->pm_caps |= MMC_PM_KEEP_POWER;
 
 	/*
 	 * If Power Off Notify capability is enabled by the host,
