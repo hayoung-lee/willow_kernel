@@ -297,7 +297,7 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 	int ta_in, usb_in;
 
 	ta_in = gpio_get_value(pdata->dok) ? 0 : 1;
-	mdelay(250);
+	msleep(250);
 	usb_in = gpio_get_value(pdata->uok) ? 0 : 1;
 
 #ifdef BATTERY_DEBUG
