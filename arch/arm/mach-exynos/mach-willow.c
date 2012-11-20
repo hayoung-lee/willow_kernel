@@ -1844,6 +1844,7 @@ static struct regulator_init_data __initdata max77686_ldo23_data = {
 		.min_uV		= 3300000,
 		.max_uV		= 3300000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -2418,15 +2419,15 @@ int touch_bootst_ctrl(int onoff)
 	int err;
 	// touch gpb4
 
-	err = gpio_request(EXYNOS4212_GPM3(3), "tsp_bootst");
+	err = gpio_request(GPIO_TOUCH_BOOTST_EN, "tsp_bootst");
 	if (err<0) {
 		printk("[touch_bootst_ctrl] Error (L:%d), %s() - gpio_request(tsp_bootst) failed (err=%d)\n", __LINE__, __func__, err);
 		return err;
 	}else {
-		gpio_direction_output(EXYNOS4212_GPM3(3), onoff);
+		gpio_direction_output(GPIO_TOUCH_BOOTST_EN, onoff);
     }		
 	
-	gpio_free(EXYNOS4212_GPM3(3));
+	gpio_free(GPIO_TOUCH_BOOTST_EN);
 
 	return 0;
 }
@@ -2438,14 +2439,14 @@ int touch_reset(int onoff)
 {
 	int err;
 
-	err = gpio_request(EXYNOS4_GPB(4), "EXYNOS4_GPB(4)");
+	err = gpio_request(GPIO_TOUCH_RESET, "EXYNOS4_GPB(4)");
 	if (err<0) {
 		printk("[touch_reset] Error (L:%d), %s() - gpio_request(EXYNOS4_GPB(4)) failed (err=%d)\n", __LINE__, __func__, err);
 		return err;
 	}else {
-		gpio_direction_output(EXYNOS4_GPB(4), onoff);
+		gpio_direction_output(GPIO_TOUCH_RESET, onoff);
     }		
-	gpio_free(EXYNOS4_GPB(4));
+	gpio_free(GPIO_TOUCH_RESET);
 
 	return 0;
 }
@@ -2461,7 +2462,7 @@ void touch_interrupt_init(void)
 	int gpio;
 
 	/* TOUCH_INT: XEINT_4 */
-	gpio = EXYNOS4_GPX0(4);
+	gpio = GPIO_TOUCH_INT;
 	gpio_request(gpio, "TOUCH_INT");
 	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
@@ -2472,10 +2473,10 @@ void touch_interrupt_low_gpio(void)
     // Touch_int gpx0_4
 	int gpio;
 
-	gpio = EXYNOS4_GPX0(4);
+	gpio = GPIO_TOUCH_INT;
 	gpio_request(gpio, "TOUCH_INT");
 	s3c_gpio_cfgpin(gpio, S3C_GPIO_INPUT);
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_DOWN);
 }
 
 void touch_on(void)
@@ -2496,14 +2497,14 @@ void touch_on(void)
 	
 	ATMEL_log("[ATMEL] TS_POWER ON___________\n");
 	/* touch reset pin */
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	s3c_gpio_cfgpin(GPIO_TOUCH_RESET, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_RESET, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_RESET, 0);
 
 	/* touch xvdd en pin */
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4212_GPM3(3), 0);
+	s3c_gpio_cfgpin(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);
 
 	//touch_bootst_ctrl(0); // xvdd off 
 	//touch_reset(0);
@@ -2526,14 +2527,14 @@ void touch_on(void)
 	regulator_put(tsp_vdd3v3);
 
 	/* enable touch xvdd */
-	gpio_set_value(EXYNOS4212_GPM3(3), 1);
+	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 1);
 
 	/* reset ic */
 	mdelay(1);
-	gpio_set_value(EXYNOS4_GPB(4), 1);
+	gpio_set_value(GPIO_TOUCH_RESET, 1);
 	
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_SFN(0xf));
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_TOUCH_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_NONE);
 
 	/* HW RESET Time  */
 	msleep(300);
@@ -2570,24 +2571,24 @@ void touch_off(void)
 	mdelay(10);
 
 	/* touch interrupt pin */
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(4), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4_GPX0(4), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_TOUCH_INT, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_NONE);
 
 	/* touch reset pin */
-	s3c_gpio_cfgpin(EXYNOS4_GPB(4), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPB(4), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4_GPB(4), 0);
+	s3c_gpio_cfgpin(GPIO_TOUCH_RESET, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_RESET, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_RESET, 0);
 
 	/* touch xvdd en pin */
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(3), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM3(3), S3C_GPIO_PULL_NONE);
-	gpio_set_value(EXYNOS4212_GPM3(3), 0);
+	s3c_gpio_cfgpin(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);
 
 }
 
 int atmel1664_gpio_chg_get(void)
 {
-	return gpio_get_value(EXYNOS4_GPX0(4));
+	return gpio_get_value(GPIO_TOUCH_INT);
 }
 	
 

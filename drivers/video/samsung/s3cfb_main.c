@@ -349,10 +349,7 @@ static int s3cfb_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_FB_S5P_LCD_INIT) && !defined(BOOTLOADER_INIT_LCD)
 	/* panel control */
-#if defined(CONFIG_FB_S5P_LTN101AL03)
-		LTN101AL03_lcd_onoff(1);
-		LTN101AL03_lvds_on(1);
-#else
+#if !defined(CONFIG_FB_S5P_LTN101AL03)
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
 
@@ -460,7 +457,6 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	info->system_state = POWER_OFF;
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-	set_backlight_ctrl(1);
 	LTN101AL03_backlight_onoff(0);
 #endif
 
@@ -492,9 +488,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	LTN101AL03_lvds_on(0);
 #endif
 
-#if defined(CONFIG_FB_S5P_LTN101AL03)
-	set_backlight_ctrl(0);
-#endif
+	LTN101AL03_lcd_onoff(0);
 
 	s3c_log("s3cfb_early_suspend is called end \n");
 
@@ -574,7 +568,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 		s3cfb_set_global_interrupt(fbdev, 1);
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-		//LTN101AL03_backlight_onoff(1);
+		LTN101AL03_backlight_onoff(1);
 		set_backlight_ctrl(0);
 		willow_backlight_on();		
 #else
@@ -682,7 +676,7 @@ int s3cfb_resume(struct platform_device *pdev)
 static int s3cfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct s3c_platform_fb *pdata = to_fb_plat(&pdev->dev);
-	pr_debug("s3cfb_suspend is called\n");
+	s3c_log("s3cfb_suspend is called\n");
 	LTN101AL03_lcd_onoff(0);
 	return 0;
 }
@@ -716,9 +710,6 @@ static struct platform_driver s3cfb_driver = {
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= s3cfb_suspend,
 	.resume		= s3cfb_resume,
-#endif
-#ifdef CONFIG_FB_S5P_LTN101AL03
-	.suspend = s3cfb_suspend,
 #endif
 	.driver		= {
 		.name	= S3CFB_NAME,

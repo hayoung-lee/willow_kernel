@@ -115,6 +115,11 @@
 #define GPIO_HDMI_HPD           EXYNOS4_GPX3(7)
 #define GPIO_HDMI_CED           EXYNOS4_GPX3(6)
 
+/* TOUCH */
+#define GPIO_TOUCH_INT			EXYNOS4_GPX0(4)
+#define GPIO_TOUCH_RESET		EXYNOS4_GPB(4)
+#define GPIO_TOUCH_BOOTST_EN	EXYNOS4212_GPM3(3)
+
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);
 

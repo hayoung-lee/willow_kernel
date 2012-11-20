@@ -304,7 +304,7 @@ EXPORT_SYMBOL(LTN101AL03_backlight_onoff);
 
 void LTN101AL03_lcd_onoff(int onoff)
 {
-	struct regulator *lcd_ldo = regulator_get(NULL, "vdd_lcd");  
+	struct regulator *lcd_ldo = regulator_get(NULL, "vdd_lcd");
 	
 	if(onoff==1)
 	{
@@ -314,9 +314,7 @@ void LTN101AL03_lcd_onoff(int onoff)
 	}
 	else
 	{
-		if(regulator_is_enabled(lcd_ldo))
-			regulator_disable(lcd_ldo);
-
+		regulator_force_disable(lcd_ldo);
 		regulator_put(lcd_ldo);
 		mdelay(100); //T1+T2//mdelay(500); //T1+T2
 	}
