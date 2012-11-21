@@ -23,8 +23,6 @@
 #include "s3c-i2s-v2.h"
 #include "../codecs/wm8985.h"
 
-#define I2S_FMT_LEFT_JUSTIFIED	1
-
 static int set_epll_rate(unsigned long rate)
 {
 	struct clk *fout_epll;
@@ -189,22 +187,14 @@ static int willow_i2s_hw_params(struct snd_pcm_substream *substream,
 	set_epll_rate(rclk * psr);
 
 	ret = snd_soc_dai_set_fmt(codec_dai,
-#if I2S_FMT_LEFT_JUSTIFIED
-					SND_SOC_DAIFMT_LEFT_J
-#else
 					SND_SOC_DAIFMT_I2S
-#endif
 					| SND_SOC_DAIFMT_NB_NF
 					| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
 	ret = snd_soc_dai_set_fmt(cpu_dai,
-#if I2S_FMT_LEFT_JUSTIFIED
-					SND_SOC_DAIFMT_RIGHT_J
-#else
 					SND_SOC_DAIFMT_I2S
-#endif
 					| SND_SOC_DAIFMT_NB_NF
 					| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
