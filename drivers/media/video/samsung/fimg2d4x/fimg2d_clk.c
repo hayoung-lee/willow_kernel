@@ -101,6 +101,7 @@ int fimg2d_clk_setup(struct fimg2d_control *info)
 {
 	struct fimg2d_platdata *pdata;
 	struct clk *parent, *sclk;
+	struct clk *mout_mpll_clock;
 	int ret = 0;
 
 	sclk = parent = NULL;
@@ -124,6 +125,18 @@ int fimg2d_clk_setup(struct fimg2d_control *info)
 		}
 		fimg2d_debug("sclk: %s\n", pdata->clkname);
 
+		//Robin Wang, mout_g2d --->mout_mpll
+		mout_mpll_clock = clk_get(NULL,"mout_mpll");
+		if (IS_ERR(mout_mpll_clock)) {
+				printk("@@@@@@ get mout_mpll fail@@@@@@@@@\n");
+				goto err_clk3;
+	 
+		}
+		if (clk_set_parent(parent, mout_mpll_clock))
+			printk(KERN_ERR "mout g2d failed to set parent\n");
+
+
+		//sclk_g2d --->mount_g2d	
 		if (clk_set_parent(sclk, parent))
 			printk(KERN_ERR "FIMG2D failed to set parent\n");
 
