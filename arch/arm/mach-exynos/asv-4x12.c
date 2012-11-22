@@ -44,7 +44,7 @@
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
 
-unsigned int exynos_armclk_max;
+unsigned int exynos_armclk_max = 1400000;
 
 struct asv_judge_table exynos4x12_limit[] = {
 	/* HPM, IDS */
