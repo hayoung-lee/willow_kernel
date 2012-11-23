@@ -36,8 +36,9 @@ enum {
 	MAX77686_DEBUG_IRQ_INT = 1 << 2,
 };
 
-static int debug_mask = MAX77686_DEBUG_IRQ_INFO | MAX77686_DEBUG_IRQ_MASK |
-						MAX77686_DEBUG_IRQ_INT;
+//static int debug_mask = MAX77686_DEBUG_IRQ_INFO | MAX77686_DEBUG_IRQ_MASK |
+//						MAX77686_DEBUG_IRQ_INT;
+static int debug_mask = MAX77686_DEBUG_IRQ_INFO;
 
 static const u8 max77686_mask_reg[] = {
 	[PMIC_INT1] = MAX77686_REG_INT1MSK,

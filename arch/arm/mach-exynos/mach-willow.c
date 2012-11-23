@@ -1440,7 +1440,6 @@ static struct regulator_init_data max77686_buck6_data = {
 		.max_uV = 2000000,
 		.apply_uV	= 1,
 		.boot_on = 1,
-		//.always_on	= 1,
 		.state_mem = {
 			.disabled	= 1,
 			.enabled 	= 0,
@@ -2001,9 +2000,7 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
 	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
-
 	[MAX77686_BUCK6] = {MAX77686_BUCK6, MAX77686_OPMODE_NORMAL},
-
 	[MAX77686_BUCK7] = {MAX77686_BUCK7, MAX77686_OPMODE_NORMAL},
 	[MAX77686_BUCK8] = {MAX77686_BUCK8, MAX77686_OPMODE_NORMAL},
 };
@@ -2013,8 +2010,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.regulators = max77686_regulators,
 	.irq_gpio	= GPIO_PMIC_IRQ,
 	.irq_base	= IRQ_BOARD_PMIC_START,
-	.wakeup		= 0,
-	//.has_full_constraints	= 1,
+	.wakeup		= 1,
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
