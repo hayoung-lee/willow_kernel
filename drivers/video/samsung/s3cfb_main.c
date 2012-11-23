@@ -308,8 +308,8 @@ static int s3cfb_probe(struct platform_device *pdev)
 		dev_info(fbdev[i]->dev, "fifo underrun trace\n");
 #endif
 		/* hw setting */
-		s3cfb_set_vsync_interrupt(fbdev, 1);
-		s3cfb_set_global_interrupt(fbdev, 1);
+		s3cfb_set_vsync_interrupt(fbdev[i], 1);
+		s3cfb_set_global_interrupt(fbdev[i], 1);
 		s3cfb_init_global(fbdev[i]);
 
 		fbdev[i]->system_state = POWER_ON;
@@ -564,8 +564,8 @@ void s3cfb_late_resume(struct early_suspend *h)
 			}
 		}
 
-		s3cfb_set_vsync_interrupt(fbdev, 1);
-		s3cfb_set_global_interrupt(fbdev, 1);
+		s3cfb_set_vsync_interrupt(fbdev[i], 1);
+		s3cfb_set_global_interrupt(fbdev[i], 1);
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 		LTN101AL03_backlight_onoff(1);
@@ -675,7 +675,6 @@ int s3cfb_resume(struct platform_device *pdev)
 #ifdef CONFIG_FB_S5P_LTN101AL03
 static int s3cfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	struct s3c_platform_fb *pdata = to_fb_plat(&pdev->dev);
 	s3c_log("s3cfb_suspend is called\n");
 	LTN101AL03_lcd_onoff(0);
 	return 0;

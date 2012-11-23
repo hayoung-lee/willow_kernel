@@ -537,7 +537,7 @@ out:
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
-	unsigned int val;
+	unsigned int val = 0;
 	bool pop = true;
 
 #ifdef CONFIG_ARM_TRUSTZONE
