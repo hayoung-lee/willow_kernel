@@ -92,13 +92,15 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		brightness = pb->notify(pb->dev, brightness);
 
 	if (brightness == 0) {
+#if defined(FEATURE_WILLOW_BACKLIGHT)
 		if(willow_backlight_ctrl==0)
+#endif
 		{
 			pwm_config(pb->pwm, 0, pb->period);
 			pwm_disable(pb->pwm);
 #if defined(FEATURE_WILLOW_BACKLIGHT)	
-			pwm_log(" pwm backlight off \n");
-			LTN101AL03_backlight_onoff(0);		
+//			pwm_log(" pwm backlight off \n");
+//			LTN101AL03_backlight_onoff(0);
 			checklog=0;
 #endif
 		}
@@ -155,10 +157,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	int ret;
 
 	checklog=0;
+#if defined(FEATURE_WILLOW_BACKLIGHT)
 	willow_backlight_ctrl=0;
 	cu_brightness=0;
 	max_brightness=0;	
-	
+#endif
+
 	if (!data) {
 		dev_err(&pdev->dev, "failed to find platform data\n");
 		return -EINVAL;

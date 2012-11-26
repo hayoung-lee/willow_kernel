@@ -258,16 +258,19 @@ int lcd_on_charging_ctrl(int onoff)
 {
 	int err;
 
-	if(onoff)
-		err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_LOW, "GPM0(3)");
-	else
-		err = gpio_request_one(EXYNOS4212_GPM0(3), GPIOF_OUT_INIT_HIGH, "GPM0(3)"); //FastCharger mode
-
+	err = gpio_request(EXYNOS4212_GPM0(3), "GPIO_LCD_ONOFF_CHG");
 	if (err) {
-		printk(KERN_ERR "failed to request GPM0(3) for "
-			"lcd off charging control\n");
-		return err;
+		lcd_log(KERN_ERR "failed to request GPM0(3) for "
+			"GPIO_LCD_ONOFF_CHG\n");
+		//return err;
 	}
+	s3c_gpio_cfgpin(EXYNOS4212_GPM0(3), S3C_GPIO_OUTPUT);
+
+	if(onoff)
+		gpio_set_value(EXYNOS4212_GPM0(3), 0);
+	else
+		gpio_set_value(EXYNOS4212_GPM0(3), 1);
+
 	gpio_free(EXYNOS4212_GPM0(3));
 
 	return 0;
