@@ -77,8 +77,6 @@
 #include <asm/irq_regs.h>
 #include <asm/mutex.h>
 
-#include <mach/sec_debug.h>
-
 #include "sched_cpupri.h"
 #include "workqueue_sched.h"
 #include "sched_autogroup.h"
@@ -4301,7 +4299,6 @@ need_resched:
 	} else
 		raw_spin_unlock_irq(&rq->lock);
 
-	sec_debug_task_log(cpu, rq->curr);
 	post_schedule(rq);
 
 	preempt_enable_no_resched();
@@ -8003,9 +8000,6 @@ void __init sched_init(void)
 {
 	int i, j;
 	unsigned long alloc_size = 0, ptr;
-
-	sec_gaf_supply_rqinfo(offsetof(struct rq, curr),
-			      offsetof(struct cfs_rq, rq));
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	alloc_size += 2 * nr_cpu_ids * sizeof(void **);

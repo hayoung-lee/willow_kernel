@@ -40,8 +40,6 @@
 #include <asm/ptrace.h>
 #include <asm/localtimer.h>
 
-#include <mach/sec_debug.h>
-
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -274,38 +272,30 @@ static void __cpuinit smp_store_cpu_info(unsigned int cpuid)
 }
 
 /*
- * Skip the secondary calibration on architectures sharing clock
- * with primary cpu. Archs can use ARCH_SKIP_SECONDARY_CALIBRATE
- * for this.
- */
-static inline int skip_secondary_calibrate(void)
-{
-#ifdef CONFIG_ARCH_SKIP_SECONDARY_CALIBRATE
-	return 0;
-#else
-	return -ENXIO;
-#endif
-}
-
-/*
  * This is the secondary CPU boot entry.  We're using this CPUs
  * idle thread stack, but a set of temporary page tables.
  */
 asmlinkage void __cpuinit secondary_start_kernel(void)
 {
 	struct mm_struct *mm = &init_mm;
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
+
+	/*
+	 * The identity mapping is uncached (strongly ordered), so
+	 * switch away from it before attempting any exclusive accesses.
+	 */
+	cpu_switch_mm(mm->pgd, mm);
+	enter_lazy_tlb(mm, current);
+	local_flush_tlb_all();
 
 	/*
 	 * All kernel threads share the same mm context; grab a
 	 * reference and switch to it.
 	 */
+	cpu = smp_processor_id();
 	atomic_inc(&mm->mm_count);
 	current->active_mm = mm;
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
-	cpu_switch_mm(mm->pgd, mm);
-	enter_lazy_tlb(mm, current);
-	local_flush_tlb_all();
 
 	printk("CPU%u: Booted secondary processor\n", cpu);
 
@@ -320,8 +310,7 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 
 	notify_cpu_starting(cpu);
 
-	if (skip_secondary_calibrate())
-		calibrate_delay();
+	calibrate_delay();
 
 	smp_store_cpu_info(cpu);
 
@@ -337,6 +326,13 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	 */
 	percpu_timer_setup();
 
+	while (!cpu_active(cpu))
+		cpu_relax();
+
+	/*
+	 * cpu_active bit is set, so it's safe to enable interrupts
+	 * now.
+	 */
 	local_irq_enable();
 	local_fiq_enable();
 
@@ -471,13 +467,10 @@ asmlinkage void __exception_irq_entry do_local_timer(struct pt_regs *regs)
 
 	if (local_timer_ack()) {
 		__inc_irq_stat(cpu, local_timer_irqs);
-		sec_debug_irq_log(0, do_local_timer, 1);
 		irq_enter();
 		ipi_timer();
 		irq_exit();
-		sec_debug_irq_log(0, do_local_timer, 2);
-	} else
-		sec_debug_irq_log(0, do_local_timer, 3);
+	}
 
 	set_irq_regs(old_regs);
 }
@@ -569,9 +562,6 @@ static void ipi_cpu_stop(unsigned int cpu)
 	local_fiq_disable();
 	local_irq_disable();
 
-	flush_cache_all();
-	local_flush_tlb_all();
-
 	while (1)
 		cpu_relax();
 }
@@ -639,8 +629,6 @@ asmlinkage void __exception_irq_entry do_IPI(int ipinr, struct pt_regs *regs)
 	if (ipinr >= IPI_TIMER && ipinr < IPI_TIMER + NR_IPI)
 		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
 
-	sec_debug_irq_log(ipinr, do_IPI, 1);
-
 	switch (ipinr) {
 	case IPI_TIMER:
 		irq_enter();
@@ -679,9 +667,6 @@ asmlinkage void __exception_irq_entry do_IPI(int ipinr, struct pt_regs *regs)
 		       cpu, ipinr);
 		break;
 	}
-
-	sec_debug_irq_log(ipinr, do_IPI, 2);
-
 	set_irq_regs(old_regs);
 }
 
