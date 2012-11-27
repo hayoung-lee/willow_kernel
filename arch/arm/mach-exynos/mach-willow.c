@@ -2186,15 +2186,6 @@ static struct gpio_keys_platform_data willow_jack_button_data = {
   .rep      = 0,
 };
 
-static struct platform_device willow_jack_button_device = {
-  .name           = "jack-keys",
-  .id             = -1,
-  .num_resources  = 0,
-  .dev            = {
-                      .platform_data	= &willow_jack_button_data,
-                    }
-};
-
 static struct sec_jack_zone sec_jack_zones[] = {
   {
     /* adc <= 2000, unstable zone, default to 3pole if it stays
@@ -2216,27 +2207,24 @@ static struct sec_jack_zone sec_jack_zones[] = {
   },
 };
 
-static struct sec_jack_remote_key_zone sec_jack_remote_key_zones[] = {
+static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
   {
-	/* adc <= 150 - Media Key */
-	.adc_high = 150,
-	.delay_ms = 10,
-	.check_count = 10,
-	.remote_key = KEY_MEDIA,
+        /* 100 < adc <= 300 - Media Key */
+        .adc_high = 300,
+        .adc_low = 100,
+        .code = KEY_MEDIA,
   },
   {
-    /* 150 < adc <= 400 - Volume Up Key */
-	.adc_high = 400,
-	.delay_ms = 10,
-	.check_count = 10,
-    .remote_key = KEY_VOLUMEUP,
+        /* 500 < adc <= 700 - Volume Up Key */
+        .adc_high = 700,
+        .adc_low = 500,
+        .code = KEY_VOLUMEUP,
   },
   {
-    /* 400 < adc <= 700 - Volume Down Key */
-	.adc_high = 700,
-	.delay_ms = 10,
-	.check_count = 10,
-    .remote_key = KEY_VOLUMEDOWN,
+        /* 1200 < adc <= 1400 - Volume Up Key */
+        .adc_high = 1400,
+        .adc_low = 1200,
+        .code = KEY_VOLUMEDOWN,
   }
 };
 
@@ -2256,12 +2244,12 @@ struct sec_jack_platform_data willow_jack_pdata = {
   .get_adc_value = sec_jack_get_adc_value,
   .zones = sec_jack_zones,
   .num_zones = ARRAY_SIZE(sec_jack_zones),
+  .buttons_zones = sec_jack_buttons_zones,
+  .num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
   .det_gpio = GPIO_JACK_DET,
   .send_end_gpio = GPIO_REMOTE_KEY_INT,
   .det_active_high = 1,
   .send_end_active_high = 0,
-  .remote_key_zones = sec_jack_remote_key_zones,
-  .num_remote_key_zones = ARRAY_SIZE(sec_jack_remote_key_zones),
 };
 
 static struct platform_device willow_device_jack = {
@@ -2269,45 +2257,6 @@ static struct platform_device willow_device_jack = {
   .id			  = 1, /* will be used also for gpio_event id */
   .dev.platform_data	= &willow_jack_pdata,
 };
-
-#define MAX_ZONE_LIMIT		10
-static int willow_last_jack_remote_key = KEY_MAX;
-
-int willow_convert_jack_remote_key(int state)
-{
-	struct sec_jack_remote_key_zone *zones = willow_jack_pdata.remote_key_zones;
-	int size = willow_jack_pdata.num_remote_key_zones;
-	int count[MAX_ZONE_LIMIT] = {0};
-	int adc;
-	int i;
-	unsigned npolarity = !willow_jack_pdata.send_end_active_high;
-
-  if(state == 1)
-  {
-	while (gpio_get_value(willow_jack_pdata.send_end_gpio) ^ npolarity) {
-		adc = willow_jack_pdata.get_adc_value();
-		printk("%s: adc = %d\n", __func__, adc);
-
-		for (i = 0; i < size; i++) {
-			if (adc <= zones[i].adc_high) {
-				if (++count[i] > zones[i].check_count) {
-            willow_last_jack_remote_key = zones[i].remote_key;
-					return zones[i].remote_key;
-				}
-				msleep(zones[i].delay_ms);
-				break;
-			}
-		}
-	}
-
-    willow_last_jack_remote_key = KEY_MAX;
-    return KEY_MAX;
-  }
-  else
-  {
-    return willow_last_jack_remote_key;
-  }
-}
 #endif /* CONFIG_JACK_MGR */
 
 static void sensor_gpio_init(void){
@@ -3254,7 +3203,6 @@ static struct platform_device *willow_devices[] __initdata = {
 #endif
 	&samsung_device_keypad,
 #ifdef CONFIG_JACK_MGR
-	&willow_jack_button_device,
 	&willow_device_jack,
 #endif
 #ifdef CONFIG_EXYNOS_C2C

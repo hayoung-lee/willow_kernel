@@ -37,12 +37,10 @@ struct sec_jack_zone {
 	unsigned int jack_type;
 };
 
-// 4pole earjack remote key detection
-struct sec_jack_remote_key_zone {
+struct sec_jack_buttons_zone {
 	unsigned int adc_high;
-	unsigned int delay_ms;
-	unsigned int check_count;
-  unsigned int remote_key;
+	unsigned int adc_low;
+	unsigned int code;
 };
 
 struct sec_jack_platform_data {
@@ -56,10 +54,6 @@ struct sec_jack_platform_data {
 	int	send_end_gpio;
 	bool	det_active_high;
 	bool	send_end_active_high;
-
-//4pole earjack remote key detection
-	struct sec_jack_remote_key_zone	*remote_key_zones;
-	int	num_remote_key_zones;
 };
 #endif
 
