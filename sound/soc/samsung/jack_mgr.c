@@ -24,7 +24,12 @@
 
 #define MAX_ZONE_LIMIT		10
 #define SEND_KEY_CHECK_TIME_MS	30		/* 30ms */
+//#define DET_CHECK_TIME_MS	200		/* 200ms */
 #define WAKE_LOCK_TIME		(HZ * 5)	/* 5 sec */
+
+#define JACK_MGR_DRV_NAME			"jack_mgr"
+#define INPUT_HANDLE_NAME 			"jakc_mgr_buttons"
+#define JACK_IST_NAME				"headset_detect"
 
 #define DEBUG_MSG(f, a...)
 //#define DEBUG_MSG(f, a...)  printk(f, ## a)
@@ -34,11 +39,19 @@ struct s3c_adc_client *adc_client;
 struct jack_mgr_info {
 	struct sec_jack_platform_data *pdata;
 	struct delayed_work jack_detect_work;
+	struct work_struct buttons_work;
+	struct workqueue_struct *queue;
+	struct input_dev *input_dev;
 	struct wake_lock det_wake_lock;
 	struct sec_jack_zone *zone;
+	struct input_handler handler;
+	struct input_handle handle;
+	struct input_device_id ids;
 	int det_irq;
 	int dev_id;
-//	struct platform_device *send_key_dev;
+	int pressed;
+	int pressed_code;
+	struct platform_device *send_key_dev;
 	unsigned int cur_jack_type;
 };
 
@@ -59,35 +72,108 @@ struct switch_dev switch_jack_detection = {
 
 static struct gpio_event_direct_entry jack_mgr_key_map[] = {
 	{
-		.code	= KEY_MEDIA,
+		.code	= KEY_UNKNOWN,
 	},
 };
 
-#if 0
-static struct gpio_event_input_info sec_jack_key_info = {
+static struct gpio_event_input_info jack_mgr_key_info = {
 	.info.func = gpio_event_input_func,
 	.info.no_suspend = true,
 	.type = EV_KEY,
-	.debounce_time.tv.nsec = SEND_KEY_CHECK_TIME_MS * NSEC_PER_MSEC,
-	.keymap = sec_jack_key_map,
-	.keymap_size = ARRAY_SIZE(sec_jack_key_map)
+	.debounce_time.tv64 = SEND_KEY_CHECK_TIME_MS * NSEC_PER_MSEC,
+	.keymap = jack_mgr_key_map,
+	.keymap_size = ARRAY_SIZE(jack_mgr_key_map)
 };
 
-static struct gpio_event_info *sec_jack_input_info[] = {
-	&sec_jack_key_info.info,
+static struct gpio_event_info *jack_mgr_input_info[] = {
+	&jack_mgr_key_info.info,
 };
 
-static struct gpio_event_platform_data sec_jack_input_data = {
-	.name = "sec_jack",
-	.info = sec_jack_input_info,
-	.info_count = ARRAY_SIZE(sec_jack_input_info),
+static struct gpio_event_platform_data jack_mgr_input_data = {
+	.name = JACK_MGR_DRV_NAME,
+	.info = jack_mgr_input_info,
+	.info_count = ARRAY_SIZE(jack_mgr_input_info),
 };
-#endif // 0
 
-/// reg/dereg earjack remote key driver
-extern void willow_disable_media_key(void);
-extern void willow_enable_media_key(void);
- 
+/* gpio_input driver does not support to read adc value.
+ * We use input filter to support 3-buttons of headset
+ * without changing gpio_input driver.
+ */
+static bool  jack_mgr_buttons_filter(struct input_handle *handle,
+				    unsigned int type, unsigned int code,
+				    int value)
+{
+	struct jack_mgr_info *hi = handle->handler->private;
+
+	if (type != EV_KEY || code != KEY_UNKNOWN)
+		return false;
+
+	hi->pressed = value;
+
+	/* This is called in timer handler of gpio_input driver.
+	 * We use workqueue to read adc value.
+	 */
+	queue_work(hi->queue, &hi->buttons_work);
+
+	return true;
+}
+
+static int  jack_mgr_buttons_connect(struct input_handler *handler,
+				    struct input_dev *dev,
+				    const struct input_device_id *id)
+{
+	struct jack_mgr_info *hi;
+	struct sec_jack_platform_data *pdata;
+	struct sec_jack_buttons_zone *btn_zones;
+	int err;
+	int i;
+
+	/* bind input_handler to input device related to only sec_jack */
+	if (dev->name != jack_mgr_input_data.name)
+		return -ENODEV;
+
+	hi = handler->private;
+	pdata = hi->pdata;
+	btn_zones = pdata->buttons_zones;
+
+	hi->input_dev = dev;
+	hi->handle.dev = dev;
+	hi->handle.handler = handler;
+	hi->handle.open = 0;
+	hi->handle.name = INPUT_HANDLE_NAME;
+
+	err = input_register_handle(&hi->handle);
+	if (err) {
+		pr_err("%s: Failed to register sec_jack buttons handle, "
+			"error %d\n", __func__, err);
+		goto err_register_handle;
+	}
+
+	err = input_open_device(&hi->handle);
+	if (err) {
+		pr_err("%s: Failed to open input device, error %d\n",
+			__func__, err);
+		goto err_open_device;
+	}
+
+	for (i = 0; i < pdata->num_buttons_zones; i++)
+		input_set_capability(dev, EV_KEY, btn_zones[i].code);
+
+	return 0;
+
+ err_open_device:
+	input_unregister_handle(&hi->handle);
+ err_register_handle:
+
+	return err;
+}
+
+static void  jack_mgr_buttons_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+}
+
 /// WILLOW 4pole earjack remote key detection
 static int willow_curr_headset_type = SEC_JACK_NO_DEVICE;
 int willow_jack_get_type(void)
@@ -119,30 +205,21 @@ static void jack_mgr_set_type(struct jack_mgr_info *hi, int jack_type)
 		return;
 
 	if (jack_type == SEC_HEADSET_4POLE) {
-/// WILLOW 4pole earjack remote key detection
-#if 0
 		/* for a 4 pole headset, enable detection of send/end key */
 		if (hi->send_key_dev == NULL)
 			/* enable to get events again */
 			hi->send_key_dev = platform_device_register_data(NULL,
 					GPIO_EVENT_DEV_NAME,
 					hi->dev_id,
-					&sec_jack_input_data,
-					sizeof(sec_jack_input_data));
-#endif // 0
-	//willow_enable_media_key();
+					&jack_mgr_input_data,
+					sizeof(jack_mgr_input_data));
 	} else {
-/// WILLOW 4pole earjack remote key detection
-#if 0
 		/* for all other jacks, disable send/end key detection */
 		if (hi->send_key_dev != NULL) {
 			/* disable to prevent false events on next insert */
 			platform_device_unregister(hi->send_key_dev);
 			hi->send_key_dev = NULL;
 		}
-#endif // 0
-	//willow_disable_media_key();
-
 		/* micbias is left enabled for 4pole and disabled otherwise */
 //    printk("[KYJUNG][File: %s][Fun: %s][Line: %d] set_micbias_state\n", __FILE__, __func__, __LINE__);
 		//pdata->set_micbias_state(false, jack_type);
@@ -150,7 +227,7 @@ static void jack_mgr_set_type(struct jack_mgr_info *hi, int jack_type)
 
 	hi->cur_jack_type = jack_type;
 	pr_info("%s : jack_type = %d\n", __func__, jack_type);
-	
+
 	/* prevent suspend to allow user space to respond to switch */
 	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
 
@@ -234,6 +311,42 @@ static irqreturn_t jack_mgr_detect_irq_thread(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+/* thread run whenever the button of headset is pressed or released */
+void  jack_mgr_buttons_work(struct work_struct *work)
+{
+	struct jack_mgr_info *hi =
+		container_of(work, struct jack_mgr_info, buttons_work);
+	struct sec_jack_platform_data *pdata = hi->pdata;
+	struct sec_jack_buttons_zone *btn_zones = pdata->buttons_zones;
+	int adc;
+	int i;
+
+	/* when button is released */
+	if (hi->pressed == 0) {
+		input_report_key(hi->input_dev, hi->pressed_code, 0);
+		input_sync(hi->input_dev);
+		pr_debug("%s: keycode=%d, is released\n", __func__,
+			hi->pressed_code);
+		return;
+	}
+
+	/* when button is pressed */
+	adc = pdata->get_adc_value();
+
+	for (i = 0; i < pdata->num_buttons_zones; i++)
+		if (adc >= btn_zones[i].adc_low &&
+		    adc <= btn_zones[i].adc_high) {
+			hi->pressed_code = btn_zones[i].code;
+			input_report_key(hi->input_dev, btn_zones[i].code, 1);
+			input_sync(hi->input_dev);
+			pr_debug("%s: keycode=%d, is pressed\n", __func__,
+				btn_zones[i].code);
+			return;
+		}
+
+	pr_warn("%s: key is skipped. ADC value is %d\n", __func__, adc);
+}
+
 static int jack_mgr_probe(struct platform_device *pdev)
 {
 	struct jack_mgr_info *hi;
@@ -260,6 +373,11 @@ static int jack_mgr_probe(struct platform_device *pdev)
 	}
 
 	jack_mgr_key_map[0].gpio = pdata->send_end_gpio;
+
+	/* If no other keys in pdata, make all keys default to KEY_MEDIA */
+	if (pdata->num_buttons_zones == 0){
+		jack_mgr_key_map[0].code = KEY_MEDIA;
+	}
 
 	hi = kzalloc(sizeof(struct jack_mgr_info), GFP_KERNEL);
 	if (hi == NULL) {
@@ -300,14 +418,37 @@ static int jack_mgr_probe(struct platform_device *pdev)
 		goto err_switch_dev_register;
 	}
 
-	wake_lock_init(&hi->det_wake_lock, WAKE_LOCK_SUSPEND, "sec_jack_det");
+	wake_lock_init(&hi->det_wake_lock, WAKE_LOCK_SUSPEND, "jack_mgr_det");
+
+	INIT_WORK(&hi->buttons_work,  jack_mgr_buttons_work);
+	hi->queue = create_singlethread_workqueue("jack_mgr_wq");
+	if (hi->queue == NULL) {
+		ret = -ENOMEM;
+		pr_err("%s: Failed to create workqueue\n", __func__);
+		goto err_create_wq_failed;
+	}
 
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
+
+	set_bit(EV_KEY, hi->ids.evbit);
+	hi->ids.flags = INPUT_DEVICE_ID_MATCH_EVBIT;
+	hi->handler.filter =  jack_mgr_buttons_filter;
+	hi->handler.connect =  jack_mgr_buttons_connect;
+	hi->handler.disconnect =  jack_mgr_buttons_disconnect;
+	hi->handler.name = INPUT_HANDLE_NAME;
+	hi->handler.id_table = &hi->ids;
+	hi->handler.private = hi;
+
+	ret = input_register_handler(&hi->handler);
+	if (ret) {
+		pr_err("%s : Failed to register_handler\n", __func__);
+		goto err_register_input_handler;
+	}
 
 	ret = request_threaded_irq(hi->det_irq, NULL,
 				   jack_mgr_detect_irq_thread,
 				   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				   IRQF_ONESHOT,"sec_headset_detect", hi);
+				   IRQF_ONESHOT, JACK_IST_NAME, hi);
 	if (ret) {
 		pr_err("%s : Failed to request_irq. ret = %d\n", __func__,ret);
 		goto err_request_detect_irq;
@@ -322,17 +463,15 @@ static int jack_mgr_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, hi);
 
-	npolarity = !hi->pdata->det_active_high;
-	DEBUG_MSG("[%s] JACK_DET : %d ,npolarity : %d \n", __func__,gpio_get_value(hi->pdata->det_gpio),npolarity);
-	if ((gpio_get_value(hi->pdata->det_gpio) ^ npolarity)) {
-		determine_jack_type(hi);
-	}
-
 	return 0;
 
 err_enable_irq_wake:
 	free_irq(hi->det_irq, hi);
 err_request_detect_irq:
+	input_unregister_handler(&hi->handler);
+err_register_input_handler:
+	destroy_workqueue(hi->queue);
+err_create_wq_failed:
 	wake_lock_destroy(&hi->det_wake_lock);
 	switch_dev_unregister(&switch_jack_detection);
 err_switch_dev_register:
@@ -353,7 +492,12 @@ static int jack_mgr_remove(struct platform_device *pdev)
 	pr_info("%s :\n", __func__);
 	disable_irq_wake(hi->det_irq);
 	free_irq(hi->det_irq, hi);
-//	platform_device_unregister(hi->send_key_dev);
+	destroy_workqueue(hi->queue);
+	if (hi->send_key_dev) {
+		platform_device_unregister(hi->send_key_dev);
+		hi->send_key_dev = NULL;
+	}
+	input_unregister_handler(&hi->handler);
 	wake_lock_destroy(&hi->det_wake_lock);
 	switch_dev_unregister(&switch_jack_detection);
 	gpio_free(hi->pdata->det_gpio);
@@ -369,7 +513,7 @@ static struct platform_driver jack_mgr_driver = {
 	.probe = jack_mgr_probe,
 	.remove = jack_mgr_remove,
 	.driver = {
-		.name = "jack_mgr",
+		.name = JACK_MGR_DRV_NAME,
 		.owner = THIS_MODULE,
 	},
 };
