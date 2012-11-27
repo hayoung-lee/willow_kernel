@@ -1640,6 +1640,7 @@ static struct regulator_init_data __initdata max77686_ldo10_data = {
 		.min_uV		= 1800000,
 		.max_uV		= 1800000,
 		.apply_uV	= 1,
+		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1859,12 +1860,11 @@ static struct regulator_init_data __initdata max77686_ldo24_data = {
 		.min_uV		= 3000000,
 		.max_uV		= 3000000,
 		.boot_on	= 1,
-		.always_on	= 1,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled	= 0,
-			.enabled	= 1,
+			.disabled	= 1,
+			.enabled	= 0,
 		},
 	},
 	.num_consumer_supplies	= 1,
