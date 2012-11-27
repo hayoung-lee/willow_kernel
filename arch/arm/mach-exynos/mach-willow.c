@@ -3033,7 +3033,7 @@ static void __init willow_usbswitch_init(void)
 	s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
 	gpio_free(pdata->gpio_device_detect);
 
-	if (1) //(samsung_board_rev_is_0_0()) /* Willow DVT has not gpio_host_vbus */
+	if (1) /* Willow DVT has not gpio_host_vbus */
 		pdata->gpio_host_vbus = 0;
 	else {
 		pdata->gpio_host_vbus = EXYNOS4_GPL2(0);
@@ -3651,66 +3651,6 @@ static void __init exynos_sysmmu_init(void)
 #endif
 }
 
-
-#define SMDK4412_REV_0_0_ADC_VALUE 0
-#define SMDK4412_REV_0_1_ADC_VALUE 443
-int samsung_board_rev;
-
-static int get_samsung_board_rev(void)
-{
-	int 		adc_val = 0;
-	struct clk	*adc_clk;
-	struct resource	*res;
-	void __iomem	*adc_regs;
-	unsigned int	con;
-	int		ret;
-
-	if ((soc_is_exynos4412() && samsung_rev() < EXYNOS4412_REV_1_0) ||
-		(soc_is_exynos4212() && samsung_rev() < EXYNOS4212_REV_1_0))
-		return SAMSUNG_BOARD_REV_0_0;
-
-	adc_clk = clk_get(NULL, "adc");
-	if (unlikely(IS_ERR(adc_clk)))
-		return SAMSUNG_BOARD_REV_0_0;
-
-	clk_enable(adc_clk);
-
-	res = platform_get_resource(&s3c_device_adc, IORESOURCE_MEM, 0);
-	if (unlikely(!res))
-		goto err_clk;
-
-	adc_regs = ioremap(res->start, resource_size(res));
-	if (unlikely(!adc_regs))
-		goto err_clk;
-
-	writel(S5PV210_ADCCON_SELMUX(3), adc_regs + S5P_ADCMUX);
-
-	con = readl(adc_regs + S3C2410_ADCCON);
-	con &= ~S3C2410_ADCCON_MUXMASK;
-	con &= ~S3C2410_ADCCON_STDBM;
-	con &= ~S3C2410_ADCCON_STARTMASK;
-	con |=  S3C2410_ADCCON_PRSCEN;
-
-	con |= S3C2410_ADCCON_ENABLE_START;
-	writel(con, adc_regs + S3C2410_ADCCON);
-
-	udelay (50);
-
-	adc_val = readl(adc_regs + S3C2410_ADCDAT0) & 0xFFF;
-	writel(0, adc_regs + S3C64XX_ADCCLRINT);
-
-	iounmap(adc_regs);
-err_clk:
-	clk_disable(adc_clk);
-	clk_put(adc_clk);
-
-	ret = (adc_val < SMDK4412_REV_0_1_ADC_VALUE/2) ?
-			SAMSUNG_BOARD_REV_0_0 : SAMSUNG_BOARD_REV_0_1;
-
-	pr_info ("SMDK MAIN Board Rev 0.%d (ADC value:%d)\n", ret, adc_val);
-	return ret;
-}
-
 static void __init willow_machine_init(void)
 {
 	arm_pm_restart = willow_pm_restart;
@@ -3725,7 +3665,6 @@ static void __init willow_machine_init(void)
 #endif
 	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
-	samsung_board_rev = get_samsung_board_rev();
 
 	willow_config_gpio_table();
 	willow_check_hw_version();
@@ -3787,7 +3726,6 @@ static void __init willow_machine_init(void)
 	s3c_i2c6_set_platdata(NULL);
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
 
-	//i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	if(willow_get_hw_version() == WILLOW_HW_MVT)
 		i2c_register_board_info(7, i2c_devs7_MVT, ARRAY_SIZE(i2c_devs7_MVT));
 	else
