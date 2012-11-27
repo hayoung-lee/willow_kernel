@@ -50,7 +50,7 @@ extern void set_backlight_ctrl(int ctrl_b);
 
 //#define BOOTLOADER_INIT_LCD
 
-#define FEATURE_S3CFB_DEBUG
+#undef FEATURE_S3CFB_DEBUG
 #ifdef FEATURE_S3CFB_DEBUG
 #define s3c_log(fmt, arg...) 	printk(fmt, ##arg)
 #else
