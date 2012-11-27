@@ -86,17 +86,17 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R42 - OUT4 to ADC */
 	0x0000,     /* R43 - Beep control */
 	0x0033,     /* R44 - Input ctrl */
-	0x013A,     /* R45 - Left INP PGA gain ctrl */
-	0x017A,     /* R46 - Right INP PGA gain ctrl */
-	0x0100,     /* R47 - Left ADC BOOST ctrl */
-	0x0100,     /* R48 - Right ADC BOOST ctrl */
+	0x0135,     /* R45 - Left INP PGA gain ctrl */
+	0x0175,     /* R46 - Right INP PGA gain ctrl */
+	0x0000,     /* R47 - Left ADC BOOST ctrl */
+	0x0000,     /* R48 - Right ADC BOOST ctrl */
 	0x0002,     /* R49 - Output ctrl */
 	0x0008,     /* R50 - Left mixer ctrl */
 	0x0000,     /* R51 - Right mixer ctrl */
-	0x0175,     /* R52 - LOUT1 (HP) volume ctrl */
-	0x0175,     /* R53 - ROUT1 (HP) volume ctrl */
-	0x0134,     /* R54 - LOUT2 (SPK) volume ctrl */
-	0x0134,     /* R55 - ROUT2 (SPK) volume ctrl */
+	0x0174,     /* R52 - LOUT1 (HP) volume ctrl */
+	0x0174,     /* R53 - ROUT1 (HP) volume ctrl */
+	0x0131,     /* R54 - LOUT2 (SPK) volume ctrl */
+	0x0131,     /* R55 - ROUT2 (SPK) volume ctrl */
 	0x0041,     /* R56 - OUT3 mixer ctrl */
 	0x0041,     /* R57 - OUT4 (MONO) mix ctrl */
 	0x0001,     /* R58 */
