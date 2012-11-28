@@ -2191,15 +2191,15 @@ static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
         .code = KEY_MEDIA,
   },
   {
-        /* 500 < adc <= 700 - Volume Up Key */
-        .adc_high = 700,
+        /* 500 < adc <= 800 - Volume Up Key */
+        .adc_high = 800,
         .adc_low = 500,
         .code = KEY_VOLUMEUP,
   },
   {
-        /* 1200 < adc <= 1400 - Volume Up Key */
-        .adc_high = 1400,
-        .adc_low = 1200,
+        /* 1100 < adc <= 1600 - Volume Down Key */
+        .adc_high = 1600,
+        .adc_low = 1100,
         .code = KEY_VOLUMEDOWN,
   }
 };
