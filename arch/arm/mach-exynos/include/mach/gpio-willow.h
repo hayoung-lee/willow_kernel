@@ -13,8 +13,8 @@
 #define GPIO_VIB_EN				EXYNOS4_GPX1(0)
 
 /*REMOTE, JACK DET*/
-#define GPIO_REMOTE_KEY_INT	EXYNOS4_GPX1(5)
-#define GPIO_JACK_DET              	EXYNOS4_GPX1(6)
+#define GPIO_REMOTE_KEY_INT		EXYNOS4_GPX1(5)
+#define GPIO_JACK_DET			EXYNOS4_GPX1(6)
 
 /*LINEOUT DET*/
 #define GPIO_LINEOUT_DET_N		EXYNOS4_GPX3(5)
@@ -119,6 +119,9 @@
 #define GPIO_TOUCH_INT			EXYNOS4_GPX0(4)
 #define GPIO_TOUCH_RESET		EXYNOS4_GPB(4)
 #define GPIO_TOUCH_BOOTST_EN	EXYNOS4212_GPM3(3)
+
+/* LSENSOR */
+#define GPIO_LSENSOR_INT		EXYNOS4_GPX2(2)
 
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);

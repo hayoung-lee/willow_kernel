@@ -2608,7 +2608,7 @@ static struct platform_device s3c_device_i2c7 = {
 };
 
 static struct isl29023_i2c_platform_data isl29023_pdata = {
-	.irq_gpio = EXYNOS4_GPX2(2),
+	.irq_gpio = GPIO_LSENSOR_INT,
 };
 
 static struct i2c_board_info i2c_devs7_DVT[] __initdata = {
@@ -2753,19 +2753,23 @@ static int __init usb3503_init(void)
         s3c_gpio_setpull(GPIO_USB_HUB_RST, S3C_GPIO_PULL_NONE);
     }
 
+    gpio_direction_input(GPIO_USB_HUB_INT);
     return 0;
 }
 
 static int usb3503_reset_n(int val)
 {
-    gpio_set_value(GPIO_USB_HUB_RST, 0);
-
     if (val) {
+    	gpio_set_value(GPIO_USB_HUB_RST, 0);
 		gpio_direction_output(GPIO_USB_BOOT_EN, 1);
 		gpio_direction_output(GPIO_USB_HUB_CONNECT, 1);
-        msleep(20);
-        gpio_set_value(GPIO_USB_HUB_RST, !!val);
-        msleep(10);
+		msleep(20);
+		gpio_set_value(GPIO_USB_HUB_RST, !!val);
+		msleep(10);
+		gpio_direction_input(GPIO_USB_HUB_INT);
+    }else{
+    	gpio_direction_output(GPIO_USB_HUB_INT, 0);
+    	gpio_set_value(GPIO_USB_HUB_RST, 0);
     }
     return 0;
 }
@@ -3745,6 +3749,15 @@ static void __init willow_machine_init(void)
 #endif
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 	willow_usbswitch_init();
+#endif
+#ifdef CONFIG_ISL29023
+	s3c_gpio_setpull(GPIO_LSENSOR_INT, S3C_GPIO_PULL_UP);
+#endif
+#ifdef CONFIG_JACK_MGR
+	if(willow_get_hw_version() > WILLOW_HW_MVT)
+		s3c_gpio_setpull(GPIO_REMOTE_KEY_INT, S3C_GPIO_PULL_DOWN);
+	else
+		s3c_gpio_setpull(GPIO_REMOTE_KEY_INT, S3C_GPIO_PULL_UP);
 #endif
 
 	samsung_bl_set(&willow_bl_gpio_info, &willow_bl_data);
