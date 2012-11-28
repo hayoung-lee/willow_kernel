@@ -523,47 +523,26 @@ static struct s3c_platform_camera mt9m113 = {
 #endif
 
 #ifdef CONFIG_VIDEO_AS0260
-int as0260_camera_eclk_ctrl(int ctrl)
-{
-	int err;
-	mdelay(50);
-
-	err = gpio_request(EXYNOS4_GPX0(1), "GPX0_1");
-	if (err)
-		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
-
-	printk("AS0260 as0260_camera_eclk_ctrl Start ___________\n");
-
-	s3c_gpio_setpull(EXYNOS4_GPX0(1), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(1), S3C_GPIO_OUTPUT);
-
-	gpio_set_value(EXYNOS4_GPX0(1), ctrl);
-	
-	return 0;
-}
-EXPORT_SYMBOL(as0260_camera_eclk_ctrl);
 
 void as0260_i2c_gpio_init(void)
 {
 	/* i2c scl, sda */
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
-
-	//as0260_camera_eclk_ctrl(0);
+	s3c_gpio_cfgpin(GPIO_CAMERA_SCL, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_SCL, S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(GPIO_CAMERA_SDA, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_SDA, S3C_GPIO_PULL_UP);
 }
 static void __init as0260_camera_config(void)
 {
 	int ret=0;
 	//CAM_SHUTDOWN  Low Setting GPM1_5 
-	ret = gpio_request(EXYNOS4212_GPM1(5), "GPM1_5");
+	ret = gpio_request(GPIO_CAMERA_SHUTDOWN, "GPM1_5");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPM1_5 ####\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
-	gpio_direction_output(EXYNOS4212_GPM1(5), 0);
-	gpio_free(EXYNOS4212_GPM1(5));	
+	s3c_gpio_setpull(GPIO_CAMERA_SHUTDOWN, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_CAMERA_SHUTDOWN, 0);
+	gpio_free(GPIO_CAMERA_SHUTDOWN);	
 }
 
 int as0260_camera_reset(void)
@@ -571,22 +550,22 @@ int as0260_camera_reset(void)
 	int err;
 	mdelay(50);
 
-	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	err = gpio_request(GPIO_CAMERA_RESET, "GPM1_4");
 	if (err)
 		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
 
 	printk("AS0260 CAMERA_RESET START___________\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
-	gpio_set_value(EXYNOS4212_GPM1(4), 1);
+	gpio_set_value(GPIO_CAMERA_RESET, 1);
 	mdelay(10);  // 10
-	gpio_set_value(EXYNOS4212_GPM1(4), 0);
+	gpio_set_value(GPIO_CAMERA_RESET, 0);
 	mdelay(5);   // 5
-	gpio_set_value(EXYNOS4212_GPM1(4), 1);	
-	mdelay(35);  // 35
-	gpio_free(EXYNOS4212_GPM1(4));
+	gpio_set_value(GPIO_CAMERA_RESET, 1);	
+	mdelay(30);  // 35
+	gpio_free(GPIO_CAMERA_RESET);
 	
 	printk("AS0260 CAMERA_RESET END ____________\n");
 	return 0;
@@ -599,18 +578,18 @@ int as0260_camera_reset_ctrl(int ctrl)
 	int err;
 	mdelay(50);
 
-	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	err = gpio_request(GPIO_CAMERA_RESET, "GPM1_4");
 	if (err)
 		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
 
 	printk("AS0260 CAMERA_RESET START___________\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
 
-	gpio_set_value(EXYNOS4212_GPM1(4), ctrl);
-	gpio_free(EXYNOS4212_GPM1(4));
+	gpio_set_value(GPIO_CAMERA_RESET, ctrl);
+	gpio_free(GPIO_CAMERA_RESET);
 	
 	printk("AS0260 CAMERA_RESET END ____________\n");
 	return 0;
@@ -640,11 +619,11 @@ int as0260_power_ctrl(int ctrl)
 
 		printk("#### AS0260 CAMERA_RESET####\n");
 
-		s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-		s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
-		gpio_set_value(EXYNOS4212_GPM1(4), 1);
-		gpio_free(EXYNOS4212_GPM1(4));		
+		gpio_set_value(GPIO_CAMERA_RESET, 1);
+		gpio_free(GPIO_CAMERA_RESET);		
 
 		mdelay(10);
 
@@ -676,9 +655,8 @@ int as0260_power_ctrl(int ctrl)
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(70);  //50
+		//mdelay(70);  //50
 
-		//as0260_camera_eclk_ctrl(1);
 	} else {
 		if (regulator_is_enabled(camera_vdda))
 			regulator_disable(camera_vdda);
@@ -694,7 +672,6 @@ int as0260_power_ctrl(int ctrl)
 		mdelay(20);	
 
 		as0260_camera_reset_ctrl(0);
-		//as0260_camera_eclk_ctrl(0);
 		
 	}
 	regulator_put(camera_vddc);
@@ -749,7 +726,6 @@ static struct s3c_platform_camera as0260= {
 	.info		= &as0260_i2c_info,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
-//	.srclk_name	= "mout_epll",
 #if defined(MCLK_22MHZ)
 	.clk_rate = 22000000, 
 #elif defined(MCLK_23MHZ)
@@ -790,8 +766,8 @@ static struct s3c_platform_camera as0260= {
 
 #if defined(CONFIG_VIDEO_MT9M113) ||defined(CONFIG_VIDEO_AS0260) 
 static struct i2c_gpio_platform_data i2c9_platdata = {
-	.scl_pin = EXYNOS4212_GPM4(0),
-	.sda_pin = EXYNOS4212_GPM4(1),
+	.scl_pin =GPIO_CAMERA_SCL,
+	.sda_pin = GPIO_CAMERA_SDA,
 	.udelay = 2,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
