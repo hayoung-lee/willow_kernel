@@ -29,10 +29,10 @@
 
 #include "csis.h"
 static s32 err_print_cnt;
-static s32 err_print_cnt_check=0;
 
 static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
+//#define FEATURE_MIPI_CSI_TIMING
 //#define CONFIG_MIPI_CSI_ADV_FEATURE
 
 static int s3c_csis_set_info(struct platform_device *pdev)
@@ -82,6 +82,7 @@ static void s3c_csis_set_nr_lanes(struct platform_device *pdev, int lanes)
 	
 }
 
+#if defined(FEATURE_MIPI_CSI_TIMING)
 static void s3c_csis_set_lntv(struct platform_device *pdev, int hsync_Lintv,int vsync_Lintv,int hsync_Eintv)
 {
 	u32 cfg;
@@ -94,7 +95,7 @@ static void s3c_csis_set_lntv(struct platform_device *pdev, int hsync_Lintv,int 
 
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_CONFIG);
 }
-
+#endif
 static void s3c_csis_enable_interrupt(struct platform_device *pdev)
 {
 	u32 cfg = 0;
@@ -111,7 +112,6 @@ static void s3c_csis_enable_interrupt(struct platform_device *pdev)
 		S3C_CSIS_INTMSK_ERR_ECC_ENABLE | \
 		S3C_CSIS_INTMSK_ERR_CRC_ENABLE | \
 		S3C_CSIS_INTMSK_ERR_ID_ENABLE;
-
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTMSK);
 
 }
@@ -252,8 +252,11 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 
 	s3c_csis_reset(pdev);
 	s3c_csis_set_nr_lanes(pdev, lanes);
-	//s3c_csis_set_lntv(pdev,30,0,0); // 60 ok // 66 ? // 30 ? // 15 ?
-		
+
+#if defined(FEATURE_MIPI_CSI_TIMING)
+	s3c_csis_set_lntv(pdev,60,0,0); // 60 ok // 66 ? // 30 ? // 15 ?
+#endif
+
 #ifdef CONFIG_MIPI_CSI_ADV_FEATURE
 	/* FIXME: how configure the followings with FIMC dynamically? */
 	s3c_csis_set_hs_settle(pdev, settle);	/* s5k6aa */
@@ -304,6 +307,7 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 
 	struct platform_device *pdev = (struct platform_device *) dev_id;
 	/* just clearing the pends */
+
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	/* receiving non-image data is not error */

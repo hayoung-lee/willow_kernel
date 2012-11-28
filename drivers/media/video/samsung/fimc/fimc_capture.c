@@ -2235,7 +2235,7 @@ int fimc_streamon_capture(void *fh)
 #endif
 	cap->irq = 0;
 
-#if 1
+#if defined(CONFIG_VIDEO_AS0260)
 	s3c_csis_stop(CSI_CH_1);
 
 	if(willow_capture_status==0)
@@ -2244,7 +2244,6 @@ int fimc_streamon_capture(void *fh)
 				ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
 
 	fimc_hwset_reset(ctrl);
-
 #endif
 	fimc_hwset_enable_irq(ctrl, 0, 1);
 

@@ -151,6 +151,7 @@ extern int brcm_wlan_init(void);
 #define WILLOW_BOOT_HOTKEY_UPDATE	3
 #define WILLOW_BOOT_FACTORYTEST_L	4
 #define WILLOW_BOOT_FACTORYTEST_H	5
+#define WILLOW_BOOT_FASTBOOT      6
 #define REG_INFORM4            (S5P_INFORM4)
 
 #include <linux/i2c-gpio.h>
@@ -523,47 +524,26 @@ static struct s3c_platform_camera mt9m113 = {
 #endif
 
 #ifdef CONFIG_VIDEO_AS0260
-int as0260_camera_eclk_ctrl(int ctrl)
-{
-	int err;
-	mdelay(50);
-
-	err = gpio_request(EXYNOS4_GPX0(1), "GPX0_1");
-	if (err)
-		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
-
-	printk("AS0260 as0260_camera_eclk_ctrl Start ___________\n");
-
-	s3c_gpio_setpull(EXYNOS4_GPX0(1), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4_GPX0(1), S3C_GPIO_OUTPUT);
-
-	gpio_set_value(EXYNOS4_GPX0(1), ctrl);
-	
-	return 0;
-}
-EXPORT_SYMBOL(as0260_camera_eclk_ctrl);
 
 void as0260_i2c_gpio_init(void)
 {
 	/* i2c scl, sda */
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_UP);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), S3C_GPIO_INPUT);
-	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_UP);
-
-	//as0260_camera_eclk_ctrl(0);
+	s3c_gpio_cfgpin(GPIO_CAMERA_SCL, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_SCL, S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(GPIO_CAMERA_SDA, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_SDA, S3C_GPIO_PULL_UP);
 }
 static void __init as0260_camera_config(void)
 {
 	int ret=0;
 	//CAM_SHUTDOWN  Low Setting GPM1_5 
-	ret = gpio_request(EXYNOS4212_GPM1(5), "GPM1_5");
+	ret = gpio_request(GPIO_CAMERA_SHUTDOWN, "GPM1_5");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPM1_5 ####\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(5), S3C_GPIO_PULL_NONE);
-	gpio_direction_output(EXYNOS4212_GPM1(5), 0);
-	gpio_free(EXYNOS4212_GPM1(5));	
+	s3c_gpio_setpull(GPIO_CAMERA_SHUTDOWN, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_CAMERA_SHUTDOWN, 0);
+	gpio_free(GPIO_CAMERA_SHUTDOWN);	
 }
 
 int as0260_camera_reset(void)
@@ -571,22 +551,22 @@ int as0260_camera_reset(void)
 	int err;
 	mdelay(50);
 
-	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	err = gpio_request(GPIO_CAMERA_RESET, "GPM1_4");
 	if (err)
 		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
 
 	printk("AS0260 CAMERA_RESET START___________\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
-	gpio_set_value(EXYNOS4212_GPM1(4), 1);
+	gpio_set_value(GPIO_CAMERA_RESET, 1);
 	mdelay(10);  // 10
-	gpio_set_value(EXYNOS4212_GPM1(4), 0);
+	gpio_set_value(GPIO_CAMERA_RESET, 0);
 	mdelay(5);   // 5
-	gpio_set_value(EXYNOS4212_GPM1(4), 1);	
-	mdelay(35);  // 35
-	gpio_free(EXYNOS4212_GPM1(4));
+	gpio_set_value(GPIO_CAMERA_RESET, 1);	
+	mdelay(30);  // 35
+	gpio_free(GPIO_CAMERA_RESET);
 	
 	printk("AS0260 CAMERA_RESET END ____________\n");
 	return 0;
@@ -599,18 +579,18 @@ int as0260_camera_reset_ctrl(int ctrl)
 	int err;
 	mdelay(50);
 
-	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4");
+	err = gpio_request(GPIO_CAMERA_RESET, "GPM1_4");
 	if (err)
 		printk(KERN_ERR "#### failed to request GPM1_4 ####\n");
 
 	printk("AS0260 CAMERA_RESET START___________\n");
 
-	s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
 
-	gpio_set_value(EXYNOS4212_GPM1(4), ctrl);
-	gpio_free(EXYNOS4212_GPM1(4));
+	gpio_set_value(GPIO_CAMERA_RESET, ctrl);
+	gpio_free(GPIO_CAMERA_RESET);
 	
 	printk("AS0260 CAMERA_RESET END ____________\n");
 	return 0;
@@ -640,11 +620,11 @@ int as0260_power_ctrl(int ctrl)
 
 		printk("#### AS0260 CAMERA_RESET####\n");
 
-		s3c_gpio_setpull(EXYNOS4212_GPM1(4), S3C_GPIO_PULL_NONE);
-		s3c_gpio_cfgpin(EXYNOS4212_GPM1(4), S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_CAMERA_RESET, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_CAMERA_RESET, S3C_GPIO_OUTPUT);
 
-		gpio_set_value(EXYNOS4212_GPM1(4), 1);
-		gpio_free(EXYNOS4212_GPM1(4));		
+		gpio_set_value(GPIO_CAMERA_RESET, 1);
+		gpio_free(GPIO_CAMERA_RESET);		
 
 		mdelay(10);
 
@@ -676,9 +656,8 @@ int as0260_power_ctrl(int ctrl)
 		if (err)
 			printk("[AS0260] _____ as0260_power_ctrl enable  camera_vdda err ..... \n");
 
-		mdelay(70);  //50
+		//mdelay(70);  //50
 
-		//as0260_camera_eclk_ctrl(1);
 	} else {
 		if (regulator_is_enabled(camera_vdda))
 			regulator_disable(camera_vdda);
@@ -694,7 +673,6 @@ int as0260_power_ctrl(int ctrl)
 		mdelay(20);	
 
 		as0260_camera_reset_ctrl(0);
-		//as0260_camera_eclk_ctrl(0);
 		
 	}
 	regulator_put(camera_vddc);
@@ -749,7 +727,6 @@ static struct s3c_platform_camera as0260= {
 	.info		= &as0260_i2c_info,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.srclk_name	= "xusbxti",
-//	.srclk_name	= "mout_epll",
 #if defined(MCLK_22MHZ)
 	.clk_rate = 22000000, 
 #elif defined(MCLK_23MHZ)
@@ -790,8 +767,8 @@ static struct s3c_platform_camera as0260= {
 
 #if defined(CONFIG_VIDEO_MT9M113) ||defined(CONFIG_VIDEO_AS0260) 
 static struct i2c_gpio_platform_data i2c9_platdata = {
-	.scl_pin = EXYNOS4212_GPM4(0),
-	.sda_pin = EXYNOS4212_GPM4(1),
+	.scl_pin =GPIO_CAMERA_SCL,
+	.sda_pin = GPIO_CAMERA_SDA,
 	.udelay = 2,  //250Mhz
 	.sda_is_open_drain = 0,
 	.scl_is_open_drain = 0,
@@ -1004,6 +981,9 @@ static void willow_pm_restart(char mode, const char *cmd)
     }
     else if(strncmp(cmd,"FACTORYTEST_H",13)==0){
       writel(WILLOW_BOOT_FACTORYTEST_H, S5P_INFORM5);
+    }
+    else if(strncmp(cmd,"fastboot",8)==0){
+      writel(WILLOW_BOOT_FASTBOOT, S5P_INFORM5);
     }
     //unknown reboot command, anyway set register to normal boot
     else
@@ -1874,8 +1854,8 @@ static struct regulator_init_data __initdata max77686_ldo24_data = {
 static struct regulator_init_data __initdata max77686_ldo25_data = {
 	.constraints	= {
 		.name		= "vdd_audio range",
-		.min_uV		= 2900000,
-		.max_uV		= 2900000,
+		.min_uV		= 3300000,
+		.max_uV		= 3300000,
 		.apply_uV	= 1,
 		.boot_on	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
@@ -2168,24 +2148,6 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 #ifdef CONFIG_JACK_MGR
 #include <linux/sec_jack.h>
 
-static struct gpio_keys_button willow_jack_buttons[] = {
-  {
-    .code               = KEY_MEDIA,
-    .gpio               = GPIO_REMOTE_KEY_INT,
-    .active_low         = 1,
-    .desc               = "Earjack Remote",
-    .type               = EV_KEY,
-    .wakeup             = 0,
-    .debounce_interval  = 30
-  },
-};
-
-static struct gpio_keys_platform_data willow_jack_button_data = {
-  .buttons	= willow_jack_buttons,
-  .nbuttons	= ARRAY_SIZE(willow_jack_buttons),
-  .rep      = 0,
-};
-
 static struct sec_jack_zone sec_jack_zones[] = {
   {
     /* adc <= 2000, unstable zone, default to 3pole if it stays
@@ -2215,15 +2177,15 @@ static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
         .code = KEY_MEDIA,
   },
   {
-        /* 500 < adc <= 700 - Volume Up Key */
-        .adc_high = 700,
+        /* 500 < adc <= 800 - Volume Up Key */
+        .adc_high = 800,
         .adc_low = 500,
         .code = KEY_VOLUMEUP,
   },
   {
-        /* 1200 < adc <= 1400 - Volume Up Key */
-        .adc_high = 1400,
-        .adc_low = 1200,
+        /* 1100 < adc <= 1600 - Volume Down Key */
+        .adc_high = 1600,
+        .adc_low = 1100,
         .code = KEY_VOLUMEDOWN,
   }
 };
