@@ -151,6 +151,7 @@ extern int brcm_wlan_init(void);
 #define WILLOW_BOOT_HOTKEY_UPDATE	3
 #define WILLOW_BOOT_FACTORYTEST_L	4
 #define WILLOW_BOOT_FACTORYTEST_H	5
+#define WILLOW_BOOT_FASTBOOT      6
 #define REG_INFORM4            (S5P_INFORM4)
 
 #include <linux/i2c-gpio.h>
@@ -980,6 +981,9 @@ static void willow_pm_restart(char mode, const char *cmd)
     }
     else if(strncmp(cmd,"FACTORYTEST_H",13)==0){
       writel(WILLOW_BOOT_FACTORYTEST_H, S5P_INFORM5);
+    }
+    else if(strncmp(cmd,"fastboot",8)==0){
+      writel(WILLOW_BOOT_FASTBOOT, S5P_INFORM5);
     }
     //unknown reboot command, anyway set register to normal boot
     else
