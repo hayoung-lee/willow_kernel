@@ -2144,24 +2144,6 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 #ifdef CONFIG_JACK_MGR
 #include <linux/sec_jack.h>
 
-static struct gpio_keys_button willow_jack_buttons[] = {
-  {
-    .code               = KEY_MEDIA,
-    .gpio               = GPIO_REMOTE_KEY_INT,
-    .active_low         = 1,
-    .desc               = "Earjack Remote",
-    .type               = EV_KEY,
-    .wakeup             = 0,
-    .debounce_interval  = 30
-  },
-};
-
-static struct gpio_keys_platform_data willow_jack_button_data = {
-  .buttons	= willow_jack_buttons,
-  .nbuttons	= ARRAY_SIZE(willow_jack_buttons),
-  .rep      = 0,
-};
-
 static struct sec_jack_zone sec_jack_zones[] = {
   {
     /* adc <= 2000, unstable zone, default to 3pole if it stays
