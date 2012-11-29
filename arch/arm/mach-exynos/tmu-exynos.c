@@ -325,12 +325,12 @@ static ssize_t store_warning_freq(struct device *dev,
 
 	return count;
 }
-static DEVICE_ATTR(temperature, 0444, show_temperature, NULL);
-static DEVICE_ATTR(throttle_temp, 0666, show_throttle, store_throttle);
-static DEVICE_ATTR(warning_temp, 0666, show_warning, store_warning);
-static DEVICE_ATTR(throttle_freq, 0666,
+static DEVICE_ATTR(temperature, 0440, show_temperature, NULL);
+static DEVICE_ATTR(throttle_temp, 0660, show_throttle, store_throttle);
+static DEVICE_ATTR(warning_temp, 0660, show_warning, store_warning);
+static DEVICE_ATTR(throttle_freq, 0660,
 			show_throttle_freq, store_throttle_freq);
-static DEVICE_ATTR(warning_freq, 0666, show_warning_freq, store_warning_freq);
+static DEVICE_ATTR(warning_freq, 0660, show_warning_freq, store_warning_freq);
 
 static int thermal_create_sysfs_file(struct device *dev)
 {
