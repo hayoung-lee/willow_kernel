@@ -51,7 +51,7 @@
 
 #define MAX77686_RTC_UPDATE_DELAY	16
 #define MAX77686_RTC_WTSR_SMPL
-#define MAX77686_RTC_DEBUG
+#undef MAX77686_RTC_DEBUG
 
 enum {
 	RTC_SEC = 0,
@@ -185,9 +185,11 @@ static int max77686_rtc_read_time(struct device *dev, struct rtc_time *tm)
 
 	ret = rtc_valid_tm(tm);
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec, tm->tm_wday);
+#endif
 
 out:
 	mutex_unlock(&info->lock);
@@ -207,9 +209,11 @@ static int max77686_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	if (ret < 0)
 		return ret;
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec, tm->tm_wday);
+#endif
 
 	mutex_lock(&info->lock);
 
@@ -253,9 +257,11 @@ static int max77686_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 	max77686_rtc_data_to_tm(data, &alrm->time, info->rtc_24hr_mode);
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		alrm->time.tm_year, alrm->time.tm_mon, alrm->time.tm_mday,
 		alrm->time.tm_hour, alrm->time.tm_min, alrm->time.tm_sec, alrm->time.tm_wday);
+#endif
 
 	alrm->enabled = 0;
 	for (i = 0; i < RTC_NR_TIME; i++) {
@@ -302,9 +308,12 @@ static int max77686_rtc_stop_alarm(struct max77686_rtc_info *info)
 	}
 
 	max77686_rtc_data_to_tm(data, &tm, info->rtc_24hr_mode);
+
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm.tm_year, tm.tm_mon, tm.tm_mday,
 		tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_wday);
+#endif
 
 	for (i = 0; i < RTC_NR_TIME; i++)
 		data[i] &= ~ALARM_ENABLE_MASK;
@@ -344,9 +353,12 @@ static int max77686_rtc_stop_alarm_boot(struct max77686_rtc_info *info)
 	}
 
 	max77686_rtc_data_to_tm(data, &tm, info->rtc_24hr_mode);
+
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm.tm_year, tm.tm_mon, tm.tm_mday,
 		tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_wday);
+#endif
 
 	for (i = 0; i < RTC_NR_TIME; i++)
 		data[i] &= ~ALARM_ENABLE_MASK;
@@ -387,9 +399,12 @@ static int max77686_rtc_start_alarm(struct max77686_rtc_info *info)
 	}
 
 	max77686_rtc_data_to_tm(data, &tm, info->rtc_24hr_mode);
+
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm.tm_year, tm.tm_mon, tm.tm_mday,
 		tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_wday);
+#endif
 
 	data[RTC_SEC] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_MIN] |= (1 << ALARM_ENABLE_SHIFT);
@@ -436,9 +451,12 @@ static int max77686_rtc_start_alarm_boot(struct max77686_rtc_info *info)
 	}
 
 	max77686_rtc_data_to_tm(data, &tm, info->rtc_24hr_mode);
+
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		tm.tm_year, tm.tm_mon, tm.tm_mday,
 		tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_wday);
+#endif
 
 	data[RTC_SEC] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_MIN] |= (1 << ALARM_ENABLE_SHIFT);
@@ -477,9 +495,11 @@ static int max77686_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	if (ret < 0)
 		return ret;
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		alrm->time.tm_year, alrm->time.tm_mon, alrm->time.tm_mday,
 		alrm->time.tm_hour, alrm->time.tm_min, alrm->time.tm_sec, alrm->time.tm_wday);
+#endif
 
 	mutex_lock(&info->lock);
 
@@ -534,10 +554,12 @@ static int max77686_rtc_set_alarm_boot(struct device *dev,
 		data[RTC_YEAR] = 0;
 	}
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		alrm->time.tm_year, alrm->time.tm_mon, alrm->time.tm_mday,
 		alrm->time.tm_hour, alrm->time.tm_min, alrm->time.tm_sec,
 		alrm->time.tm_wday);
+#endif
 
 	mutex_lock(&info->lock);
 
@@ -586,7 +608,9 @@ static irqreturn_t max77686_rtc_alarm_irq(int irq, void *data)
 {
 	struct max77686_rtc_info *info = data;
 
+#ifdef MAX77686_RTC_DEBUG
 	dev_info(info->dev, "%s:irq(%d)\n", __func__, irq);
+#endif
 
 	rtc_update_irq(info->rtc_dev, 1, RTC_IRQF | RTC_AF);
 
@@ -600,7 +624,9 @@ static irqreturn_t max77686_rtc_alarm2_irq(int irq, void *data)
 	int ret;
 	u8 val;
 
+#ifdef MAX77686_RTC_DEBUG
 	dev_info(info->dev, "%s:irq(%d)\n", __func__, irq);
+#endif
 
 #if defined(CONFIG_SLP)
 	if (strstr(saved_command_line, "charger_detect_boot") != 0)
@@ -730,10 +756,12 @@ static int max77686_rtc_init_reg(struct max77686_rtc_info *info)
 		return ret;
 	}
 
+#ifdef MAX77686_RTC_DEBUG
 	printk(KERN_INFO "%s:alm2: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 		data_alm2[RTC_YEAR], data_alm2[RTC_MONTH], data_alm2[RTC_DATE],
 		data_alm2[RTC_HOUR], data_alm2[RTC_MIN], data_alm2[RTC_SEC],
 		data_alm2[RTC_WEEKDAY]);
+#endif
 #endif
 #if 0
 	max77686_rtc_update(info, MAX77686_RTC_READ);
