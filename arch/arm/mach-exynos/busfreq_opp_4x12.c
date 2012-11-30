@@ -506,10 +506,11 @@ void exynos4x12_target(int index)
 	unsigned int tmp;
 
 #ifdef CONFIG_MACH_WILLOW
-	//printk("%s %d\n",__func__,index);
-	if(index > 4)
-		index = 4;
+       //printk("%s %d\n",__func__,index);
+       if(index > 4)
+               index = 4;
 #endif
+
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[index].clk_dmc0div;
 
@@ -652,6 +653,7 @@ unsigned int exynos4x12_get_table_index(struct opp *opp)
 
 void exynos4x12_prepare(unsigned int index)
 {
+#if 0
 	unsigned int timing0 = 0;
 
 #ifdef CONFIG_ARM_TRUSTZONE
@@ -673,10 +675,12 @@ void exynos4x12_prepare(unsigned int index)
 	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
 #endif
+#endif
 }
 
 void exynos4x12_post(unsigned int index)
 {
+#if 0
 	unsigned int timing0 = 0;
 
 #ifdef CONFIG_ARM_TRUSTZONE
@@ -697,6 +701,7 @@ void exynos4x12_post(unsigned int index)
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
+#endif
 #endif
 }
 
