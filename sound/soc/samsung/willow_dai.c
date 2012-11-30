@@ -273,10 +273,10 @@ static int willow_bcm4334_pcm_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 
 	/* default 256kHz Clock Out */
-	snd_soc_dai_set_sysclk(rtd->cpu_dai, S3C_PCM_CLKSRC_MUX, 256000, SND_SOC_CLOCK_OUT);
+	snd_soc_dai_set_sysclk(cpu_dai, S3C_PCM_CLKSRC_MUX, 256000, SND_SOC_CLOCK_OUT);
 
 	/* Set SCLK_DIV for making bclk, default 256 */
-	snd_soc_dai_set_clkdiv(rtd->cpu_dai, S3C_PCM_SCLK_PER_FS, 256);
+	snd_soc_dai_set_clkdiv(cpu_dai, S3C_PCM_SCLK_PER_FS, 256);
 
 	return 0;
 }
