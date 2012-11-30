@@ -91,7 +91,7 @@ static int willow_pcm_hw_params(struct snd_pcm_substream *substream,
 	/* 8kHz * 256(16bits * 16slots, frame sync) = 2048kHz Clock Out */
 	ret = snd_soc_dai_set_sysclk(cpu_dai, S3C_PCM_CLKSRC_MUX,
 				params_rate(params)*rfs,
-				SND_SOC_CLOCK_IN);
+				SND_SOC_CLOCK_OUT);
 
 	/* Set SCLK_DIV for making bclk */
 	ret = snd_soc_dai_set_clkdiv(cpu_dai, S3C_PCM_SCLK_PER_FS, rfs);
@@ -268,6 +268,19 @@ static int willow_wm8985_init_paif(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int willow_bcm4334_pcm_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+
+	/* default 256kHz Clock Out */
+	snd_soc_dai_set_sysclk(rtd->cpu_dai, S3C_PCM_CLKSRC_MUX, 256000, SND_SOC_CLOCK_OUT);
+
+	/* Set SCLK_DIV for making bclk, default 256 */
+	snd_soc_dai_set_clkdiv(rtd->cpu_dai, S3C_PCM_SCLK_PER_FS, 256);
+
+	return 0;
+}
+
 static struct snd_soc_dai_link willow_dai[] = {
 #if defined(CONFIG_SND_SOC_WM8985) && defined(CONFIG_SND_SAMSUNG_I2S)
 	{ /* Primary i/f */
@@ -288,6 +301,7 @@ static struct snd_soc_dai_link willow_dai[] = {
 		.cpu_dai_name = "samsung-pcm.1",
 		.codec_dai_name = "bcm4334-pcm",
 		.platform_name = "samsung-audio",
+		.init = willow_bcm4334_pcm_init,
 		.codec_name = "bcm4334-pcm",
 		.ops = &willow_pcm_ops,
 	},
