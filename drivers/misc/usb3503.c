@@ -298,7 +298,7 @@ int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 	usb3503_change_status(hc, 1);
 
-	pr_info(HUB_TAG "suspended\n");
+	pr_debug(HUB_TAG "suspended\n");
 
 	return 0;
 }
@@ -312,7 +312,7 @@ int usb3503_resume(struct i2c_client *client)
 	if (hc->mode == USB3503_MODE_HUB)
 		usb3503_set_mode(hc, USB3503_MODE_HUB);
 
-	pr_info(HUB_TAG "resume mode=%s", (hc->mode == USB3503_MODE_HUB) ?
+	pr_debug(HUB_TAG "resume mode=%s", (hc->mode == USB3503_MODE_HUB) ?
 		"hub" : "standny");
 #endif
 

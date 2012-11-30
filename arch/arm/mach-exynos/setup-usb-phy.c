@@ -453,7 +453,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 	else if (!strcmp(pdev->name, "s3c-usbgadget"))
 		set_bit(HOST_PHY_DEVICE, &usb_phy_control.usage);
 
-	dev_info(&pdev->dev, "usb phy usage(%ld)\n",usb_phy_control.usage);
+	dev_dbg(&pdev->dev, "usb phy usage(%ld)\n",usb_phy_control.usage);
 
 	if (exynos4_usb_host_phy_is_on()) {
 		dev_err(&pdev->dev, "Already power on PHY\n");
@@ -520,7 +520,7 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 		clear_bit(HOST_PHY_DEVICE, &usb_phy_control.usage);
 
 	if (usb_phy_control.usage) {
-		dev_info(&pdev->dev, "still being used(%ld)\n",usb_phy_control.usage);
+		dev_dbg(&pdev->dev, "still being used(%ld)\n",usb_phy_control.usage);
 		return -EBUSY;
 	}
 
@@ -546,7 +546,7 @@ static int exynos4_usb_phy20_init(struct platform_device *pdev)
 	else if (!strcmp(pdev->name, "s3c-usbgadget"))
 		set_bit(HOST_PHY_DEVICE, &usb_phy_control.usage);
 
-	dev_info(&pdev->dev, "usb phy usage(%ld)\n", usb_phy_control.usage);
+	dev_dbg(&pdev->dev, "usb phy usage(%ld)\n", usb_phy_control.usage);
 
 	if (exynos4_usb_phy20_is_on()) {
 		dev_err(&pdev->dev, "Already power on PHY\n");
@@ -627,11 +627,11 @@ static int exynos4_usb_phy20_exit(struct platform_device *pdev)
 		clear_bit(HOST_PHY_DEVICE, &usb_phy_control.usage);
 
 	if (usb_phy_control.usage) {
-		dev_info(&pdev->dev, "still being used(%ld)\n",
+		dev_dbg(&pdev->dev, "still being used(%ld)\n",
 			usb_phy_control.usage);
 		return -EBUSY;
 	} else
-		dev_info(&pdev->dev, "usb host phy off\n");
+		dev_dbg(&pdev->dev, "usb host phy off\n");
 
 	/* unset to normal of Device */
 	writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
@@ -815,7 +815,7 @@ static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 	u32 hostphy_ctrl0, otgphy_sys, hsic_ctrl;
 
 	if (atomic_dec_return(&host_usage) > 0) {
-		dev_info(&pdev->dev, "still being used\n");
+		dev_dbg(&pdev->dev, "still being used\n");
 		return -EBUSY;
 	}
 
@@ -1180,7 +1180,7 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 				phyclk &= ~(PHY1_COMMON_ON_N);
 				writel(phyclk, EXYNOS4_PHYCLK);
 			}
-			dev_info(&pdev->dev, "host_phy_susp:%d\n",
+			dev_dbg(&pdev->dev, "host_phy_susp:%d\n",
 					ohci_hcd->state);
 #endif
 			ret = exynos4_usb_phy1_suspend(pdev);
@@ -1211,7 +1211,7 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 		if (soc_is_exynos4210() ||
 			soc_is_exynos4212() ||
 			soc_is_exynos4412()) {
-			dev_info(&pdev->dev, "host_phy_resume\n");
+			dev_dbg(&pdev->dev, "host_phy_resume\n");
 #ifdef CONFIG_USB_OHCI_S5P
 			phyclk = readl(EXYNOS4_PHYCLK);
 			phyclk |= PHY1_COMMON_ON_N;

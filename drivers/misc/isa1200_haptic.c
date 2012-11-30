@@ -24,7 +24,7 @@
 #ifdef CONFIG_MACH_WILLOW
 #include <linux/slab.h>
 
-#define DEBUG_HAPTIC
+#undef DEBUG_HAPTIC
 
 #ifdef DEBUG_HAPTIC
 #define dbg(x...)  printk(x)
