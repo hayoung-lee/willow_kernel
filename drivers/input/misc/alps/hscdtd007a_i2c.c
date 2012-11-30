@@ -63,6 +63,8 @@ static int hscd_i2c_readm(char *rxData, int length)
     int err;
     int tries = 0;
 
+    if(client_hscd==NULL) return -EIO;
+
     struct i2c_msg msgs[] = {
         {
             .addr  = client_hscd->addr,
@@ -100,6 +102,8 @@ static int hscd_i2c_writem(char *txData, int length)
 #ifdef ALPS_DEBUG
     int i;
 #endif
+
+    if(client_hscd==NULL) return -EIO;
 
     struct i2c_msg msg[] = {
         {
