@@ -3640,10 +3640,10 @@ static void __init willow_machine_init(void)
 	s3c_i2c6_set_platdata(NULL);
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
 
-	if(willow_get_hw_version() == WILLOW_HW_MVT)
-		i2c_register_board_info(7, i2c_devs7_MVT, ARRAY_SIZE(i2c_devs7_MVT));
-	else
+	if(willow_get_hw_version() == WILLOW_HW_DVT)
 		i2c_register_board_info(7, i2c_devs7_DVT, ARRAY_SIZE(i2c_devs7_DVT));
+	else
+		i2c_register_board_info(7, i2c_devs7_MVT, ARRAY_SIZE(i2c_devs7_MVT));
 
 #if defined(CONFIG_HAPTIC_ISA1200) || defined(CONFIG_USBHUB_USB3503)
 #ifdef CONFIG_HAPTIC_ISA1200
