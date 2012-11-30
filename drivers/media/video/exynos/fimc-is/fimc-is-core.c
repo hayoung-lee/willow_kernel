@@ -501,7 +501,7 @@ static int fimc_is_suspend(struct device *dev)
 
 	//printk(KERN_INFO "FIMC-IS suspend\n");
 	if (!test_bit(IS_ST_INIT_DONE, &is_dev->state)) {
-		printk(KERN_INFO "FIMC-IS suspend end\n");
+		//printk(KERN_INFO "FIMC-IS suspend end\n");
 		return 0;
 	}
 	/* If stream was not stopped, stop streaming */
