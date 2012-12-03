@@ -302,14 +302,18 @@ static int __init alps_init(void)
     int ret;
 
     #include <mach/willow_version.h>
-    if(g_willow_hw_version==WILLOW_HW_DVT){
-        printk("alps_init : Not use! alps input device not used DVT device!\n");
+    if(g_willow_hw_version >= WILLOW_HW_MVT){
+        printk("alps_init: board revision check ok! (upper MVT) \n");
+    }else{
+        printk("alps_init: Not use! alps input device not used DVT device!\n");
         return -1;
     }
 
     ret = platform_driver_register(&alps_driver);
-    if (ret)
+    if (ret){
+        printk("alps_init: failt to platform_driver_register!\n");
         goto out_region;
+    }
     printk(KERN_INFO "alps-init: platform_driver_register\n");
 
     pdev = platform_device_register_simple("alps_compass", -1, NULL, 0);
