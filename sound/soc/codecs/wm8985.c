@@ -156,6 +156,11 @@ static int eqmode_get(struct snd_kcontrol *kcontrol,
 static int eqmode_put(struct snd_kcontrol *kcontrol,
 		      struct snd_ctl_elem_value *ucontrol);
 
+static int amp_switch_get(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol);
+static int amp_switch_put(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol);
+
 static const DECLARE_TLV_DB_SCALE(dac_tlv, -12700, 50, 1);
 static const DECLARE_TLV_DB_SCALE(adc_tlv, -12700, 50, 1);
 static const DECLARE_TLV_DB_SCALE(out_tlv, -5700, 100, 0);
@@ -239,6 +244,9 @@ static const char *depth_3d_text[] = {
 };
 static const SOC_ENUM_SINGLE_DECL(depth_3d, WM8985_3D_CONTROL, 0,
 				  depth_3d_text);
+
+static const char *amp_switch_text[] = { "Off", "On" };
+static const SOC_ENUM_SINGLE_EXT_DECL(amp_switch, amp_switch_text);
 
 static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE("Digital Loopback Switch", WM8985_COMPANDING_CONTROL,
@@ -328,12 +336,16 @@ static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_SINGLE_TLV("EQ4 Volume", WM8985_EQ4_PEAK_3, 0, 24, 1, eq_tlv),
 	SOC_ENUM("EQ5 Cutoff", eq5_cutoff),
 	SOC_SINGLE_TLV("EQ5 Volume", WM8985_EQ5_HIGH_SHELF, 0, 24, 1, eq_tlv),
-	/* Main Mic Right, Headset Mic Left */
-	SOC_SINGLE("ADC LR Swap Switch", WM8985_AUDIO_INTERFACE, 1, 1, 0),
 
 	SOC_ENUM("3D Depth", depth_3d),
 
-	SOC_ENUM("Speaker Mode", speaker_mode)
+	SOC_ENUM("Speaker Mode", speaker_mode),
+
+	/* Main Mic Right, Headset Mic Left */
+	SOC_SINGLE("ADC LR Swap Switch", WM8985_AUDIO_INTERFACE, 1, 1, 0),
+
+	/* Amp Switch */
+	SOC_ENUM_EXT("AMP Switch", amp_switch, amp_switch_get, amp_switch_put)
 };
 
 static const struct snd_kcontrol_new left_out_mixer[] = {
@@ -384,10 +396,10 @@ static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", WM8985_POWER_MANAGEMENT_2,
 		1, 0),
 
-	SND_SOC_DAPM_MIXER("Right Output Mixer", WM8985_POWER_MANAGEMENT_3,
-		2, 0, left_out_mixer, ARRAY_SIZE(left_out_mixer)),
 	SND_SOC_DAPM_MIXER("Left Output Mixer", WM8985_POWER_MANAGEMENT_3,
-		3, 0, right_out_mixer, ARRAY_SIZE(right_out_mixer)),
+		3, 0, left_out_mixer, ARRAY_SIZE(left_out_mixer)),
+	SND_SOC_DAPM_MIXER("Right Output Mixer", WM8985_POWER_MANAGEMENT_3,
+		2, 0, right_out_mixer, ARRAY_SIZE(right_out_mixer)),
 
 	SND_SOC_DAPM_MIXER("Left Input Mixer", WM8985_POWER_MANAGEMENT_2,
 		2, 0, left_input_mixer, ARRAY_SIZE(left_input_mixer)),
@@ -532,6 +544,35 @@ static int eqmode_put(struct snd_kcontrol *kcontrol,
 	snd_soc_write(codec, WM8985_POWER_MANAGEMENT_2, regpwr2);
 	snd_soc_write(codec, WM8985_POWER_MANAGEMENT_3, regpwr3);
 	return 0;
+}
+
+static int amp_switch_get(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol)
+{
+	int amp_onoff;
+
+	amp_onoff = gpio_get_value(GPIO_SPEAKER_AMP_ONOFF);
+	if (amp_onoff)
+		ucontrol->value.integer.value[0] = 1;
+	else
+		ucontrol->value.integer.value[0] = 0;
+
+	return 0;
+}
+
+static int amp_switch_put(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol)
+{
+	if (ucontrol->value.integer.value[0] == 0) {
+		gpio_set_value(GPIO_SPEAKER_AMP_ONOFF, 0);
+		gpio_set_value(GPIO_POP_SUPPRESSOR_ONOFF, 0);
+	} else if (ucontrol->value.integer.value[0] == 1) {
+		gpio_set_value(GPIO_SPEAKER_AMP_ONOFF, 1);
+		gpio_set_value(GPIO_POP_SUPPRESSOR_ONOFF, 1);
+		msleep(100);
+	} else {
+		return -EINVAL;
+	}
 }
 
 static int wm8985_add_widgets(struct snd_soc_codec *codec)
@@ -894,10 +935,6 @@ static int wm8985_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
 				    WM8985_VMIDSEL_MASK,
 				    1 << WM8985_VMIDSEL_SHIFT);
-		/* we want mic to be turned on always */
-		//snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
-		//		    WM8985_MICBEN_MASK,
-		//		    1 << WM8985_MICBEN_SHIFT);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
