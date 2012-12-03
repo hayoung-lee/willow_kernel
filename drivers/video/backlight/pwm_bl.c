@@ -21,8 +21,6 @@
 #include <linux/pwm_backlight.h>
 #include <linux/slab.h>
 
-int checklog=0;
-
 #define FEATURE_PWM_DEBUG
 #define FEATURE_WILLOW_BACKLIGHT
 
@@ -92,39 +90,13 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		brightness = pb->notify(pb->dev, brightness);
 
 	if (brightness == 0) {
-#if defined(FEATURE_WILLOW_BACKLIGHT)
-		if(willow_backlight_ctrl==0)
-#endif
-		{
-			pwm_config(pb->pwm, 0, pb->period);
-			pwm_disable(pb->pwm);
-#if defined(FEATURE_WILLOW_BACKLIGHT)	
-//			pwm_log(" pwm backlight off \n");
-//			LTN101AL03_backlight_onoff(0);
-			checklog=0;
-#endif
-		}
+		pwm_config(pb->pwm, 0, pb->period);
+		pwm_disable(pb->pwm);
 	} else {
-		if(checklog==0)
-		{
-			pwm_log(" pwm backlight requset on \n");		
-			checklog=1;
-		}
-#if defined(FEATURE_WILLOW_BACKLIGHT)	
-		if(willow_backlight_ctrl==0)
-		{
-			LTN101AL03_backlight_crtl(0);
-			brightness = pb->lth_brightness +
-				(brightness * (pb->period - pb->lth_brightness) / max);
-			pwm_config(pb->pwm, brightness, pb->period);
-			pwm_enable(pb->pwm);
-		}
-#else
 		brightness = pb->lth_brightness +
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
 		pwm_enable(pb->pwm);
-#endif		
 	}
 	return 0;
 }
@@ -156,7 +128,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_bl_data *pb;
 	int ret;
 
-	checklog=0;
 #if defined(FEATURE_WILLOW_BACKLIGHT)
 	willow_backlight_ctrl=0;
 	cu_brightness=0;
@@ -180,9 +151,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
-#if defined(FEATURE_WILLOW_BACKLIGHT)
-	LTN101AL03_backlight_crtl(0);
-#endif
 
 	pb->period = data->pwm_period_ns;
 	pb->notify = data->notify;

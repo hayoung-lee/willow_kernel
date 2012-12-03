@@ -3495,9 +3495,9 @@ static struct samsung_bl_gpio_info willow_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data willow_bl_data = {
 	.pwm_id = 1,
-#ifdef CONFIG_FB_S5P_LMS501KF03
-	.pwm_period_ns  = 1000,
-#endif
+	.max_brightness = 238,
+	.dft_brightness = 235,
+	.pwm_period_ns  = 51758,
 };
 
 static void __init willow_map_io(void)
