@@ -93,18 +93,10 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		pwm_config(pb->pwm, 0, pb->period);
 		pwm_disable(pb->pwm);
 	} else {
-#if defined(FEATURE_WILLOW_BACKLIGHT)	
-//		LTN101AL03_backlight_crtl(0);
 		brightness = pb->lth_brightness +
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
 		pwm_enable(pb->pwm);
-#else
-		brightness = pb->lth_brightness +
-			(brightness * (pb->period - pb->lth_brightness) / max);
-		pwm_config(pb->pwm, brightness, pb->period);
-		pwm_enable(pb->pwm);
-#endif		
 	}
 	return 0;
 }
