@@ -1,8 +1,6 @@
 config BCMDHD
 	tristate "Broadcom 4330/34 wireless cards support"
 	depends on MMC
-	select BCMDHD_FW_PATH
-	select BCMDHD_NVRAM_PATH
 	---help---
 	  This module adds support for wireless adapters based on
 	  Broadcom 4330/34 chipset.

@@ -12,7 +12,7 @@
 #include <mach/regs-gpio.h>
 #include <mach/gpio.h>
 
-#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 
 #define WLAN_STATIC_SCAN_BUF0		5
 #define WLAN_STATIC_SCAN_BUF1		6
@@ -117,7 +117,7 @@ static int brcm_init_wlan_mem(void)
 
 	return -ENOMEM;
 }
-#endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 
 static unsigned int wlan_on_gpio_table[][4] = {
         {GPIO_WLAN_EN, GPIO_WLAN_EN_AF, GPIO_LEVEL_HIGH, S3C_GPIO_PULL_NONE},
@@ -290,7 +290,7 @@ static struct wifi_platform_data brcm_wlan_control = {
 	.set_power	= brcm_wlan_power,
 	.set_reset	= brcm_wlan_reset,
 	.set_carddetect	= brcm_wlan_set_carddetect,
-#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 	.mem_prealloc	= brcm_wlan_mem_prealloc,
 #endif
 	.get_country_code = brcm_wlan_get_country_code,
@@ -311,7 +311,7 @@ int __init brcm_wlan_init(void)
 	int ret;
 	printk("%s: start\n", __FUNCTION__);
 
-#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 	brcm_init_wlan_mem();
 #endif
 
