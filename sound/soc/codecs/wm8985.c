@@ -86,8 +86,8 @@ static const u16 wm8985_reg_defs[] = {
 	0x0000,     /* R42 - OUT4 to ADC */
 	0x0000,     /* R43 - Beep control */
 	0x0033,     /* R44 - Input ctrl */
-	0x0135,     /* R45 - Left INP PGA gain ctrl */
-	0x0175,     /* R46 - Right INP PGA gain ctrl */
+	0x013F,     /* R45 - Left INP PGA gain ctrl */
+	0x0170,     /* R46 - Right INP PGA gain ctrl */
 	0x0000,     /* R47 - Left ADC BOOST ctrl */
 	0x0000,     /* R48 - Right ADC BOOST ctrl */
 	0x0002,     /* R49 - Output ctrl */
