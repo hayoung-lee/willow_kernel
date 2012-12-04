@@ -288,6 +288,9 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	dev_dbg(pcm->dev, "Entered %s\n", __func__);
 
+	clk_enable(pcm->cclk);
+	clk_enable(pcm->pclk);
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		dma_data = pcm->dma_playback;
 	else
@@ -358,6 +361,17 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(pcm->dev, "PCMSOURCE_CLK-%lu SCLK=%ufs SCLK_DIV=%d SYNC_DIV=%d\n",
 				clk_get_rate(clk), pcm->sclk_per_fs,
 				sclk_div, sync_div);
+
+	return 0;
+}
+
+static int s3c_pcm_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *socdai)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct s3c_pcm_info *pcm = snd_soc_dai_get_drvdata(rtd->cpu_dai);
+
+	clk_disable(pcm->cclk);
+	clk_disable(pcm->pclk);
 
 	return 0;
 }
@@ -511,6 +525,7 @@ static struct snd_soc_dai_ops s3c_pcm_dai_ops = {
 	.set_clkdiv	= s3c_pcm_set_clkdiv,
 	.trigger	= s3c_pcm_trigger,
 	.hw_params	= s3c_pcm_hw_params,
+	.hw_free	= s3c_pcm_hw_free,
 	.set_fmt	= s3c_pcm_set_fmt,
 };
 
@@ -606,7 +621,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 		ret = PTR_ERR(pcm->cclk);
 		goto err1;
 	}
-	clk_enable(pcm->cclk);
+	//clk_enable(pcm->cclk); //move to s3c_pcm_hw_params
 
 	/* record our pcm structure for later use in the callbacks */
 	dev_set_drvdata(&pdev->dev, pcm);
@@ -631,7 +646,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 		ret = PTR_ERR(pcm->pclk);
 		goto err4;
 	}
-	clk_enable(pcm->pclk);
+	//clk_enable(pcm->pclk); //move to s3c_pcm_hw_params
 
 	ret = snd_soc_register_dai(&pdev->dev, &s3c_pcm_dai[pdev->id]);
 	if (ret != 0) {
