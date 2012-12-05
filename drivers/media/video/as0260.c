@@ -1216,7 +1216,7 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 		//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
 		//buf=getSystemState(sd);
 	}
-	enterStandby(sd);
+	startStreaming(sd);
 	msleep(5);	
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	msleep(5);	
@@ -1598,7 +1598,7 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 		//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
 		//buf=getSystemState(sd);
 	}
-	enterStandby(sd);
+	startStreaming(sd);
 	msleep(5);	
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	msleep(5);	
@@ -1864,7 +1864,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	msleep(20);
 
-	enterStandby(sd);
+	startStreaming(sd);
 	msleep(5);	
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	msleep(5);	
