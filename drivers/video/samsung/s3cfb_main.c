@@ -509,9 +509,6 @@ void s3cfb_late_resume(struct early_suspend *h)
 
 	s3c_log("s3cfb_late_resume is called start \n");
 
-#if defined(CONFIG_FB_S5P_LTN101AL03)
-	set_backlight_ctrl(1);
-#endif
 	dev_dbg(info->dev, "wake up from suspend\n");
 
 #ifdef CONFIG_EXYNOS_DEV_PD
@@ -527,10 +524,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 		if (pdata->cfg_gpio)
 			pdata->cfg_gpio(pdev);
 	
-#if defined(CONFIG_FB_S5P_LTN101AL03)
-		LTN101AL03_lcd_onoff(1);
-		LTN101AL03_lvds_on(1);
-#else
+#ifndef CONFIG_FB_S5P_LTN101AL03
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
 
@@ -568,14 +562,19 @@ void s3cfb_late_resume(struct early_suspend *h)
 		s3cfb_set_global_interrupt(fbdev[i], 1);
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
-		LTN101AL03_backlight_onoff(1);
-		set_backlight_ctrl(0);
-		willow_backlight_on();		
+		LTN101AL03_lcd_onoff(1);
+		LTN101AL03_lvds_on(1);
 #else
 		if (pdata->backlight_on)
 			pdata->backlight_on(pdev);
-#endif		
+#endif
 	}
+
+#if defined(CONFIG_FB_S5P_LTN101AL03)
+	LTN101AL03_backlight_onoff(1);
+	set_backlight_ctrl(1);
+	willow_backlight_on();
+#endif
 
 	info->system_state = POWER_ON;
 	s3c_log("s3cfb_late_resume is called end \n");

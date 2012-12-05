@@ -218,12 +218,12 @@ void LTN101AL03_lvds_on(int onoff)
 	if(onoff)
 	{
 		err = gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_HIGH, "GPM1(0)");
-		mdelay(100);
+		mdelay(300);
 	}
 	else
 	{
 		err = gpio_request_one(GPIO_nLVDS_PDN, GPIOF_OUT_INIT_LOW, "GPM1(0)");
-		mdelay(100);
+		mdelay(40);
 	}
 	
 	if (err) {
@@ -281,8 +281,6 @@ void LTN101AL03_backlight_onoff(int onoff)
 	int err;
 	//LCD PWM on
 
-	mdelay(250); 	
-
 	err = gpio_request(GPIO_LCD_BL_PWM, "GPIO_LCD_BL_PWM");
 	if (err) {
 		lcd_log(KERN_ERR "failed to request GPD0 for "
@@ -295,8 +293,6 @@ void LTN101AL03_backlight_onoff(int onoff)
 	//gpio_direction_output(GPIO_LCD_BL_PWM, onoff);
 	gpio_set_value(GPIO_LCD_BL_PWM, onoff);
 
-	mdelay(5); 
-	
 	//s3c_gpio_cfgpin(GPIO_LCD_BL_PWM, S3C_GPIO_SFN(2));	
 	lcd_on_charging_ctrl(onoff);
 
@@ -313,13 +309,13 @@ void LTN101AL03_lcd_onoff(int onoff)
 	{
 		regulator_enable(lcd_ldo);
 		regulator_put(lcd_ldo);
-		mdelay(100); //T1+T2
+		mdelay(10); //T1+T2
 	}
 	else
 	{
 		regulator_force_disable(lcd_ldo);
 		regulator_put(lcd_ldo);
-		mdelay(100); //T1+T2//mdelay(500); //T1+T2
+		mdelay(500); //T1+T2
 	}
 
 }
