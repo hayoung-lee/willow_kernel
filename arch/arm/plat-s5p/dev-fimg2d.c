@@ -35,11 +35,17 @@ static struct resource s5p_fimg2d_resource[] = {
 	}
 };
 
+static u64 s5p_device_fimg2d_dmamask = 0xffffffffUL;
+
 struct platform_device s5p_device_fimg2d = {
 	.name		= "s5p-fimg2d",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(s5p_fimg2d_resource),
-	.resource	= s5p_fimg2d_resource
+	.resource	= s5p_fimg2d_resource,
+	.dev		= {
+		.dma_mask		= &s5p_device_fimg2d_dmamask,
+		.coherent_dma_mask	= 0xffffffffUL,
+	},
 };
 EXPORT_SYMBOL(s5p_device_fimg2d);
 
