@@ -672,7 +672,7 @@ int issueCommand(struct v4l2_subdev *sd, const HOST_COMMAND_E command)
 		as0260_i2c_16_read(client,0x0080,&buf);
 		if (0 == (buf & command))
 		{
-			as0260_info(&client->dev, "issue command return =%d\n",buf);
+			as0260_info(&client->dev, "issue command return =%x\n",buf);
 
 			return (buf & HC_OK);
 		}
@@ -783,7 +783,7 @@ int changestate(struct v4l2_subdev *sd,SYSTEM_STATE_E state_d, HOST_COMMAND_E cm
 	u16 buf16=0;
 	int i=0;
 	//msleep(10);
-
+	err=as0260_i2c_write_reg_16(client, 0x098E, 0xdc00);  
 	err=as0260_i2c_write_reg_8(client, 0xdc00, state_d);  
 	err=as0260_i2c_write_reg_16(client, 0x0080, 0x8000 | cmd_d);  
 	do {
@@ -897,6 +897,26 @@ int refresh(struct v4l2_subdev *sd)
 		return 1;
 	}
 }
+
+#if defined(FEATURE_TW_CAMERA_P_REG_WRITE)
+// requests system leave standby
+int waitForEvent(struct v4l2_subdev *sd)
+{
+	int res;
+	//int err = -EINVAL;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	res = issueCommand(sd,HC_WAIT_FOR_EVENT);
+
+	if (res>0)
+	{
+		as0260_info(&client->dev,"setSystemState error \n");
+		return -1;
+	}
+	else
+	return getSystemState(sd);
+}
+#endif
 
 static const char *as0260_querymenu_wb_preset[] = {
 	"WB Tungsten", "WB Fluorescent", "WB sunny", "WB cloudy", NULL
@@ -1118,6 +1138,30 @@ static int as0260_set_resolution_reg(struct v4l2_subdev *sd,int index)
 		//case AS0260_PREVIEW_QCIIF:
 		//	err =as0260_i2c_w_write_regs(sd,&as0260_176[0], ARRAY_SIZE(as0260_176));
 		//	break;
+#if defined(FEATURE_TW_CAMERA_NO_SET_PLL)
+		case AS0260_PREVIEW_QVGA:
+			err =as0260_i2c_w_write_regs(sd,&as0260_320_reg[0], ARRAY_SIZE(as0260_320_reg));
+			break;
+		case AS0260_PREVIEW_VGA:
+			err =as0260_i2c_w_write_regs(sd,&as0260_640_reg[0], ARRAY_SIZE(as0260_640_reg));
+			break;	
+		case AS0260_PREVIEW_1M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_720_reg[0], ARRAY_SIZE(as0260_720_reg));
+			
+		case AS0260_PREVIEW_1P3M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_960_reg[0], ARRAY_SIZE(as0260_960_reg));
+			//err=	write_block(sd,&as0260_960[0], ARRAY_SIZE(as0260_960));
+			break;		
+#if !defined(FEATURE_TW_CAMERA_FPS28_MCLK24_PCLK92_H)
+		case AS0260_PREVIEW_1P5M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_1440_reg[0], ARRAY_SIZE(as0260_1440_reg));
+			break;		
+#endif			
+		case AS0260_PREVIEW_2M:
+			err =as0260_i2c_w_write_regs(sd,&as0260_1080_reg[0], ARRAY_SIZE(as0260_1080_reg));
+			break;		
+#else		
+
 		case AS0260_PREVIEW_QVGA:
 			err =as0260_i2c_w_write_regs(sd,&as0260_320[0], ARRAY_SIZE(as0260_320));
 			break;
@@ -1139,6 +1183,7 @@ static int as0260_set_resolution_reg(struct v4l2_subdev *sd,int index)
 		case AS0260_PREVIEW_2M:
 			err =as0260_i2c_w_write_regs(sd,&as0260_1080[0], ARRAY_SIZE(as0260_1080));
 			break;		
+#endif
 	}
 
 	return err;
@@ -1150,15 +1195,38 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 #endif
 	struct as0260_state *state = to_state(sd);
-	//u32 read_value=0;
-	//u16 buf16=0;
+	int buf=0;
 	
 #ifdef AS0260_DEBUG
 	as0260_info(&client->dev, "[AS0260] %s: ________set_Preview_start\n", __func__);
 #endif
-	msleep(150);
-	//as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
+	msleep(10);
 
+#if defined(FEATURE_TW_CAMERA_P_REG_WRITE)
+	as0260_set_resolution_reg(sd,state->framesize_index);
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(50);
+	//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
+	//buf=getSystemState(sd);
+	if(0)
+	{
+		as0260_set_resolution_reg(sd,state->framesize_index);
+		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+		msleep(50);
+		//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
+		//buf=getSystemState(sd);
+	}
+	enterStandby(sd);
+	msleep(5);	
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(5);	
+	
+	buf=getSystemState(sd);
+	waitForEvent(sd);
+
+	msleep(100);
+
+#else
 	as0260_set_resolution_reg(sd,state->framesize_index);
 	//as0260_i2c_w_write_regs(sd,&as0260_low_init_regs[0], ARRAY_SIZE(as0260_low_init_regs));
 	//err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
@@ -1181,7 +1249,8 @@ static int as0260_set_preview_start(struct v4l2_subdev *sd)
 		//msleep(10);
 		//err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
-	
+#endif
+
 	state->runmode = as0260_RUNMODE_RUNNING;
 	msleep(10);
 
@@ -1499,8 +1568,9 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 	struct as0260_state *state = to_state(sd);
 	int err = 0;
 	int framesize_index=0;
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
-
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int buf=0;
+	
 	as0260_info(&client->dev, "as0260_s_fmt__________________ requested res(%d, %d)\n",
 		fmt->width, fmt->height);
 	as0260_info(&client->dev, "as0260_s_fmt__________________ requested res(%d, %d)\n",
@@ -1513,6 +1583,30 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 	framesize_index = as0260_get_framesize_index(sd);
 	err = as0260_set_framesize_index(sd, framesize_index);
 
+#if defined(FEATURE_TW_CAMERA_P_REG_WRITE)
+	msleep(50);
+	as0260_set_resolution_reg(sd,state->framesize_index);
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(50);
+	//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
+	//buf=getSystemState(sd);
+	if(1)
+	{
+		as0260_set_resolution_reg(sd,state->framesize_index);
+		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+		msleep(50);
+		//changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_REFRESH);	
+		//buf=getSystemState(sd);
+	}
+	enterStandby(sd);
+	msleep(5);	
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(5);	
+	
+	waitForEvent(sd);
+
+	buf=getSystemState(sd);
+#else
 	as0260_set_resolution_reg(sd,state->framesize_index);
 	msleep(15);
 	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
@@ -1530,6 +1624,7 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 		}
 		as0260_info(&client->dev, "as0260_set_resolution_reg \n");
 	}
+#endif
 
 	msleep(500);
 
@@ -1754,7 +1849,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	int err = -EINVAL;
 	u32 read_value=0;
 	u16 buf16=0;
-	//u8 buf=0;
+	u8 buf=0;
 	
 	v4l_info(client, "%s: camera initialization start\n", __func__);
 	//pdata = client->dev.platform_data;
@@ -1764,7 +1859,26 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 
 	as0260_i2c_16_read(client, 0x001c,&buf16);
 	as0260_info(&client->dev,"as0260_init ______ AS0260 MCU BOOT MODE =0x%x\n",buf16);
+#if defined(FEATURE_TW_CAMERA_P_REG_WRITE)
+	as0260_i2c_w_write_regs(sd,&as0260_init01_regs[0], ARRAY_SIZE(as0260_init01_regs));
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(20);
 
+	enterStandby(sd);
+	msleep(5);	
+	err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	msleep(5);	
+	buf=getSystemState(sd);	
+
+	if(buf!=0x31)
+	{
+		msleep(20);
+		//as0260_set_resolution_reg(sd,AS0260_PREVIEW_2M);
+		as0260_i2c_w_write_regs(sd,&as0260_init01_regs[0], ARRAY_SIZE(as0260_init01_regs));
+		err=changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
+	}
+	waitForEvent(sd);
+#else
 	err=as0260_set_resolution_reg(sd,AS0260_PREVIEW_2M);
 	err =as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
 	msleep(10);
@@ -1777,7 +1891,7 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 		as0260_i2c_w_write_regs(sd,&as0260_init_regs[0], ARRAY_SIZE(as0260_init_regs));
 		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
 	}
-
+#endif
 	backup_client=client;
 
 	as0260_i2c_16_read(client, 0x0018,&buf16);
@@ -1800,12 +1914,14 @@ static int as0260_init(struct v4l2_subdev *sd, u32 val)
 	*/
 	//err=as0260_i2c_write_reg_16(client, 0x3070, 2);  // test pattern
 #endif
-	
+
+#if	 0
 	if (err < 0) {
 		v4l_err(client, "%s: camera initialization failed\n", \
 			__func__);
 		return -EIO;	/* FIXME */
 	}
+#endif	
 	v4l_info(client, "%s: camera initialization end\n", __func__);
 	msleep(100);
 	read_value=0;
