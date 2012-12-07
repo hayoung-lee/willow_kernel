@@ -397,9 +397,9 @@ static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 		1, 0),
 
 	SND_SOC_DAPM_MIXER("Left Output Mixer", WM8985_POWER_MANAGEMENT_3,
-		3, 0, left_out_mixer, ARRAY_SIZE(left_out_mixer)),
+		3, 0, right_out_mixer, ARRAY_SIZE(right_out_mixer)),
 	SND_SOC_DAPM_MIXER("Right Output Mixer", WM8985_POWER_MANAGEMENT_3,
-		2, 0, right_out_mixer, ARRAY_SIZE(right_out_mixer)),
+		2, 0, left_out_mixer, ARRAY_SIZE(left_out_mixer)),
 
 	SND_SOC_DAPM_MIXER("Left Input Mixer", WM8985_POWER_MANAGEMENT_2,
 		2, 0, left_input_mixer, ARRAY_SIZE(left_input_mixer)),
