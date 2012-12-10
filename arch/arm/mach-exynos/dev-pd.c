@@ -21,6 +21,7 @@
 
 #include <plat/cpu.h>
 #include <plat/pd.h>
+#include <plat/bts.h>
 
 int exynos_pd_init(struct device *dev)
 {
@@ -74,6 +75,7 @@ int exynos_pd_enable(struct device *dev)
 	if (data->clk_base)
 		__raw_writel(tmp, data->clk_base);
 
+	bts_enable(pdata->id);
 	return 0;
 }
 
@@ -83,6 +85,22 @@ int exynos_pd_disable(struct device *dev)
 	struct exynos_pd_data *data = (struct exynos_pd_data *) pdata->data;
 	u32 timeout;
 	u32 tmp = 0;
+
+	static int boot_lcd0 = 1;
+	if (boot_lcd0) {
+		struct platform_device *pdev = to_platform_device(dev);
+		/*
+		 * Currently,in exynos4x12, FIMD parent power domain
+		 * is PD_LCD0,
+		 * but in exynos5x12, it is changed to PD_DISP1.
+		 * so i add PD_DISP1 for exynos5
+		 */
+		if ((pdev->id == PD_LCD0) || (pdev->id == PD_DISP1)) {
+			printk(KERN_INFO "lcd0 disable skip only one time");
+			boot_lcd0--;
+			return 0;
+		}
+	}
 
 	/*  save clock source register */
 	if (data->clksrc_base)

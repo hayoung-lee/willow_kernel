@@ -3495,7 +3495,6 @@ static void __init willow_map_io(void)
 
 static void __init exynos_sysmmu_init(void)
 {
-	ASSIGN_SYSMMU_POWERDOMAIN(fimd0, &exynos4_device_pd[PD_LCD0].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc0, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc1, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc2, &exynos4_device_pd[PD_CAM].dev);
@@ -3568,10 +3567,11 @@ static void __init willow_machine_init(void)
 #ifdef CONFIG_BATTERY_MAX17040
 	max8903_gpio_init();
 #endif
+
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
-	exynos_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
+	//exynos_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_CAM].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_TV].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_GPS].dev);
@@ -3591,6 +3591,7 @@ static void __init willow_machine_init(void)
 	exynos_pd_enable(&exynos4_device_pd[PD_GPS_ALIVE].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
+
 #ifdef CONFIG_MFD_MAX77686
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
