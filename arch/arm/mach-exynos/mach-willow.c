@@ -338,6 +338,13 @@ struct platform_device exynos_device_md0 = {
 };
 #endif
 
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+static struct platform_device watchdog_reset_device = {
+	.name = "watchdog-reset",
+	.id = -1,
+};
+#endif
+
 //#define WRITEBACK_ENABLED
 
 #if defined(CONFIG_VIDEO_FIMC) || defined(CONFIG_VIDEO_SAMSUNG_S5P_FIMC)
@@ -2008,7 +2015,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 			PMIC_DVS2,
 			PMIC_DVS3,
 		},
-#if 1
+
 	.buck2_voltage[0] = 1300000,	/* 1.3V */
 	.buck2_voltage[1] = 1000000,	/* 1.0V */
 	.buck2_voltage[2] = 950000,	/* 0.95V */
@@ -2035,34 +2042,6 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck4_voltage[5] = 1000000,	/* 1.0V */
 	.buck4_voltage[6] = 950000,	/* 0.95V */
 	.buck4_voltage[7] = 900000,	/* 0.9V */
-#else
-	.buck2_voltage[0] = 1300000,
-	.buck2_voltage[1] = 1287500,
-	.buck2_voltage[2] = 1250000,
-	.buck2_voltage[3] = 1187500,
-	.buck2_voltage[4] = 1087500,
-	.buck2_voltage[5] = 987500,
-	.buck2_voltage[6] = 937500,
-	.buck2_voltage[7] = 900000,
-
-	.buck3_voltage[0] = 1062500,
-	.buck3_voltage[1] = 1050000,
-	.buck3_voltage[2] = 1000000,
-	.buck3_voltage[3] = 925000,
-	.buck3_voltage[4] = 900000,
-	.buck3_voltage[5] = 875000,
-	.buck3_voltage[6] = 1037500,
-	.buck3_voltage[7] = 987500,
-
-	.buck4_voltage[0] = 875000,
-	.buck4_voltage[1] = 900000,
-	.buck4_voltage[2] = 950000,
-	.buck4_voltage[3] = 1025000,
-	.buck4_voltage[4] = 1100000,
-	.buck4_voltage[5] = 1000000,
-	.buck4_voltage[6] = 950000,
-	.buck4_voltage[7] = 900000,
-#endif
 };
 #endif
 
@@ -2985,6 +2964,9 @@ static struct platform_device bcm4334_bluetooth_device = {
 #endif
 
 static struct platform_device *willow_devices[] __initdata = {
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	&watchdog_reset_device,
+#endif
 	&s3c_device_adc,
 	/* Samsung Power Domain */
 	&exynos4_device_pd[PD_MFC],
@@ -3513,6 +3495,7 @@ static void __init willow_map_io(void)
 
 static void __init exynos_sysmmu_init(void)
 {
+	ASSIGN_SYSMMU_POWERDOMAIN(fimd0, &exynos4_device_pd[PD_LCD0].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc0, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc1, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc2, &exynos4_device_pd[PD_CAM].dev);
@@ -3585,7 +3568,6 @@ static void __init willow_machine_init(void)
 #ifdef CONFIG_BATTERY_MAX17040
 	max8903_gpio_init();
 #endif
-
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);

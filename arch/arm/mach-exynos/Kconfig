@@ -957,6 +957,19 @@ config EXYNOS5250_ABB_WA
 	help
 	 Add W/A to fix ARM/INT ABB errata in EVT0
 
+menuconfig SEC_WATCHDOG_RESET
+	bool "S5PV310 watchdog reset to exit from lockup"
+	depends on (CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412)
+	default n
+	help
+	  Use watchdog reset to exit from lockup
+
+if SEC_WATCHDOG_RESET
+config SEC_WATCHDOG_PET_TIME
+	int "sec watchdog kicking time interval value"
+	default 5
+endif
+
 config BT_BCM4334
 	bool "Enable BCM4334 driver"
 	default n
