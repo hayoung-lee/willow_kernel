@@ -29,7 +29,7 @@
 
 #undef PRINT_DIV_VAL
 
-#define ENABLE_CLKOUT
+#undef ENABLE_CLKOUT
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -492,6 +492,12 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 				need_dynamic_ema)
 			__raw_writel(0x101, EXYNOS4_EMA_CONF);
 
+		if ((samsung_rev() >= EXYNOS4412_REV_2_0)
+			&& (exynos_result_of_asv > 2)
+			&& (old_index > L8) && (new_index <= L8)) {
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
+		}
+
 		if (!exynos4x12_pms_change(old_index, new_index)) {
 			/* 1. Change the system clock divider values */
 			set_clkdiv(new_index);
@@ -524,18 +530,43 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 			/* 2. Change the system clock divider values */
 			set_clkdiv(new_index);
 		}
+		if ((samsung_rev() >= EXYNOS4412_REV_2_0)
+			&& (exynos_result_of_asv > 2)
+			&& (old_index <= L8) && (new_index > L8)) {
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
+		}
 		if (exynos4x12_volt_table[new_index] < 950000 &&
 				need_dynamic_ema)
 			__raw_writel(0x404, EXYNOS4_EMA_CONF);
 	}
 
 	/* ABB value is changed in below case */
-	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
+	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)
+		&& (samsung_rev() < EXYNOS4412_REV_2_0)) {
 		if (new_index == L14)
 			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
 		else
 			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
 	}
+}
+
+/* Get maximum cpufreq index of chip */
+static unsigned int get_max_cpufreq_idx(void)
+{
+	unsigned int index;
+
+	/* exynos4x12 prime supports 1.6GHz */
+	if (samsung_rev() >= EXYNOS4412_REV_2_0)
+		index = L0;
+	else {
+	/* exynos4x12 supports only 1.4GHz and 1.1GHz */
+		if (exynos_armclk_max != 1400000)
+			index = L6;
+		else
+			index = L2;
+	}
+
+	return index;
 }
 
 static void __init set_volt_table(void)
@@ -553,7 +584,7 @@ static void __init set_volt_table(void)
 	for_1400 = true;
 	max_support_idx = L2;
 #else
-	max_support_idx = L6;
+	max_support_idx = get_max_cpufreq_idx();
 #endif
 	/*
 	 * Should be fixed !!!
