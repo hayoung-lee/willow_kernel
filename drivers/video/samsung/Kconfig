@@ -7,6 +7,9 @@ config FB_S5P
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
+	select SYNC
+	select SW_SYNC
+	select SW_SYNC_USER
 	depends on FB && (ARCH_S5PV210 || ARCH_EXYNOS4) && !FB_S3C
 	default n
 	help
@@ -24,6 +27,10 @@ config FB_S5P_LCD_INIT
 
 config FB_S5P_DEBUG
 	bool "S5P Framebuffer debug messages"
+	depends on FB_S5P
+
+config FB_S5P_VSYNC_THREAD
+	bool "S5P Framebuffer vsync thread"
 	depends on FB_S5P
 
 config FB_S5P_TRACE_UNDERRUN
