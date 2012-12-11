@@ -38,6 +38,8 @@
 #include "fimg2d_ctx.h"
 #include "fimg2d_helper.h"
 
+#define CTX_TIMEOUT	msecs_to_jiffies(5000)
+
 static struct fimg2d_control *info;
 
 static void fimg2d_worker(struct work_struct *work)
@@ -98,23 +100,11 @@ next:
 
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
-	int ret;
-
-	fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
-
 	while (atomic_read(&ctx->ncmd)) {
-		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd),
-				msecs_to_jiffies(1000));
-		if (ret) {
-			fimg2d_debug("ctx %p wake up\n", ctx);
-		} else {
-			if (info->err) {
-				printk(KERN_ERR "[%s] ctx %p wait timeout, device error\n",
-						__func__, ctx);
+		if (!wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd), CTX_TIMEOUT)) {
+			fimg2d_debug("[%s] ctx %p blit wait timeout\n", __func__, ctx);
+			if (info->err)
 				break;
-			} else {
-				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
-			}
 		}
 	}
 }
@@ -124,9 +114,6 @@ static void fimg2d_request_bitblt(struct fimg2d_context *ctx)
 	if (!atomic_read(&info->active)) {
 		atomic_set(&info->active, 1);
 		fimg2d_debug("dispatch ctx %p to kernel thread\n", ctx);
-#ifdef PERF_PROFILE
-		perf_start(ctx, PERF_WORKQUE);
-#endif
 		queue_work(info->work_q, &fimg2d_work);
 	}
 	fimg2d_context_wait(ctx);
@@ -184,9 +171,9 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int ret = 0;
 	struct fimg2d_context *ctx;
 	struct fimg2d_platdata *pdata;
-	struct fimg2d_version ver;
 	union {
 		struct fimg2d_blit *blit;
+		struct fimg2d_version ver;
 	} u;
 
 	ctx = file->private_data;
@@ -199,14 +186,11 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case FIMG2D_BITBLT_BLIT:
 		fimg2d_debug("FIMG2D_BITBLT_BLIT ctx: %p\n", ctx);
 		u.blit = (struct fimg2d_blit *)arg;
-#ifdef PERF_PROFILE
-		perf_start(ctx, PERF_KERN);
-#endif
+
 		ret = fimg2d_add_command(info, ctx, u.blit);
 		if (!ret)
 			fimg2d_request_bitblt(ctx);
 #ifdef PERF_PROFILE
-		perf_end(ctx, PERF_KERN);
 		perf_print(ctx, u.blit->seq_no);
 		perf_clear(ctx);
 #endif
@@ -220,10 +204,10 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case FIMG2D_BITBLT_VERSION:
 		fimg2d_debug("FIMG2D_BITBLT_VERSION ctx: %p\n", ctx);
 		pdata = to_fimg2d_plat(info->dev);
-		ver.hw = pdata->hw_ver;
-		ver.sw = 0;
-		fimg2d_debug("fimg2d version, hw: 0x%x sw: 0x%x\n", ver.hw, ver.sw);
-		if (copy_to_user((void *)arg, &ver, sizeof(ver)))
+		u.ver.hw = pdata->hw_ver;
+		u.ver.sw = 0;
+		fimg2d_debug("fimg2d version, hw: 0x%x sw: 0x%x\n", u.ver.hw, u.ver.sw);
+		if (copy_to_user((void *)arg, &u.ver, sizeof(u.ver)))
 			return -EFAULT;
 		break;
 
