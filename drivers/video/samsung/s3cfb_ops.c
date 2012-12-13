@@ -691,11 +691,15 @@ int s3cfb_init_fbinfo(struct s3cfb_global *fbdev, int id)
 	var->right_margin = timing->h_fp;
 	var->upper_margin = timing->v_bp;
 	var->lower_margin = timing->v_fp;
+#ifdef CONFIG_FB_S5P_LTN101AL03
+	var->pixclock = 74200000;
+#else
 	var->pixclock = (lcd->freq *
 		(var->left_margin + var->right_margin
 		+ var->hsync_len + var->xres) *
 		(var->upper_margin + var->lower_margin
 		+ var->vsync_len + var->yres));
+#endif
 	var->pixclock = KHZ2PICOS(var->pixclock/1000);
 
 	s3cfb_set_bitfield(var);

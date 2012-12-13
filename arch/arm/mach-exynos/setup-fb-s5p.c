@@ -145,7 +145,7 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk2;
 	}
 
-	ret = clk_set_rate(sclk, 668000000);
+	ret = clk_set_rate(sclk, 74200000);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to clk_set_rate of sclk for fimd\n");
 		goto err_clk2;
