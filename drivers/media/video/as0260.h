@@ -39,6 +39,8 @@
 #define CMD_HANDLER_NUM_EVENTS 2
 // Command Handler events
 
+#define USE_INIT_REG_AWB_MODIFY			1
+#define USE_INIT_REG_POLL_DELAY			0
 
 #define FEATURE_TW_CAMERA_P_REG_WRITE
 
@@ -5176,45 +5178,8 @@ struct as0260_reg as0260_init01_regs[] =
 	{0xD021, 0x5A,1}, 		//PGA_ZONE_HI_2
 	{0xD01B, 0x03,1}, 		//PGA_NUMBER_ZONES
 	{0xC9F2, 0x0011,2}, 		//CAM_PGA_PGA_CONTROL
-#if 1
-    {0x098E, 0x0000,2},      // LOGICAL_ADDRESS_ACCESS
-    {0xC894, 0x00FE,2},      // CAM_AWB_CCM_L_0
-    {0xC896, 0xFFA6,2},      // CAM_AWB_CCM_L_1
-    {0xC898, 0x005D,2},      // CAM_AWB_CCM_L_2
-    {0xC89A, 0x000A,2},      // CAM_AWB_CCM_L_3
-    {0xC89C, 0x00B5,2},      // CAM_AWB_CCM_L_4
-    {0xC89E, 0x0041,2},      // CAM_AWB_CCM_L_5
-    {0xC8A0, 0xFFF3,2},      // CAM_AWB_CCM_L_6
-    {0xC8A2, 0xFF9F,2},      // CAM_AWB_CCM_L_7
-    {0xC8A4, 0x016E,2},      // CAM_AWB_CCM_L_8
-    {0xC8CA, 0x0056,2},      // CAM_AWB_CCM_L_RG_GAIN
-    {0xC8CC, 0x01A8,2},      // CAM_AWB_CCM_L_BG_GAIN
-    {0xC8A6, 0x01C8,2},      // CAM_AWB_CCM_M_0
-    {0xC8A8, 0xFF01,2},      // CAM_AWB_CCM_M_1
-    {0xC8AA, 0x0036,2},      // CAM_AWB_CCM_M_2
-    {0xC8AC, 0xFFFE,2},      // CAM_AWB_CCM_M_3
-    {0xC8AE, 0x00F0,2},      // CAM_AWB_CCM_M_4
-    {0xC8B0, 0x0012,2},      // CAM_AWB_CCM_M_5
-    {0xC8B2, 0xFFD7,2},      // CAM_AWB_CCM_M_6
-    {0xC8B4, 0xFF23,2},      // CAM_AWB_CCM_M_7
-    {0xC8B6, 0x0206,2},      // CAM_AWB_CCM_M_8
-    {0xC8CE, 0x0087,2},      // CAM_AWB_CCM_M_RG_GAIN
-    {0xC8D0, 0x0157,2},      // CAM_AWB_CCM_M_BG_GAIN
-    {0xC8B8, 0x0182,2},      // CAM_AWB_CCM_R_0
-    {0xC8BA, 0xFF58,2},      // CAM_AWB_CCM_R_1
-    {0xC8BC, 0x0027,2},      // CAM_AWB_CCM_R_2
-    {0xC8BE, 0xFFF9,2},      // CAM_AWB_CCM_R_3
-    {0xC8C0, 0x00D3,2},      // CAM_AWB_CCM_R_4
-    {0xC8C2, 0x0034,2},      // CAM_AWB_CCM_R_5
-    {0xC8C4, 0xFFF4,2},      // CAM_AWB_CCM_R_6
-    {0xC8C6, 0xFF60,2},      // CAM_AWB_CCM_R_7
-    {0xC8C8, 0x01AC,2},      // CAM_AWB_CCM_R_8
-    {0xC8D2, 0x00BF,2},      // CAM_AWB_CCM_R_RG_GAIN
-    {0xC8D4, 0x00CD,2},      // CAM_AWB_CCM_R_BG_GAIN
-    {0xC8D6, 0x09C4,2},      // CAM_AWB_CCM_L_CTEMP
-    {0xC8D8, 0x0D67,2},      // CAM_AWB_CCM_M_CTEMP
-    {0xC8DA, 0x1964,2},      // CAM_AWB_CCM_R_CTEMP
-    {0xAC0A, 0x00,1},      // AWB_R_SCENE_RATIO_LOWER
+#if USE_INIT_REG_AWB_MODIFY
+     {0xAC0A, 0x00,1},      // AWB_R_SCENE_RATIO_LOWER
     {0xAC0B, 0xFF,1},      // AWB_R_SCENE_RATIO_UPPER
     {0xAC0C, 0x22,1},      // AWB_B_SCENE_RATIO_LOWER
     {0xAC0D, 0xFF,1},      // AWB_B_SCENE_RATIO_UPPER
@@ -5224,6 +5189,8 @@ struct as0260_reg as0260_init01_regs[] =
     {0xAC07, 0x65,1},      // AWB_R_RATIO_UPPER
     {0xAC08, 0x63,1},      // AWB_B_RATIO_LOWER
     {0xAC09, 0x65,1},      // AWB_B_RATIO_UPPER
+    {0xC94A, 0x08,1}, 		//CAM_STAT_LUMA_THRESH_LOW
+    {0xC94B, 0x74,1}, 		//CAM_STAT_LUMA_THRESH_HIGH
     {0xC894, 0x01D4,2},      // CAM_AWB_CCM_L_0
     {0xC896, 0xFF4E,2},      // CAM_AWB_CCM_L_1
     {0xC898, 0xFFDD,2},      // CAM_AWB_CCM_L_2
@@ -5270,8 +5237,8 @@ struct as0260_reg as0260_init01_regs[] =
     {0xC8F6, 0x00AB,2},      // CAM_AWB_AWB_YSCALE
     {0xC8F8, 0x0000,2},      // CAM_AWB_AWB_ROT_CENTER_X
     {0xC8FA, 0x03D9,2},      // CAM_AWB_AWB_ROT_CENTER_Y
-    {0xC8FD, 0x00,1},      // CAM_AWB_AWB_ROT_ANGLE_SIN
     {0xC8FC, 0x00,1},      // CAM_AWB_AWB_ROT_ANGLE_COS
+    {0xC8FD, 0x00,1},      // CAM_AWB_AWB_ROT_ANGLE_SIN
     {0xC900, 0x0000,2},      // CAM_AWB_AWB_WEIGHTS_0
     {0xC902, 0x0000,2},      // CAM_AWB_AWB_WEIGHTS_1
     {0xC904, 0x0000,2},      // CAM_AWB_AWB_WEIGHTS_2
@@ -5515,8 +5482,9 @@ struct as0260_reg as0260_init01_regs[] =
 
 	{0xDC00, 0x28,1}, 		//SYSMGR_NEXT_STATE
 	{0x0080, 0x8002,2}, 		//COMMAND_REGISTER
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_1 =>  0x00
 	{0x0982, 0x0001,2}, 		//ACCESS_CTL_STAT
 	{0x098A, 0x6000,2}, 		//PHYSICAL_ADDRESS_ACCESS
@@ -5577,13 +5545,15 @@ struct as0260_reg as0260_init01_regs[] =
 	{0xE002, 0x0005,2}, 		//PATCHLDR_PATCH_ID
 	{0xE004, 0x51000000,4}, 		//PATCHLDR_FIRMWARE_ID
 	{0x0080, 0xFFF0,2}, 		//COMMAND_REGISTER
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
 	{0x0080, 0xFFF1,2}, 		//COMMAND_REGISTER
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	{0x0982, 0x0001,2}, 		//ACCESS_CTL_STAT
 	{0x098A, 0x6568,2}, 		//PHYSICAL_ADDRESS_ACCESS
 	{0xE568, 0xC0F1,2},
@@ -5649,13 +5619,15 @@ struct as0260_reg as0260_init01_regs[] =
 	{0xE002, 0x0205,2}, 		//PATCHLDR_PATCH_ID
 	{0xE004, 0x51000000,4}, 		//PATCHLDR_FIRMWARE_ID
 	{0x0080, 0xFFF0,2}, 		//COMMAND_REGISTER
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
 	{0x0080, 0xFFF1,2}, 		//COMMAND_REGISTER
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	{0x0982, 0x0001,2}, 		//ACCESS_CTL_STAT
 	{0x098A, 0x65DC,2}, 		//PHYSICAL_ADDRESS_ACCESS
 	{0xE5DC, 0xC0F1,2},
@@ -5737,13 +5709,15 @@ struct as0260_reg as0260_init01_regs[] =
 	{0xE002, 0x0305,2}, 		//PATCHLDR_PATCH_ID
 	{0xE004, 0x51000000,4}, 		//PATCHLDR_FIRMWARE_ID
 	{0x0080, 0xFFF0,2}, 		//COMMAND_REGISTER
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
 	{0x0080, 0xFFF1,2}, 		//COMMAND_REGISTER
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	{0x0982, 0x0001,2}, 		//ACCESS_CTL_STAT
 	{0x098A, 0x6670,2}, 		//PHYSICAL_ADDRESS_ACCESS
 	{0xE670, 0xC0F1,2},
@@ -5904,12 +5878,14 @@ struct as0260_reg as0260_init01_regs[] =
 	{0xE004, 0x51000000,4}, 		//PATCHLDR_FIRMWARE_ID
 	{0x0080, 0xFFF0,2}, 		//COMMAND_REGISTER
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	{0x0080, 0xFFF1,2}, 		//COMMAND_REGISTER
 	//  POLL  COMMAND_REGISTER::HOST_COMMAND_0 =>  0x00
+#if USE_INIT_REG_POLL_DELAY
 	{0xffff, POLL_DELAY,2},      // delay
-
+#endif
 	//LOAD=Patch 0805; FEATURE RECOMMENDED ; blacklevel patch 
 
 	{0xBC02, 0x0013,2}, 		//LL_MODE
