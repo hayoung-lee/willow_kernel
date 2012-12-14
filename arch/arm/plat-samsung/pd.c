@@ -29,11 +29,14 @@ static int samsung_pd_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+	pdata->id = pdev->id;
 	if (pdata->init) {
-		ret = pdata->init(dev);
-		if (ret) {
-			dev_err(dev, "init fails");
-			return ret;
+		if(pdata->id != 3){
+			ret = pdata->init(dev);
+			if (ret) {
+				dev_err(dev, "init fails");
+				return ret;
+			}
 		}
 	}
 
@@ -52,6 +55,32 @@ static int __devexit samsung_pd_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int samsung_pd_suspend(struct device *dev)
+{
+	struct samsung_pd_info *pdata = dev->platform_data;
+	int ret = 0;
+
+	if (pdata->save)
+		ret = pdata->save(dev);
+
+	dev_dbg(dev, "suspended\n");
+
+	return ret;
+}
+
+static int samsung_pd_resume(struct device *dev)
+{
+	struct samsung_pd_info *pdata = dev->platform_data;
+	int ret = 0;
+
+	if (pdata->restore)
+		ret = pdata->restore(dev);
+
+	dev_dbg(dev, "resumed\n");
+
+	return ret;
+}
+
 static int samsung_pd_runtime_suspend(struct device *dev)
 {
 	struct samsung_pd_info *pdata = dev->platform_data;
@@ -60,7 +89,7 @@ static int samsung_pd_runtime_suspend(struct device *dev)
 	if (pdata->disable)
 		ret = pdata->disable(dev);
 
-	dev_dbg(dev, "suspended\n");
+	dev_dbg(dev, "runtime suspended\n");
 	return ret;
 }
 
@@ -72,11 +101,13 @@ static int samsung_pd_runtime_resume(struct device *dev)
 	if (pdata->enable)
 		ret = pdata->enable(dev);
 
-	dev_dbg(dev, "resumed\n");
+	dev_dbg(dev, "runtime resumed\n");
 	return ret;
 }
 
 static const struct dev_pm_ops samsung_pd_pm_ops = {
+	.suspend		= samsung_pd_suspend,
+	.resume			= samsung_pd_resume,
 	.runtime_suspend	= samsung_pd_runtime_suspend,
 	.runtime_resume		= samsung_pd_runtime_resume,
 };
