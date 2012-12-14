@@ -3393,6 +3393,7 @@ static inline void exynos4_reserve_mem(void)
 }
 #endif /* CONFIG_CMA */
 
+#ifdef CONFIG_BACKLIGHT_PWM
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info willow_bl_gpio_info = {
 	.no = BACKLIGHT_PWM_GPIO,
@@ -3401,10 +3402,12 @@ static struct samsung_bl_gpio_info willow_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data willow_bl_data = {
 	.pwm_id = 1,
-	.max_brightness = 238,
-	.dft_brightness = 235,
-	.pwm_period_ns  = 51758,
+	.max_brightness = 255,
+	.dft_brightness = 255,
+	.lth_brightness = 17,
+	.pwm_period_ns  = 62500,
 };
+#endif
 
 static void __init willow_map_io(void)
 {
