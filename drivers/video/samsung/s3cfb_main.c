@@ -753,6 +753,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 
 #if defined(CONFIG_FB_S5P_LTN101AL03)
 	LTN101AL03_lvds_on(0);
+	LTN101AL03_lcd_onoff(0);
 #endif
 
 	s3c_log("s3cfb_early_suspend is called end \n");
@@ -981,9 +982,6 @@ static struct platform_driver s3cfb_driver = {
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= s3cfb_suspend,
 	.resume		= s3cfb_resume,
-#endif
-#ifdef CONFIG_FB_S5P_LTN101AL03
-	.suspend	= s3cfb_suspend,
 #endif
 	.driver		= {
 		.name	= S3CFB_NAME,
