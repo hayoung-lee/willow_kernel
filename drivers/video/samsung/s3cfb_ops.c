@@ -872,7 +872,7 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 	int win_status;
 #endif
 
-	dev_info(fbdev->dev, "change blank mode=%d, fb%d\n", blank_mode, win->id);
+	dev_dbg(fbdev->dev, "change blank mode=%d, fb%d\n", blank_mode, win->id);
 
 #ifdef CONFIG_EXYNOS_DEV_PD
 	if (unlikely(fbdev->system_state == POWER_OFF)) {
