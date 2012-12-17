@@ -1956,7 +1956,6 @@ static struct max77686_platform_data exynos4_max77686_info = {
 
 	.opmode_data = max77686_opmode_data,
 	.ramp_rate = MAX77686_RAMP_RATE_27MV,
-	.wtsr_smpl = MAX77686_WTSR_ENABLE | MAX77686_SMPL_ENABLE,
 
 	.buck234_gpio_dvs = {
 			/* Use DVS2 register of each bucks to supply stable power
