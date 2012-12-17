@@ -1909,7 +1909,7 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO25, &max77686_ldo25_data,},
 	{MAX77686_LDO26, &max77686_ldo26_data,},
 	{MAX77686_EN32KHZ_CP, &max77686_32khcp_data,},
-	{MAX77686_P32KH, &max77686_enp32khz_data,},
+//	{MAX77686_P32KH, &max77686_enp32khz_data,},
 };
 
 struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
