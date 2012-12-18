@@ -2396,7 +2396,21 @@ void touch_off(void)
 	6. touch xvdd en pin 
 	*/
 
-	//touch_bootst_ctrl(0); // xvdd off 
+	/* touch interrupt pin */
+	s3c_gpio_cfgpin(GPIO_TOUCH_INT, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_NONE);
+   
+	/* touch reset pin */
+	s3c_gpio_cfgpin(GPIO_TOUCH_RESET, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_RESET, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_RESET, 0);
+   
+	/* touch xvdd en pin */
+	s3c_gpio_cfgpin(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);
+
+	mdelay(10);
 
 	ATMEL_log("[ATMEL] TS_POWER OFF ___________\n");
 	
@@ -2407,23 +2421,6 @@ void touch_off(void)
 	if (regulator_is_enabled(tsp_vdd1v8))
 		regulator_force_disable(tsp_vdd1v8);
 	regulator_put(tsp_vdd1v8);	
-
-	mdelay(10);
-
-	/* touch interrupt pin */
-	s3c_gpio_cfgpin(GPIO_TOUCH_INT, S3C_GPIO_INPUT);
-	s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_NONE);
-
-	/* touch reset pin */
-	s3c_gpio_cfgpin(GPIO_TOUCH_RESET, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TOUCH_RESET, S3C_GPIO_PULL_NONE);
-	gpio_set_value(GPIO_TOUCH_RESET, 0);
-
-	/* touch xvdd en pin */
-	s3c_gpio_cfgpin(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TOUCH_BOOTST_EN, S3C_GPIO_PULL_NONE);
-	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);
-
 }
 
 int atmel1664_gpio_chg_get(void)

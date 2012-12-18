@@ -133,7 +133,90 @@ static bool g_debug_switch;
 static u8 threshold;
 //static int firm_status_data;
 
-#define TOUCH_CAL_VER 4
+#define FEATURE_TOUCH_ACTIVEPEN
+#define FEATURE_TOUCH_CONFIG_UPDATE
+
+#ifdef FEATURE_TOUCH_CONFIG_UPDATE 
+#include <linux/fs.h>
+#include <asm/unistd.h>
+#include <asm/uaccess.h>
+
+typedef enum
+{
+    ERR_OK,
+    ERR_MODE,
+    ERR_READID,
+    ERR_ERASE,
+    ERR_STATUS,
+    ERR_ECC,
+    ERR_DL_ERASE_FAIL,
+    ERR_DL_PROGRAM_FAIL,
+    ERR_DL_VERIFY_FAIL
+}E_UPGRADE_ERR_TYPE;
+
+typedef unsigned char         FTS_BYTE;     //8 bit
+typedef unsigned short        FTS_WORD;    //16 bit
+typedef unsigned int          FTS_DWRD;    //16 bit
+typedef unsigned char         FTS_BOOL;    //8 bit
+
+typedef struct _FTS_CTP_PROJECT_SETTING_T
+{
+    unsigned char uc_i2C_addr;             //I2C slave address (8 bit address)
+    unsigned char uc_io_voltage;           //IO Voltage 0---3.3v;	1----1.8v
+    unsigned char uc_panel_factory_id;     //TP panel factory ID
+}FTS_CTP_PROJECT_SETTING_T;
+
+#define FTS_NULL                0x0
+#define FTS_TRUE                0x01
+#define FTS_FALSE              0x0
+
+#define FIRMWARE_NAME "mXT_1664_config.cfg"
+
+u8 num_digit_index = 0;
+u8 config_data_out = 0;
+
+u8 t0_info_data[2] = {0, 5};
+u8 t7_config_data[4] = {50, 255, 64, 3};
+u8 t8_config_data[10] = {160, 0, 5, 3, 0, 0, 5, 0, 20, 1};
+u8 t9_config_data[34] = 
+	{131, 0, 0, 32, 52, 0, 150, 68, 2, 3, 
+	 20, 0, 0, 0, 10, 20, 20, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 20, 16, 
+	 0, 0, 0, 0};
+u8 t15_config_data[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t25_config_data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t40_config_data[5] = {0, 0, 0, 0, 0};
+u8 t42_config_data[46] = 
+	{3, 20, 24, 100, 0, 20, 10, 0, 3, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0};
+u8 t43_config_data[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 2, 0, 0, 13};
+u8 t47_config_data[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t55_config_data[6] = {0, 0, 0, 0, 0, 0};
+u8 t56_config_data[47] = 
+	{2, 0, 1, 24, 57, 57, 57, 57, 57, 57, 
+	 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 
+	 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 
+	 57, 57, 57, 57, 57, 57, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0};
+u8 t62_config_data[74] = 
+	{3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 
+	 0, 0, 0, 0, 5, 0, 10, 5, 5, 80, 
+	 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	 0, 0, 0, 0};
+#ifdef FEATURE_TOUCH_ACTIVEPEN
+u8 t63_config_data[12] = {0, 6, 20, 215, 15, 97, 162, 3, 28, 255, 100, 0};
+#else
+u8 t63_config_data[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#endif
+#endif
 
 /* ATMEL CONFIG STRUCTURE Start */
 //static u8 firmware_latest[] = {0x5, 0x2};       /* version, build_version */
@@ -294,27 +377,19 @@ int mxt_GEN_POWERCONFIG_T7(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             GEN_POWERCONFIG_T7, &obj_size, &obj_addr);
 	//printk("mxt_GEN_POWERCONFIG_T7 obj_size=%d obj_addr=%d OBJECT_SIZE=4   OBJECT_ADDRESS=455 \n",obj_size,obj_addr );
 	memset(&t7_config, 0, sizeof(t7_config));
-#if TOUCH_CAL_VER==1
-	t7_config.nIDLEACQINT=255;
-	t7_config.nACTVACQINT=255;
-	t7_config.nACTV2IDLETO=5;  // 5
-	t7_config.nCFG=0; // 0
-#elif  TOUCH_CAL_VER==2
-	t7_config.nIDLEACQINT=255;
-	t7_config.nACTVACQINT=255;
-	t7_config.nACTV2IDLETO=64;  // 5
-	t7_config.nCFG=3; // 0
-#elif  TOUCH_CAL_VER>=3
-	t7_config.nIDLEACQINT=50;
-	t7_config.nACTVACQINT=255;
-	t7_config.nACTV2IDLETO=64;  // 5
-	t7_config.nCFG=3; // 0
-#endif
+
+	printk("t7_config sizeof (%d), [%d]\n", sizeof(t7_config), GEN_POWERCONFIG_T7);
+
+	t7_config.nIDLEACQINT=t7_config_data[i++];
+	t7_config.nACTVACQINT=t7_config_data[i++];
+	t7_config.nACTV2IDLETO=t7_config_data[i++];
+	t7_config.nCFG=t7_config_data[i++];
 
 	error = mxt_write_block(client,
 			obj_addr, obj_size, (u8 *)&t7_config);
@@ -334,57 +409,23 @@ int mxt_GEN_ACQUISITIONCONFIG_T8(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             GEN_ACQUISITIONCONFIG_T8, &obj_size, &obj_addr);
 	//printk("mxt_GEN_ACQUISITIONCONFIG_T8 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=459 \n",obj_size,obj_addr );
 	memset(&t8_config, 0, sizeof(t8_config));
 
-#if TOUCH_CAL_VER==1
-	t8_config.nCHRGTIME=100;  // 100
-	t8_config.nATCHDRIFT=0;
-	t8_config.nTCHDRIFT=20;
-	t8_config.nDRIFTST=20;
-	t8_config.nTCHAUTOCAL=0;
-	t8_config.nSYNC=0;
-	t8_config.nATCHCALST=0;
-	t8_config.nATCHCALSTHR=1;
-	t8_config.nATCHFRCCALTHR=0;
-	t8_config.nATCHFRCCALRATIO=0;
-#elif  TOUCH_CAL_VER==2
-	t8_config.nCHRGTIME=120;  // 100
-	t8_config.nATCHDRIFT=0;
-	t8_config.nTCHDRIFT=20;
-	t8_config.nDRIFTST=20;
-	t8_config.nTCHAUTOCAL=0;
-	t8_config.nSYNC=0;
-	t8_config.nATCHCALST=0;
-	t8_config.nATCHCALSTHR=1;
-	t8_config.nATCHFRCCALTHR=0;
-	t8_config.nATCHFRCCALRATIO=0;
-#elif  TOUCH_CAL_VER==3
-	t8_config.nCHRGTIME=160;  // 100
-	t8_config.nATCHDRIFT=0;
-	t8_config.nTCHDRIFT=5;
-	t8_config.nDRIFTST=3;
-	t8_config.nTCHAUTOCAL=0;
-	t8_config.nSYNC=0;
-	t8_config.nATCHCALST=0;
-	t8_config.nATCHCALSTHR=0;
-	t8_config.nATCHFRCCALTHR=0;
-	t8_config.nATCHFRCCALRATIO=0;
-#elif  TOUCH_CAL_VER==4
-	t8_config.nCHRGTIME=160;  // 100
-	t8_config.nATCHDRIFT=0;
-	t8_config.nTCHDRIFT=5;
-	t8_config.nDRIFTST=3;
-	t8_config.nTCHAUTOCAL=0;
-	t8_config.nSYNC=0;
-	t8_config.nATCHCALST=5;
-	t8_config.nATCHCALSTHR=0;
-	t8_config.nATCHFRCCALTHR=20;
-	t8_config.nATCHFRCCALRATIO=1;
-#endif
+	t8_config.nCHRGTIME=t8_config_data[i++];  
+	t8_config.nATCHDRIFT=t8_config_data[i++];
+	t8_config.nTCHDRIFT=t8_config_data[i++];
+	t8_config.nDRIFTST=t8_config_data[i++];
+	t8_config.nTCHAUTOCAL=t8_config_data[i++];
+	t8_config.nSYNC=t8_config_data[i++];
+	t8_config.nATCHCALST=t8_config_data[i++];
+	t8_config.nATCHCALSTHR=t8_config_data[i++];
+	t8_config.nATCHFRCCALTHR=t8_config_data[i++];
+	t8_config.nATCHFRCCALRATIO=t8_config_data[i++];
 
 	error = mxt_write_block(client,
 			obj_addr, obj_size, (u8 *)&t8_config);
@@ -404,117 +445,54 @@ int mxt_TOUCH_MULTITOUCHSCREEN_T9(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             TOUCH_MULTITOUCHSCREEN_T9, &obj_size, &obj_addr);
 	//printk("mxt_TOUCH_MULTITOUCHSCREEN_T9 obj_size=%d obj_addr=%d  OBJECT_SIZE=36 OBJECT_ADDRESS=469  \n",obj_size,obj_addr );
 	memset(&t9_config, 0, sizeof(t9_config));
-#if  TOUCH_CAL_VER==3
-	t9_config.nCTRL=139;
-	t9_config.nXORIGIN=0;
-	t9_config.nYORIGIN=0;
-	t9_config.nXSIZE=32;
-	t9_config.nYSIZE=52;
-	t9_config.nAKSCFG=0;
-	t9_config.nBLEN=150; //	t9_config.nBLEN=123;
-	t9_config.nTCHTHR=70;  // 	t9_config.nTCHTHR=40;
-	t9_config.nTCHDI=2;
-	t9_config.nORIENT=3;  // 	t9_config.nORIENT=5;  x and y change
-	t9_config.nMRGTIMEOUT=20;  // 	t9_config.nMRGTIMEOUT=0;
-	t9_config.nMOVHYSTI=0; // 	t9_config.nMOVHYSTI=131;
-	t9_config.nMOVHYSTN=0;
-	t9_config.nMOVFILTER=0;
-	t9_config.nNUMTOUCH=10;  // 	t9_config.nNUMTOUCH=16;
-	t9_config.nMRGHYST=20;
-	t9_config.nMRGTHR=20;
-	t9_config.nAMPHYST=0;  //	t9_config.nAMPHYST=20;
-	t9_config.nXRANGE=799; //
-	t9_config.nYRANGE=1279;
-	t9_config.nXLOCLIP=0;
-	t9_config.nXHICLIP=0;
-	t9_config.nYLOCLIP=0;
-	t9_config.nYHICLIP=0;
-	t9_config.nXEDGECTRL=0;
-	t9_config.nXEDGEDIST=0;
-	t9_config.nYEDGECTRL=0;
-	t9_config.nYEDGEDIST=0;
-	t9_config.nJUMPLIMIT=20; // 	t9_config.nJUMPLIMIT=15;
-	t9_config.nTCHHYST=15; //	t9_config.nTCHHYST=25;
-	t9_config.nXPITCH=0;
-	t9_config.nYPITCH=0;
-	t9_config.nNEXTTCHDI=0;  //	t9_config.nNEXTTCHDI=2;
-	t9_config.nCFG=0;
-#elif  TOUCH_CAL_VER==2 || TOUCH_CAL_VER==3
-	t9_config.nCTRL=131;
-	t9_config.nXORIGIN=0;
-	t9_config.nYORIGIN=0;
-	t9_config.nXSIZE=32;
-	t9_config.nYSIZE=52;
-	t9_config.nAKSCFG=0;
-	t9_config.nBLEN=150; //	t9_config.nBLEN=123;
-	t9_config.nTCHTHR=70;  // 	t9_config.nTCHTHR=40;
-	t9_config.nTCHDI=2;
-	t9_config.nORIENT=3;  // 	t9_config.nORIENT=5;  x and y change
-	t9_config.nMRGTIMEOUT=20;  // 	t9_config.nMRGTIMEOUT=0;
-	t9_config.nMOVHYSTI=0; // 	t9_config.nMOVHYSTI=131;
-	t9_config.nMOVHYSTN=0;
-	t9_config.nMOVFILTER=0;
-	t9_config.nNUMTOUCH=10;  // 	t9_config.nNUMTOUCH=16;
-	t9_config.nMRGHYST=20;
-	t9_config.nMRGTHR=20;
-	t9_config.nAMPHYST=0;  //	t9_config.nAMPHYST=20;
-	t9_config.nXRANGE=799; //
-	t9_config.nYRANGE=1279;
-	t9_config.nXLOCLIP=0;
-	t9_config.nXHICLIP=0;
-	t9_config.nYLOCLIP=0;
-	t9_config.nYHICLIP=0;
-	t9_config.nXEDGECTRL=0;
-	t9_config.nXEDGEDIST=0;
-	t9_config.nYEDGECTRL=0;
-	t9_config.nYEDGEDIST=0;
-	t9_config.nJUMPLIMIT=20; // 	t9_config.nJUMPLIMIT=15;
-	t9_config.nTCHHYST=15; //	t9_config.nTCHHYST=25;
-	t9_config.nXPITCH=0;
-	t9_config.nYPITCH=0;
-	t9_config.nNEXTTCHDI=0;  //	t9_config.nNEXTTCHDI=2;
-	t9_config.nCFG=0;
-#elif  TOUCH_CAL_VER ==4
-	t9_config.nCTRL=131;
-	t9_config.nXORIGIN=0;
-	t9_config.nYORIGIN=0;
-	t9_config.nXSIZE=32;
-	t9_config.nYSIZE=52;
-	t9_config.nAKSCFG=0;
-	t9_config.nBLEN=150; //	t9_config.nBLEN=123;
-	t9_config.nTCHTHR=68;  // 	t9_config.nTCHTHR=40;
-	t9_config.nTCHDI=2;
-	t9_config.nORIENT=3;  // 	t9_config.nORIENT=5;  x and y change
-	t9_config.nMRGTIMEOUT=20;  // 	t9_config.nMRGTIMEOUT=0;
-	t9_config.nMOVHYSTI=0; // 	t9_config.nMOVHYSTI=131;
-	t9_config.nMOVHYSTN=0;
-	t9_config.nMOVFILTER=0;
-	t9_config.nNUMTOUCH=10;  // 	t9_config.nNUMTOUCH=16;
-	t9_config.nMRGHYST=20;
-	t9_config.nMRGTHR=20;
-	t9_config.nAMPHYST=0;  //	t9_config.nAMPHYST=20;
-	t9_config.nXRANGE=799; //
-	t9_config.nYRANGE=1279;
-	t9_config.nXLOCLIP=0;
-	t9_config.nXHICLIP=0;
-	t9_config.nYLOCLIP=0;
-	t9_config.nYHICLIP=0;
-	t9_config.nXEDGECTRL=0;
-	t9_config.nXEDGEDIST=0;
-	t9_config.nYEDGECTRL=0;
-	t9_config.nYEDGEDIST=0;
-	t9_config.nJUMPLIMIT=20; // 	t9_config.nJUMPLIMIT=15;
-	t9_config.nTCHHYST=16; //	t9_config.nTCHHYST=25;
-	t9_config.nXPITCH=0;
-	t9_config.nYPITCH=0;
-	t9_config.nNEXTTCHDI=0;  //	t9_config.nNEXTTCHDI=2;
-	t9_config.nCFG=0;
+
+	t9_config.nCTRL=t9_config_data[i++];
+	t9_config.nXORIGIN=t9_config_data[i++];
+	t9_config.nYORIGIN=t9_config_data[i++];
+	t9_config.nXSIZE=t9_config_data[i++];
+	t9_config.nYSIZE=t9_config_data[i++];
+	t9_config.nAKSCFG=t9_config_data[i++];
+	t9_config.nBLEN=t9_config_data[i++]; 
+	t9_config.nTCHTHR=t9_config_data[i++];  
+	t9_config.nTCHDI=t9_config_data[i++];
+	t9_config.nORIENT=t9_config_data[i++];  
+	t9_config.nMRGTIMEOUT=t9_config_data[i++];  
+	t9_config.nMOVHYSTI=t9_config_data[i++]; 
+	t9_config.nMOVHYSTN=t9_config_data[i++];
+	t9_config.nMOVFILTER=t9_config_data[i++];
+	t9_config.nNUMTOUCH=t9_config_data[i++];  
+	t9_config.nMRGHYST=t9_config_data[i++];
+	t9_config.nMRGTHR=t9_config_data[i++];
+	t9_config.nAMPHYST=t9_config_data[i++];  
+#if 1 // FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)	
+	t9_config.nXRANGE=4095; 
+	t9_config.nYRANGE=4095; 
+#else
+	t9_config.nXRANGE=799; 
+	t9_config.nYRANGE=1279; 
 #endif
+	i = i+2;
+	t9_config.nXLOCLIP=t9_config_data[i++];
+	t9_config.nXHICLIP=t9_config_data[i++];
+	t9_config.nYLOCLIP=t9_config_data[i++];
+	t9_config.nYHICLIP=t9_config_data[i++];
+	t9_config.nXEDGECTRL=t9_config_data[i++];
+	t9_config.nXEDGEDIST=t9_config_data[i++];
+	t9_config.nYEDGECTRL=t9_config_data[i++];
+	t9_config.nYEDGEDIST=t9_config_data[i++];
+	t9_config.nJUMPLIMIT=t9_config_data[i++]; 
+	t9_config.nTCHHYST=t9_config_data[i++]; 
+	t9_config.nXPITCH=t9_config_data[i++];
+	t9_config.nYPITCH=t9_config_data[i++];
+	t9_config.nNEXTTCHDI=t9_config_data[i++];	
+	t9_config.nCFG=t9_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t9_config);
 /*
@@ -543,36 +521,25 @@ int mxt_TOUCH_KEYARRAY_T15(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             TOUCH_KEYARRAY_T15, &obj_size, &obj_addr);
 	//printk("mxt_TOUCH_KEYARRAY_T15 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=541\n",obj_size,obj_addr );
 	memset(&t15_config, 0, sizeof(t15_config));
-#if TOUCH_CAL_VER==1
-	t15_config.nCTRL=0;
-	t15_config.nXORIGIN=8;
-	t15_config.nYORIGIN=51;
-	t15_config.nXSIZE=16;
-	t15_config.nYSIZE=1;
-	t15_config.nAKSCFG=1;
-	t15_config.nBLEN=123;
-	t15_config.nTCHTHR=40;
-	t15_config.nTCHDI=2;
-	t15_config.nRESERVED[0]=0;
-	t15_config.nRESERVED[1]=0;
-#elif TOUCH_CAL_VER>=2
-	t15_config.nCTRL=0;
-	t15_config.nXORIGIN=0;
-	t15_config.nYORIGIN=0;
-	t15_config.nXSIZE=0;
-	t15_config.nYSIZE=0;
-	t15_config.nAKSCFG=0;
-	t15_config.nBLEN=0;
-	t15_config.nTCHTHR=0;
-	t15_config.nTCHDI=0;
-	t15_config.nRESERVED[0]=0;
-	t15_config.nRESERVED[1]=0;
-#endif
+
+	t15_config.nCTRL=t15_config_data[i++];
+	t15_config.nXORIGIN=t15_config_data[i++];
+	t15_config.nYORIGIN=t15_config_data[i++];
+	t15_config.nXSIZE=t15_config_data[i++];
+	t15_config.nYSIZE=t15_config_data[i++];
+	t15_config.nAKSCFG=t15_config_data[i++];
+	t15_config.nBLEN=t15_config_data[i++];
+	t15_config.nTCHTHR=t15_config_data[i++];
+	t15_config.nTCHDI=t15_config_data[i++];
+	t15_config.nRESERVED[0]=t15_config_data[i++];
+	t15_config.nRESERVED[1]=t15_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t15_config);
 
@@ -596,13 +563,10 @@ int mxt_SPT_COMMSCONFIG_T18(struct mxt_data *mxt)
             SPT_COMMSCONFIG_T18, &obj_size, &obj_addr);
 	//printk("mxt_SPT_COMMSCONFIG_T18 obj_size=%d obj_addr=%d  OBJECT_SIZE=2  OBJECT_ADDRESS=552 \n",obj_size,obj_addr );
 	memset(&t18_config, 0, sizeof(t18_config));
-#if TOUCH_CAL_VER==1
-	t18_config.nCTRL=4;
-	t18_config.nCOMMAND=0;
-#elif TOUCH_CAL_VER>=2
+
 	t18_config.nCTRL=0;
 	t18_config.nCOMMAND=0;
-#endif
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t18_config);
 
@@ -673,33 +637,22 @@ int mxt_SPT_SELFTEST_T25(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             SPT_SELFTEST_T25, &obj_size, &obj_addr);
 	//printk("mxt_SPT_SELFTEST_T25 obj_size=%d obj_addr=%d   OBJECT_SIZE=15  OBJECT_ADDRESS=592\n",obj_size,obj_addr );
 	memset(&t25_config, 0, sizeof(t25_config));
 
-#if TOUCH_CAL_VER==1
-	t25_config.nCTRL=0;
-	t25_config.nCMD=0;
-	t25_config.nUPSIGLIM[0]=28000;
-	t25_config.nLOSIGLIM[0]=20000;
-	t25_config.nUPSIGLIM[1]=0;
-	t25_config.nLOSIGLIM[1]=0;
-	t25_config.nUPSIGLIM[2]=0;
-	t25_config.nLOSIGLIM[2]=0;
-	t25_config.nPINDWELLUS=0;
-#elif TOUCH_CAL_VER>=2
-	t25_config.nCTRL=0;
-	t25_config.nCMD=0;
-	t25_config.nUPSIGLIM[0]=0;
-	t25_config.nLOSIGLIM[0]=0;
-	t25_config.nUPSIGLIM[1]=0;
-	t25_config.nLOSIGLIM[1]=0;
-	t25_config.nUPSIGLIM[2]=0;
-	t25_config.nLOSIGLIM[2]=0;
-	t25_config.nPINDWELLUS=0;
-#endif
+	t25_config.nCTRL=t25_config_data[i++];
+	t25_config.nCMD=t25_config_data[i++];
+	t25_config.nUPSIGLIM[0]=t25_config_data[i++];
+	t25_config.nLOSIGLIM[0]=t25_config_data[i++];
+	t25_config.nUPSIGLIM[1]=t25_config_data[i++];
+	t25_config.nLOSIGLIM[1]=t25_config_data[i++];
+	t25_config.nUPSIGLIM[2]=t25_config_data[i++];
+	t25_config.nLOSIGLIM[2]=t25_config_data[i++];
+	t25_config.nPINDWELLUS=t25_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t25_config);
@@ -741,7 +694,22 @@ int mxt_PROCI_TWOTOUCHGESTUREPROCESSOR_T27(struct mxt_data *mxt)
 	return 0;
 }
 
+static int read_mem(struct mxt_data *data, u16 reg, u8 len, u8 *buf);
 
+int mxt_SPT_USERDATA_T38_read(struct mxt_data *mxt)
+{	
+	u16 obj_addr=0, obj_size=0;	
+	u8 value = 0;
+
+	get_object_info(copy_data, SPT_USERDATA_T38,
+    	&obj_size, &obj_addr);
+
+	read_mem(mxt, obj_addr, 1, &value);
+	
+	//printk("[ATMEL] obj_address=%d  Chip Config Version =%d \n",obj_addr,value);
+
+	return value;
+}
 
 int mxt_SPT_USERDATA_T38(struct mxt_data *mxt)
 
@@ -752,38 +720,12 @@ int mxt_SPT_USERDATA_T38(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             SPT_USERDATA_T38, &obj_size, &obj_addr);
-	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=64 OBJECT_ADDRESS=391\n",obj_size,obj_addr );
+	
 	memset(&t38_config, 0, sizeof(t38_config));
 
-	t38_config.nDATA[0]=TOUCH_CAL_VER;
-	
-	error = mxt_write_block(client, obj_addr,
-			obj_size, (u8 *)&t38_config);
+	t38_config.nDATA[0]=t0_info_data[1];
+	//printk("Chip Config Ver (%d), New Config Ver (%d)\n", obj_addr, obj_size, mxt_SPT_USERDATA_T38_read(mxt), t0_info_data[1]);
 
-	if (error < 0) {
-		dev_err(&client->dev, "[TSP] mxt_write_block failed! "
-				"(%s, %d)\n", __func__, __LINE__);
-		return -EIO;
-	}
-
-	return 0;
-}
-
-
-int mxt_SPT_USERDATA_T38_read(struct mxt_data *mxt)
-
-{
-	struct i2c_client *client = mxt->client;
-	u16 obj_addr=0, obj_size=0;
-	int error=0;
-
-    get_object_info(copy_data,
-            SPT_USERDATA_T38, &obj_size, &obj_addr);
-	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=64 OBJECT_ADDRESS=391\n",obj_size,obj_addr );
-	memset(&t38_config, 0, sizeof(t38_config));
-
-	//t38_config.nDATA[0]=TOUCH_CAL_VER;
-	
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t38_config);
 
@@ -807,7 +749,7 @@ int mxt_DEBUG_DIAGNOSTIC_T37(struct mxt_data *mxt)
 
     get_object_info(copy_data,
             DEBUG_DIAGNOSTIC_T37, &obj_size, &obj_addr);
-	//printk("DEBUG_DIAGNOSTIC_T37 obj_size=%d obj_addr=%d OBJECT_SIZE=130 OBJECT_ADDRESS=172\n",obj_size,obj_addr );
+
 	memset(&t37_config, 0, sizeof(t37_config));
 
 	t37_config.nMODE=16;
@@ -830,25 +772,19 @@ int mxt_PROCI_GRIPSUPPRESSION_T40(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_GRIPSUPPRESSION_T40, &obj_size, &obj_addr);
-	//printk("mxt_PROCI_GRIPSUPPRESSION_T40 obj_size=%d obj_addr=%d  OBJECT_SIZE=5 OBJECT_ADDRESS=621 \n",obj_size,obj_addr );
+
 	memset(&t40_config, 0, sizeof(t40_config));
 
-#if TOUCH_CAL_VER==1
-	t40_config.nCTRL=0;
-	t40_config.nXLOGRIP=20;
-	t40_config.nXHIGRIP=20;
-	t40_config.nYLOGRIP=20;
-	t40_config.nYHIGRIP=20;
-#elif  TOUCH_CAL_VER>=2
-	t40_config.nCTRL=0;
-	t40_config.nXLOGRIP=0;
-	t40_config.nXHIGRIP=0;
-	t40_config.nYLOGRIP=0;
-	t40_config.nYHIGRIP=0;
-#endif
+	t40_config.nCTRL=t40_config_data[i++];
+	t40_config.nXLOGRIP=t40_config_data[i++];
+	t40_config.nXHIGRIP=t40_config_data[i++];
+	t40_config.nYLOGRIP=t40_config_data[i++];
+	t40_config.nYHIGRIP=t40_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t40_config);
 
@@ -870,46 +806,24 @@ int mxt_PROCI_TOUCHSUPPRESSION_T42(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_TOUCHSUPPRESSION_T42, &obj_size, &obj_addr);
-	//printk("mxt_PROCI_TOUCHSUPPRESSION_T42 obj_size=%d obj_addr=%d OBJECT_SIZE=10  OBJECT_ADDRESS=631 \n",obj_size,obj_addr );
+	
 	memset(&t42_config, 0, sizeof(t42_config));
 
-#if TOUCH_CAL_VER==1
-	t42_config.nCTRL=32;
-	t42_config.nAPPRTHR=20;
-	t42_config.nMAXAPPRAREA=0;
-	t42_config.nMAXTCHAREA=0;
-	t42_config.nSUPSTRENGTH=0;
-	t42_config.nSUPEXTTO=20;
-	t42_config.nMAXNUMTCHS=17;
-	t42_config.nSHAPESTRENGTH=0;
-	t42_config.nSUPDIST=3;
-	t42_config.nDISTHYST=0;
-#elif  TOUCH_CAL_VER==2
-	t42_config.nCTRL=0;
-	t42_config.nAPPRTHR=0;
-	t42_config.nMAXAPPRAREA=0;
-	t42_config.nMAXTCHAREA=0;
-	t42_config.nSUPSTRENGTH=0;
-	t42_config.nSUPEXTTO=0;
-	t42_config.nMAXNUMTCHS=0;
-	t42_config.nSHAPESTRENGTH=0;
-	t42_config.nSUPDIST=0;
-	t42_config.nDISTHYST=0;
-#elif  TOUCH_CAL_VER==4
-	t42_config.nCTRL=3;
-	t42_config.nAPPRTHR=20;
-	t42_config.nMAXAPPRAREA=24;
-	t42_config.nMAXTCHAREA=100;
-	t42_config.nSUPSTRENGTH=0;
-	t42_config.nSUPEXTTO=20;
-	t42_config.nMAXNUMTCHS=10;
-	t42_config.nSHAPESTRENGTH=0;
-	t42_config.nSUPDIST=3;
-	t42_config.nDISTHYST=0;	
-#endif
+	t42_config.nCTRL=t42_config_data[i++];
+	t42_config.nAPPRTHR=t42_config_data[i++];
+	t42_config.nMAXAPPRAREA=t42_config_data[i++];
+	t42_config.nMAXTCHAREA=t42_config_data[i++];
+	t42_config.nSUPSTRENGTH=t42_config_data[i++];
+	t42_config.nSUPEXTTO=t42_config_data[i++];
+	t42_config.nMAXNUMTCHS=t42_config_data[i++];
+	t42_config.nSHAPESTRENGTH=t42_config_data[i++];
+	t42_config.nSUPDIST=t42_config_data[i++];
+	t42_config.nDISTHYST=t42_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t42_config);
 
@@ -932,35 +846,23 @@ int mxt_SPT_DIGITIZER_T43(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             SPT_DIGITIZER_T43, &obj_size, &obj_addr);
 	//printk("mxt_SPT_DIGITIZER_T43 obj_size=%d obj_addr=%d   OBJECT_SIZE=12 OBJECT_ADDRESS=651\n",obj_size,obj_addr );
 	memset(&t43_config, 0, sizeof(t43_config));
 
-#if TOUCH_CAL_VER==1
-	t43_config.nCTRL=0;
-	t43_config.nHIDIDLERATE=128;
-	t43_config.nXLENGTH=137;
-	t43_config.nYLENGTH=221;
-	t43_config.nRWKRATE=128;
-	t43_config.nHEIGHTSCALE=0;
-	t43_config.nHEIGHTOFFSET=0;
-	t43_config.nWIDTHSCALE=0;
-	t43_config.nWIDTHOFFSET=0;
-	t43_config.nRESERVED=0;
-#elif  TOUCH_CAL_VER>=2
-	t43_config.nCTRL=0;
-	t43_config.nHIDIDLERATE=0;
-	t43_config.nXLENGTH=0;
-	t43_config.nYLENGTH=0;
-	t43_config.nRWKRATE=0;
-	t43_config.nHEIGHTSCALE=0;
-	t43_config.nHEIGHTOFFSET=0;
-	t43_config.nWIDTHSCALE=0;
-	t43_config.nWIDTHOFFSET=0;
-	t43_config.nRESERVED=0;
-#endif
+	t43_config.nCTRL=t43_config_data[i++];
+	t43_config.nHIDIDLERATE=t43_config_data[i++];
+	t43_config.nXLENGTH=t43_config_data[i++];
+	t43_config.nYLENGTH=t43_config_data[i++];
+	t43_config.nRWKRATE=t43_config_data[i++];
+	t43_config.nHEIGHTSCALE=t43_config_data[i++];
+	t43_config.nHEIGHTOFFSET=t43_config_data[i++];
+	t43_config.nWIDTHSCALE=t43_config_data[i++];
+	t43_config.nWIDTHOFFSET=t43_config_data[i++];
+	t43_config.nRESERVED=t43_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t43_config);
@@ -979,46 +881,23 @@ int mxt_SPT_CTECONFIG_T46(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             SPT_CTECONFIG_T46, &obj_size, &obj_addr);
 	//printk("mxt_SPT_CTECONFIG_T46 obj_size=%d obj_addr=%d OBJECT_SIZE=11  OBJECT_ADDRESS=663 \n",obj_size,obj_addr );
 	memset(&t46_config, 0, sizeof(t46_config));
 
-#if TOUCH_CAL_VER==1
-	t46_config.nCTRL=0;
-	t46_config.nMODE=0;
-	t46_config.nIDLESYNCSPERX=8;
-	t46_config.nACTVSYNCSPERX=8;
-	t46_config.nADCSPERSYNC=0;
-	t46_config.nPULSESPERADC=0;
-	t46_config.nXSLEW=1;
-	t46_config.nSYNCDELAY=0;
-	t46_config.nXVOLTAGE=0;
-	t46_config.nADCCTRL=15;
-#elif  TOUCH_CAL_VER==2
-	t46_config.nCTRL=4;
-	t46_config.nMODE=0;
-	t46_config.nIDLESYNCSPERX=16;
-	t46_config.nACTVSYNCSPERX=24;
-	t46_config.nADCSPERSYNC=0;
-	t46_config.nPULSESPERADC=0;
-	t46_config.nXSLEW=2;
-	t46_config.nSYNCDELAY=0;
-	t46_config.nXVOLTAGE=0;
-	t46_config.nADCCTRL=0;
-#elif  TOUCH_CAL_VER>=3
-	t46_config.nCTRL=4;
-	t46_config.nMODE=0;
-	t46_config.nIDLESYNCSPERX=16;
-	t46_config.nACTVSYNCSPERX=24;
-	t46_config.nADCSPERSYNC=0;
-	t46_config.nPULSESPERADC=0;
-	t46_config.nXSLEW=2;
-	t46_config.nSYNCDELAY=0;
-	t46_config.nXVOLTAGE=0;
-	t46_config.nADCCTRL=13;
-#endif
+	t46_config.nCTRL=t46_config_data[i++];
+	t46_config.nMODE=t46_config_data[i++];
+	t46_config.nIDLESYNCSPERX=t46_config_data[i++];
+	t46_config.nACTVSYNCSPERX=t46_config_data[i++];
+	t46_config.nADCSPERSYNC=t46_config_data[i++];
+	t46_config.nPULSESPERADC=t46_config_data[i++];
+	t46_config.nXSLEW=t46_config_data[i++];
+	t46_config.nSYNCDELAY=t46_config_data[i++];
+	t46_config.nXVOLTAGE=t46_config_data[i++];
+	t46_config.nADCCTRL=t46_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t46_config);
@@ -1038,41 +917,27 @@ int mxt_PROCI_STYLUS_T47(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_STYLUS_T47, &obj_size, &obj_addr);
 	//printk("mxt_PROCI_STYLUS_T47 obj_size=%d obj_addr=%d  OBJECT_SIZE=22  OBJECT_ADDRESS=674 \n",obj_size,obj_addr );
 	memset(&t47_config, 0, sizeof(t47_config));
 
-#if TOUCH_CAL_VER==1
-	t47_config.nCTRL=0;
-	t47_config.nCONTMIN=20;
-	t47_config.nCONTMAX=35;
-	t47_config.nSTABILITY=2;
-	t47_config.nMAXTCHAREA=5;
-	t47_config.nAMPLTHR=30;
-	t47_config.nSTYSHAPE=1;
-	t47_config.nHOVERSUP=120;
-	t47_config.nCONFTHR=3;
-	t47_config.nSYNCSPERX=16;
-	t47_config.nXPOSADJ=0;
-	t47_config.nYPOSADJ=0;
-	t47_config.nCFG=0;
-#elif  TOUCH_CAL_VER>=2
-	t47_config.nCTRL=0;
-	t47_config.nCONTMIN=0;
-	t47_config.nCONTMAX=0;
-	t47_config.nSTABILITY=0;
-	t47_config.nMAXTCHAREA=0;
-	t47_config.nAMPLTHR=0;
-	t47_config.nSTYSHAPE=0;
-	t47_config.nHOVERSUP=0;
-	t47_config.nCONFTHR=0;
-	t47_config.nSYNCSPERX=0;
-	t47_config.nXPOSADJ=0;
-	t47_config.nYPOSADJ=0;
-	t47_config.nCFG=0;
-#endif
+	t47_config.nCTRL=t47_config_data[i++];
+	t47_config.nCONTMIN=t47_config_data[i++];
+	t47_config.nCONTMAX=t47_config_data[i++];
+	t47_config.nSTABILITY=t47_config_data[i++];
+	t47_config.nMAXTCHAREA=t47_config_data[i++];
+	t47_config.nAMPLTHR=t47_config_data[i++];
+	t47_config.nSTYSHAPE=t47_config_data[i++];
+	t47_config.nHOVERSUP=t47_config_data[i++];
+	t47_config.nCONFTHR=t47_config_data[i++];
+	t47_config.nSYNCSPERX=t47_config_data[i++];
+	t47_config.nXPOSADJ=t47_config_data[i++];
+	t47_config.nYPOSADJ=t47_config_data[i++];
+	t47_config.nCFG=t47_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t47_config);
 
@@ -1095,18 +960,19 @@ int mxt_PROCI_ADAPTIVETHRESHOLD_T55(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_ADAPTIVETHRESHOLD_T55, &obj_size, &obj_addr);
 	//printk("ADAPTIVE_T55 obj_size=%d obj_addr=%d OBJECT_SIZE=7  OBJECT_ADDRESS=718\n",obj_size,obj_addr );
 	memset(&t55_config, 0, sizeof(t55_config));
 
-	t55_config.nCTRL=0;
-	t55_config.nTARGETTHR=0;
-	t55_config.nTHRADJLIM=0;
-	t55_config.nRESETSTEPTIME=0;
-	t55_config.nFORCECHGDIST=0;
-	t55_config.nFORCECHGTIME=0;
+	t55_config.nCTRL=t55_config_data[i++];
+	t55_config.nTARGETTHR=t55_config_data[i++];
+	t55_config.nTHRADJLIM=t55_config_data[i++];
+	t55_config.nRESETSTEPTIME=t55_config_data[i++];
+	t55_config.nFORCECHGDIST=t55_config_data[i++];
+	t55_config.nFORCECHGTIME=t55_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t55_config);
@@ -1129,156 +995,61 @@ int mxt_PROCI_SHIELDLESS_T56(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_SHIELDLESS_T56, &obj_size, &obj_addr);
 	//printk("mxt_PROCI_SHIELDLESS_T56 obj_size=%d obj_addr=%d   OBJECT_SIZE=51 OBJECT_ADDRESS=732\n",obj_size,obj_addr );
 	memset(&t56_config, 0, sizeof(t56_config));
 
-#if TOUCH_CAL_VER==1
-	t56_config.nCTRL=2;
-	t56_config.nCOMMAND=0;
-	t56_config.nOPTINT=1;
-	t56_config.nINTTIME=48;
-	t56_config.nINTDELAY[0]=19;
-	t56_config.nINTDELAY[1]=20;
-	t56_config.nINTDELAY[2]=20;
-	t56_config.nINTDELAY[3]=20;
-	t56_config.nINTDELAY[4]=21;
-	t56_config.nINTDELAY[5]=21;
-	t56_config.nINTDELAY[6]=21;
-	t56_config.nINTDELAY[7]=21;
-	t56_config.nINTDELAY[8]=21;
-	t56_config.nINTDELAY[9]=21;
-	t56_config.nINTDELAY[10]=21;
-	t56_config.nINTDELAY[11]=22;
-	t56_config.nINTDELAY[12]=22;
-	t56_config.nINTDELAY[13]=22;
-	t56_config.nINTDELAY[14]=22;
-	t56_config.nINTDELAY[15]=22;
-	t56_config.nINTDELAY[16]=22;
-	t56_config.nINTDELAY[17]=22;
-	t56_config.nINTDELAY[18]=22;
-	t56_config.nINTDELAY[19]=22;
-	t56_config.nINTDELAY[20]=22;
-	t56_config.nINTDELAY[21]=21;
-	t56_config.nINTDELAY[22]=20;
-	t56_config.nINTDELAY[23]=20;
-	t56_config.nINTDELAY[24]=20;
-	t56_config.nINTDELAY[25]=20;
-	t56_config.nINTDELAY[26]=21;
-	t56_config.nINTDELAY[27]=20;
-	t56_config.nINTDELAY[28]=20;
-	t56_config.nINTDELAY[29]=20;
-	t56_config.nINTDELAY[30]=20;
-	t56_config.nINTDELAY[31]=19;
-	t56_config.nMULTICUTGC=0;
-	t56_config.nGCLIMIT=0;
-	t56_config.nNCNCL=1;
-	t56_config.nTOUCHBIAS=2;
-	t56_config.nBASESCALE=5;
-	t56_config.nSHIFTLIMIT=5;
-	t56_config.nYLONOISEMUL=0;
-	t56_config.nYLONOISEDIV=0;
-	t56_config.nYHINOISEMUL=0;
-	t56_config.nYHINOISEDIV=0;
-#elif  TOUCH_CAL_VER==2
-	t56_config.nCTRL=0;
-	t56_config.nCOMMAND=0;
-	t56_config.nOPTINT=0;
-	t56_config.nINTTIME=0;
-	t56_config.nINTDELAY[0]=0;
-	t56_config.nINTDELAY[1]=0;
-	t56_config.nINTDELAY[2]=0;
-	t56_config.nINTDELAY[3]=0;
-	t56_config.nINTDELAY[4]=0;
-	t56_config.nINTDELAY[5]=0;
-	t56_config.nINTDELAY[6]=0;
-	t56_config.nINTDELAY[7]=0;
-	t56_config.nINTDELAY[8]=0;
-	t56_config.nINTDELAY[9]=0;
-	t56_config.nINTDELAY[10]=0;
-	t56_config.nINTDELAY[11]=0;
-	t56_config.nINTDELAY[12]=0;
-	t56_config.nINTDELAY[13]=0;
-	t56_config.nINTDELAY[14]=0;
-	t56_config.nINTDELAY[15]=0;
-	t56_config.nINTDELAY[16]=0;
-	t56_config.nINTDELAY[17]=0;
-	t56_config.nINTDELAY[18]=0;
-	t56_config.nINTDELAY[19]=0;
-	t56_config.nINTDELAY[20]=0;
-	t56_config.nINTDELAY[21]=0;
-	t56_config.nINTDELAY[22]=0;
-	t56_config.nINTDELAY[23]=0;
-	t56_config.nINTDELAY[24]=0;
-	t56_config.nINTDELAY[25]=0;
-	t56_config.nINTDELAY[26]=0;
-	t56_config.nINTDELAY[27]=0;
-	t56_config.nINTDELAY[28]=0;
-	t56_config.nINTDELAY[29]=0;
-	t56_config.nINTDELAY[30]=0;
-	t56_config.nINTDELAY[31]=0;
-	t56_config.nMULTICUTGC=0;
-	t56_config.nGCLIMIT=0;
-	t56_config.nNCNCL=0;
-	t56_config.nTOUCHBIAS=0;
-	t56_config.nBASESCALE=0;
-	t56_config.nSHIFTLIMIT=0;
-	t56_config.nYLONOISEMUL=0;
-	t56_config.nYLONOISEDIV=0;
-	t56_config.nYHINOISEMUL=0;
-	t56_config.nYHINOISEDIV=0;
-	t56_config.nNCNCLMANIDX=0;
-#elif  TOUCH_CAL_VER>=3
-	t56_config.nCTRL=2;
-	t56_config.nCOMMAND=0;
-	t56_config.nOPTINT=1;
-	t56_config.nINTTIME=24;
-	t56_config.nINTDELAY[0]=57;
-	t56_config.nINTDELAY[1]=57;
-	t56_config.nINTDELAY[2]=57;
-	t56_config.nINTDELAY[3]=57;
-	t56_config.nINTDELAY[4]=57;
-	t56_config.nINTDELAY[5]=57;
-	t56_config.nINTDELAY[6]=57;
-	t56_config.nINTDELAY[7]=57;
-	t56_config.nINTDELAY[8]=57;
-	t56_config.nINTDELAY[9]=57;
-	t56_config.nINTDELAY[10]=57;
-	t56_config.nINTDELAY[11]=57;
-	t56_config.nINTDELAY[12]=57;
-	t56_config.nINTDELAY[13]=57;
-	t56_config.nINTDELAY[14]=57;
-	t56_config.nINTDELAY[15]=57;
-	t56_config.nINTDELAY[16]=57;
-	t56_config.nINTDELAY[17]=57;
-	t56_config.nINTDELAY[18]=57;
-	t56_config.nINTDELAY[19]=57;
-	t56_config.nINTDELAY[20]=57;
-	t56_config.nINTDELAY[21]=57;
-	t56_config.nINTDELAY[22]=57;
-	t56_config.nINTDELAY[23]=57;
-	t56_config.nINTDELAY[24]=57;
-	t56_config.nINTDELAY[25]=57;
-	t56_config.nINTDELAY[26]=57;
-	t56_config.nINTDELAY[27]=57;
-	t56_config.nINTDELAY[28]=57;
-	t56_config.nINTDELAY[29]=57;
-	t56_config.nINTDELAY[30]=57;
-	t56_config.nINTDELAY[31]=57;
-	t56_config.nMULTICUTGC=0;
-	t56_config.nGCLIMIT=0;
-	t56_config.nNCNCL=0;
-	t56_config.nTOUCHBIAS=0;
-	t56_config.nBASESCALE=0;
-	t56_config.nSHIFTLIMIT=0;
-	t56_config.nYLONOISEMUL=0;
-	t56_config.nYLONOISEDIV=0;
-	t56_config.nYHINOISEMUL=0;
-	t56_config.nYHINOISEDIV=0;
-	t56_config.nNCNCLMANIDX=0;
-#endif 
+	t56_config.nCTRL=t56_config_data[i++];
+	t56_config.nCOMMAND=t56_config_data[i++];
+	t56_config.nOPTINT=t56_config_data[i++];
+	t56_config.nINTTIME=t56_config_data[i++];
+	t56_config.nINTDELAY[0]=t56_config_data[i++];
+	t56_config.nINTDELAY[1]=t56_config_data[i++];
+	t56_config.nINTDELAY[2]=t56_config_data[i++];
+	t56_config.nINTDELAY[3]=t56_config_data[i++];
+	t56_config.nINTDELAY[4]=t56_config_data[i++];
+	t56_config.nINTDELAY[5]=t56_config_data[i++];
+	t56_config.nINTDELAY[6]=t56_config_data[i++];
+	t56_config.nINTDELAY[7]=t56_config_data[i++];
+	t56_config.nINTDELAY[8]=t56_config_data[i++];
+	t56_config.nINTDELAY[9]=t56_config_data[i++];
+	t56_config.nINTDELAY[10]=t56_config_data[i++];
+	t56_config.nINTDELAY[11]=t56_config_data[i++];
+	t56_config.nINTDELAY[12]=t56_config_data[i++];
+	t56_config.nINTDELAY[13]=t56_config_data[i++];
+	t56_config.nINTDELAY[14]=t56_config_data[i++];
+	t56_config.nINTDELAY[15]=t56_config_data[i++];
+	t56_config.nINTDELAY[16]=t56_config_data[i++];
+	t56_config.nINTDELAY[17]=t56_config_data[i++];
+	t56_config.nINTDELAY[18]=t56_config_data[i++];
+	t56_config.nINTDELAY[19]=t56_config_data[i++];
+	t56_config.nINTDELAY[20]=t56_config_data[i++];
+	t56_config.nINTDELAY[21]=t56_config_data[i++];
+	t56_config.nINTDELAY[22]=t56_config_data[i++];
+	t56_config.nINTDELAY[23]=t56_config_data[i++];
+	t56_config.nINTDELAY[24]=t56_config_data[i++];
+	t56_config.nINTDELAY[25]=t56_config_data[i++];
+	t56_config.nINTDELAY[26]=t56_config_data[i++];
+	t56_config.nINTDELAY[27]=t56_config_data[i++];
+	t56_config.nINTDELAY[28]=t56_config_data[i++];
+	t56_config.nINTDELAY[29]=t56_config_data[i++];
+	t56_config.nINTDELAY[30]=t56_config_data[i++];
+	t56_config.nINTDELAY[31]=t56_config_data[i++];
+	t56_config.nMULTICUTGC=t56_config_data[i++];
+	t56_config.nGCLIMIT=t56_config_data[i++];
+	t56_config.nNCNCL=t56_config_data[i++];
+	t56_config.nTOUCHBIAS=t56_config_data[i++];
+	t56_config.nBASESCALE=t56_config_data[i++];
+	t56_config.nSHIFTLIMIT=t56_config_data[i++];
+	t56_config.nYLONOISEMUL=t56_config_data[i++];
+	t56_config.nYLONOISEDIV=t56_config_data[i++];
+	t56_config.nYHINOISEMUL=t56_config_data[i++];
+	t56_config.nYHINOISEDIV=t56_config_data[i++];
+	t56_config.nNCNCLMANIDX=t56_config_data[i++];
+
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t56_config);
 
@@ -1358,300 +1129,89 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCG_NOISESUPPRESSION_T62, &obj_size, &obj_addr);
 	//printk("mxt_PROCG_NOISESUPPRESSION_T62 obj_size=%d obj_addr=%d OBJECT_SIZE=74  OBJECT_ADDRESS=799 \n",obj_size,obj_addr );
 	memset(&t62_config, 0, sizeof(t62_config));
 
-#if TOUCH_CAL_VER==1
-	t62_config.nCTRL=126;
-	t62_config.nCALCFG1=11;
-	t62_config.nCALCFG2=0;
-	t62_config.nCALCFG3=23;
-	t62_config.nCFG1=0;
-	t62_config.nRESERVED1=0;
-	t62_config.nRESERVED2=0;
-	t62_config.nBASEFREQ=0;
-	t62_config.nMAXSELFREQ=25;
-	t62_config.nFREQ[0]=0;
-	t62_config.nFREQ[1]=3;
-	t62_config.nFREQ[2]=9;
-	t62_config.nFREQ[3]=12;
-	t62_config.nFREQ[4]=23;
-	t62_config.nHOPCNT=5;
-	t62_config.nALTMAXSELFREQ=0;
-	t62_config.nHOPCNTPER=10;
-	t62_config.nHOPEVALTO=5;
-	t62_config.nHOPST=5;
-	t62_config.nNLGAIN=80;
-	t62_config.nMINNLTHR=44;
-	t62_config.nINCNLTHR=26;
-	t62_config.nADCSPERXTHR=26;
-	t62_config.nNLTHRMARGIN=26;
-	t62_config.nMAXADCSPERX=63;
-	t62_config.nACTVADCSVLDNOD=0;
-	t62_config.nIDLEADCSVLDNOD=0;
-	t62_config.nMINGCLIMIT=4;
-	t62_config.nMAXGCLIMIT=64;
-	t62_config.nRESERVED[0]=0;
-	t62_config.nRESERVED[1]=0;
-	t62_config.nRESERVED[2]=0;
-	t62_config.nRESERVED[3]=0;
-	t62_config.nRESERVED[4]=0;
+	t62_config.nCTRL=t62_config_data[i++];
+	t62_config.nCALCFG1=t62_config_data[i++];
+	t62_config.nCALCFG2=t62_config_data[i++];
+	t62_config.nCALCFG3=t62_config_data[i++];
+	t62_config.nCFG1=t62_config_data[i++];
+	t62_config.nRESERVED1=t62_config_data[i++];
+	t62_config.nRESERVED2=t62_config_data[i++];
+	t62_config.nBASEFREQ=t62_config_data[i++];
+	t62_config.nMAXSELFREQ=t62_config_data[i++];
+	t62_config.nFREQ[0]=t62_config_data[i++];
+	t62_config.nFREQ[1]=t62_config_data[i++];
+	t62_config.nFREQ[2]=t62_config_data[i++];
+	t62_config.nFREQ[3]=t62_config_data[i++];
+	t62_config.nFREQ[4]=t62_config_data[i++];
+	t62_config.nHOPCNT=t62_config_data[i++];
+	t62_config.nALTMAXSELFREQ=t62_config_data[i++];
+	t62_config.nHOPCNTPER=t62_config_data[i++];
+	t62_config.nHOPEVALTO=t62_config_data[i++];
+	t62_config.nHOPST=t62_config_data[i++];
+	t62_config.nNLGAIN=t62_config_data[i++];
+	t62_config.nMINNLTHR=t62_config_data[i++];
+	t62_config.nINCNLTHR=t62_config_data[i++];
+	t62_config.nADCSPERXTHR=t62_config_data[i++];
+	t62_config.nNLTHRMARGIN=t62_config_data[i++];
+	t62_config.nMAXADCSPERX=t62_config_data[i++];
+	t62_config.nACTVADCSVLDNOD=t62_config_data[i++];
+	t62_config.nIDLEADCSVLDNOD=t62_config_data[i++];
+	t62_config.nMINGCLIMIT=t62_config_data[i++];
+	t62_config.nMAXGCLIMIT=t62_config_data[i++];
+	t62_config.nRESERVED[0]=t62_config_data[i++];
+	t62_config.nRESERVED[1]=t62_config_data[i++];
+	t62_config.nRESERVED[2]=t62_config_data[i++];
+	t62_config.nRESERVED[3]=t62_config_data[i++];
+	t62_config.nRESERVED[4]=t62_config_data[i++];
 
-	t62_config.nBLEN[0]=0;
-	t62_config.nTCHTHR[0]=0;
-	t62_config.nTCHDI[0]=2;
-	t62_config.nMOVHYSTI[0]=0;
-	t62_config.nMOVHYSTN[0]=0;
-	t62_config.nMOVFILTER[0]=0;
-	t62_config.nNUMTOUCH[0]=0;
-	t62_config.nMRGHYST[0]=0;
-	t62_config.nMRGTHR[0]=0;
-	t62_config.nXLOCLIP[0]=0;
-	t62_config.nXHICLIP[0]=0;
-	t62_config.nYLOCLIP[0]=0;
-	t62_config.nYHICLIP[0]=0;
-	t62_config.nXEDGECTRL[0]=0;
-	t62_config.nXEDGEDIST[0]=0;
-	t62_config.nYEDGECTRL[0]=0;
-	t62_config.nYEDGEDIST[0]=0;
-	t62_config.nJUMPLIMIT[0]=0;
-	t62_config.nTCHHYST[0]=0;
-	t62_config.nNEXTTCHDI[0]=0;
-#elif  TOUCH_CAL_VER==2
-	t62_config.nCTRL=0;
-	t62_config.nCALCFG1=0;
-	t62_config.nCALCFG2=0;
-	t62_config.nCALCFG3=0;
-	t62_config.nCFG1=0;
-	t62_config.nRESERVED1=0;
-	t62_config.nRESERVED2=0;
-	t62_config.nBASEFREQ=0;
-	t62_config.nMAXSELFREQ=0;
-	t62_config.nFREQ[0]=0;
-	t62_config.nFREQ[1]=0;
-	t62_config.nFREQ[2]=0;
-	t62_config.nFREQ[3]=0;
-	t62_config.nFREQ[4]=0;
-	t62_config.nHOPCNT=0;
-	t62_config.nALTMAXSELFREQ=0;
-	t62_config.nHOPCNTPER=0;
-	t62_config.nHOPEVALTO=0;
-	t62_config.nHOPST=0;
-	t62_config.nNLGAIN=0;
-	t62_config.nMINNLTHR=0;
-	t62_config.nINCNLTHR=0;
-	t62_config.nADCSPERXTHR=0;
-	t62_config.nNLTHRMARGIN=0;
-	t62_config.nMAXADCSPERX=0;
-	t62_config.nACTVADCSVLDNOD=0;
-	t62_config.nIDLEADCSVLDNOD=0;
-	t62_config.nMINGCLIMIT=0;
-	t62_config.nMAXGCLIMIT=0;
-	t62_config.nRESERVED[0]=0;
-	t62_config.nRESERVED[1]=0;
-	t62_config.nRESERVED[2]=0;
-	t62_config.nRESERVED[3]=0;
-	t62_config.nRESERVED[4]=0;
+	t62_config.nBLEN[0]=t62_config_data[i++];
+	t62_config.nTCHTHR[0]=t62_config_data[i++];
+	t62_config.nTCHDI[0]=t62_config_data[i++];
+	t62_config.nMOVHYSTI[0]=t62_config_data[i++];
+	t62_config.nMOVHYSTN[0]=t62_config_data[i++];
+	t62_config.nMOVFILTER[0]=t62_config_data[i++];
+	t62_config.nNUMTOUCH[0]=t62_config_data[i++];
+	t62_config.nMRGHYST[0]=t62_config_data[i++];
+	t62_config.nMRGTHR[0]=t62_config_data[i++];
+	t62_config.nXLOCLIP[0]=t62_config_data[i++];
+	t62_config.nXHICLIP[0]=t62_config_data[i++];
+	t62_config.nYLOCLIP[0]=t62_config_data[i++];
+	t62_config.nYHICLIP[0]=t62_config_data[i++];
+	t62_config.nXEDGECTRL[0]=t62_config_data[i++];
+	t62_config.nXEDGEDIST[0]=t62_config_data[i++];
+	t62_config.nYEDGECTRL[0]=t62_config_data[i++];
+	t62_config.nYEDGEDIST[0]=t62_config_data[i++];
+	t62_config.nJUMPLIMIT[0]=t62_config_data[i++];
+	t62_config.nTCHHYST[0]=t62_config_data[i++];
+	t62_config.nNEXTTCHDI[0]=t62_config_data[i++];
 
-	t62_config.nBLEN[0]=0;
-	t62_config.nTCHTHR[0]=0;
-	t62_config.nTCHDI[0]=0;
-	t62_config.nMOVHYSTI[0]=0;
-	t62_config.nMOVHYSTN[0]=0;
-	t62_config.nMOVFILTER[0]=0;
-	t62_config.nNUMTOUCH[0]=0;
-	t62_config.nMRGHYST[0]=0;
-	t62_config.nMRGTHR[0]=0;
-	t62_config.nXLOCLIP[0]=0;
-	t62_config.nXHICLIP[0]=0;
-	t62_config.nYLOCLIP[0]=0;
-	t62_config.nYHICLIP[0]=0;
-	t62_config.nXEDGECTRL[0]=0;
-	t62_config.nXEDGEDIST[0]=0;
-	t62_config.nYEDGECTRL[0]=0;
-	t62_config.nYEDGEDIST[0]=0;
-	t62_config.nJUMPLIMIT[0]=0;
-	t62_config.nTCHHYST[0]=0;
-	t62_config.nNEXTTCHDI[0]=0;
-
-	t62_config.nBLEN[1]=0;
-	t62_config.nTCHTHR[1]=0;
-	t62_config.nTCHDI[1]=0;
-	t62_config.nMOVHYSTI[1]=0;
-	t62_config.nMOVHYSTN[1]=0;
-	t62_config.nMOVFILTER[1]=0;
-	t62_config.nNUMTOUCH[1]=0;
-	t62_config.nMRGHYST[1]=0;
-	t62_config.nMRGTHR[1]=0;
-	t62_config.nXLOCLIP[1]=0;
-	t62_config.nXHICLIP[1]=0;
-	t62_config.nYLOCLIP[1]=0;
-	t62_config.nYHICLIP[1]=0;
-	t62_config.nXEDGECTRL[1]=0;
-	t62_config.nXEDGEDIST[1]=0;
-	t62_config.nYEDGECTRL[1]=0;
-	t62_config.nYEDGEDIST[1]=0;
-	t62_config.nJUMPLIMIT[1]=0;
-	t62_config.nTCHHYST[1]=0;
-	t62_config.nNEXTTCHDI[1]=0;
-#elif  TOUCH_CAL_VER==3
-	t62_config.nCTRL=1;
-	t62_config.nCALCFG1=3;
-	t62_config.nCALCFG2=0;
-	t62_config.nCALCFG3=6;
-	t62_config.nCFG1=0;
-	t62_config.nRESERVED1=0;
-	t62_config.nRESERVED2=0;
-	t62_config.nBASEFREQ=0;
-	t62_config.nMAXSELFREQ=40;
-	t62_config.nFREQ[0]=0;
-	t62_config.nFREQ[1]=0;
-	t62_config.nFREQ[2]=0;
-	t62_config.nFREQ[3]=0;
-	t62_config.nFREQ[4]=0;
-	t62_config.nHOPCNT=5;
-	t62_config.nALTMAXSELFREQ=0;
-	t62_config.nHOPCNTPER=10;
-	t62_config.nHOPEVALTO=5;
-	t62_config.nHOPST=5;
-	t62_config.nNLGAIN=80;
-	t62_config.nMINNLTHR=25;
-	t62_config.nINCNLTHR=50;
-	t62_config.nADCSPERXTHR=52;
-	t62_config.nNLTHRMARGIN=25;
-	t62_config.nMAXADCSPERX=54;
-	t62_config.nACTVADCSVLDNOD=6;
-	t62_config.nIDLEADCSVLDNOD=6;
-	t62_config.nMINGCLIMIT=4;
-	t62_config.nMAXGCLIMIT=54;
-	t62_config.nRESERVED[0]=0;
-	t62_config.nRESERVED[1]=0;
-	t62_config.nRESERVED[2]=0;
-	t62_config.nRESERVED[3]=0;
-	t62_config.nRESERVED[4]=0;
-
-	t62_config.nBLEN[0]=0;
-	t62_config.nTCHTHR[0]=0;
-	t62_config.nTCHDI[0]=0;
-	t62_config.nMOVHYSTI[0]=0;
-	t62_config.nMOVHYSTN[0]=0;
-	t62_config.nMOVFILTER[0]=0;
-	t62_config.nNUMTOUCH[0]=0;
-	t62_config.nMRGHYST[0]=0;
-	t62_config.nMRGTHR[0]=0;
-	t62_config.nXLOCLIP[0]=0;
-	t62_config.nXHICLIP[0]=0;
-	t62_config.nYLOCLIP[0]=0;
-	t62_config.nYHICLIP[0]=0;
-	t62_config.nXEDGECTRL[0]=0;
-	t62_config.nXEDGEDIST[0]=0;
-	t62_config.nYEDGECTRL[0]=0;
-	t62_config.nYEDGEDIST[0]=0;
-	t62_config.nJUMPLIMIT[0]=0;
-	t62_config.nTCHHYST[0]=0;
-	t62_config.nNEXTTCHDI[0]=0;
-
-	t62_config.nBLEN[1]=0;
-	t62_config.nTCHTHR[1]=0;
-	t62_config.nTCHDI[1]=0;
-	t62_config.nMOVHYSTI[1]=0;
-	t62_config.nMOVHYSTN[1]=0;
-	t62_config.nMOVFILTER[1]=0;
-	t62_config.nNUMTOUCH[1]=0;
-	t62_config.nMRGHYST[1]=0;
-	t62_config.nMRGTHR[1]=0;
-	t62_config.nXLOCLIP[1]=0;
-	t62_config.nXHICLIP[1]=0;
-	t62_config.nYLOCLIP[1]=0;
-	t62_config.nYHICLIP[1]=0;
-	t62_config.nXEDGECTRL[1]=0;
-	t62_config.nXEDGEDIST[1]=0;
-	t62_config.nYEDGECTRL[1]=0;
-	t62_config.nYEDGEDIST[1]=0;
-	t62_config.nJUMPLIMIT[1]=0;
-	t62_config.nTCHHYST[1]=0;
-	t62_config.nNEXTTCHDI[1]=0;
-#elif  TOUCH_CAL_VER==4
-	t62_config.nCTRL=3;
-	t62_config.nCALCFG1=3;
-	t62_config.nCALCFG2=0;
-	t62_config.nCALCFG3=6;
-	t62_config.nCFG1=0;
-	t62_config.nRESERVED1=0;
-	t62_config.nRESERVED2=0;
-	t62_config.nBASEFREQ=0;
-	t62_config.nMAXSELFREQ=40;
-	t62_config.nFREQ[0]=0;
-	t62_config.nFREQ[1]=0;
-	t62_config.nFREQ[2]=0;
-	t62_config.nFREQ[3]=0;
-	t62_config.nFREQ[4]=0;
-	t62_config.nHOPCNT=5;
-	t62_config.nALTMAXSELFREQ=0;
-	t62_config.nHOPCNTPER=10;
-	t62_config.nHOPEVALTO=5;
-	t62_config.nHOPST=5;
-	t62_config.nNLGAIN=80;
-	t62_config.nMINNLTHR=25;
-	t62_config.nINCNLTHR=50;
-	t62_config.nADCSPERXTHR=52;
-	t62_config.nNLTHRMARGIN=25;
-	t62_config.nMAXADCSPERX=54;
-	t62_config.nACTVADCSVLDNOD=6;
-	t62_config.nIDLEADCSVLDNOD=6;
-	t62_config.nMINGCLIMIT=4;
-	t62_config.nMAXGCLIMIT=54;
-	t62_config.nRESERVED[0]=0;
-	t62_config.nRESERVED[1]=0;
-	t62_config.nRESERVED[2]=0;
-	t62_config.nRESERVED[3]=0;
-	t62_config.nRESERVED[4]=0;
-
-	t62_config.nBLEN[0]=0;
-	t62_config.nTCHTHR[0]=0;
-	t62_config.nTCHDI[0]=0;
-	t62_config.nMOVHYSTI[0]=0;
-	t62_config.nMOVHYSTN[0]=0;
-	t62_config.nMOVFILTER[0]=0;
-	t62_config.nNUMTOUCH[0]=0;
-	t62_config.nMRGHYST[0]=0;
-	t62_config.nMRGTHR[0]=0;
-	t62_config.nXLOCLIP[0]=0;
-	t62_config.nXHICLIP[0]=0;
-	t62_config.nYLOCLIP[0]=0;
-	t62_config.nYHICLIP[0]=0;
-	t62_config.nXEDGECTRL[0]=0;
-	t62_config.nXEDGEDIST[0]=0;
-	t62_config.nYEDGECTRL[0]=0;
-	t62_config.nYEDGEDIST[0]=0;
-	t62_config.nJUMPLIMIT[0]=0;
-	t62_config.nTCHHYST[0]=0;
-	t62_config.nNEXTTCHDI[0]=0;
-
-	t62_config.nBLEN[1]=0;
-	t62_config.nTCHTHR[1]=0;
-	t62_config.nTCHDI[1]=0;
-	t62_config.nMOVHYSTI[1]=0;
-	t62_config.nMOVHYSTN[1]=0;
-	t62_config.nMOVFILTER[1]=0;
-	t62_config.nNUMTOUCH[1]=0;
-	t62_config.nMRGHYST[1]=0;
-	t62_config.nMRGTHR[1]=0;
-	t62_config.nXLOCLIP[1]=0;
-	t62_config.nXHICLIP[1]=0;
-	t62_config.nYLOCLIP[1]=0;
-	t62_config.nYHICLIP[1]=0;
-	t62_config.nXEDGECTRL[1]=0;
-	t62_config.nXEDGEDIST[1]=0;
-	t62_config.nYEDGECTRL[1]=0;
-	t62_config.nYEDGEDIST[1]=0;
-	t62_config.nJUMPLIMIT[1]=0;
-	t62_config.nTCHHYST[1]=0;
-	t62_config.nNEXTTCHDI[1]=0;	
-#endif
+	t62_config.nBLEN[1]=t62_config_data[i++];
+	t62_config.nTCHTHR[1]=t62_config_data[i++];
+	t62_config.nTCHDI[1]=t62_config_data[i++];
+	t62_config.nMOVHYSTI[1]=t62_config_data[i++];
+	t62_config.nMOVHYSTN[1]=t62_config_data[i++];
+	t62_config.nMOVFILTER[1]=t62_config_data[i++];
+	t62_config.nNUMTOUCH[1]=t62_config_data[i++];
+	t62_config.nMRGHYST[1]=t62_config_data[i++];
+	t62_config.nMRGTHR[1]=t62_config_data[i++];
+	t62_config.nXLOCLIP[1]=t62_config_data[i++];
+	t62_config.nXHICLIP[1]=t62_config_data[i++];
+	t62_config.nYLOCLIP[1]=t62_config_data[i++];
+	t62_config.nYHICLIP[1]=t62_config_data[i++];
+	t62_config.nXEDGECTRL[1]=t62_config_data[i++];
+	t62_config.nXEDGEDIST[1]=t62_config_data[i++];
+	t62_config.nYEDGECTRL[1]=t62_config_data[i++];
+	t62_config.nYEDGEDIST[1]=t62_config_data[i++];
+	t62_config.nJUMPLIMIT[1]=t62_config_data[i++];
+	t62_config.nTCHHYST[1]=t62_config_data[i++];
+	t62_config.nNEXTTCHDI[1]=t62_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t62_config);
@@ -1670,25 +1230,26 @@ int mxt_PROCI_ACTIVESTYLUS_T63(struct mxt_data *mxt)
 	struct i2c_client *client = mxt->client;
 	u16 obj_addr=0, obj_size=0;
 	int error=0;
+	int i=0;
 
     get_object_info(copy_data,
             PROCI_ACTIVESTYLUS_T63, &obj_size, &obj_addr);
 	//printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
 	memset(&t63_config, 0, sizeof(t63_config));
 
-	t63_config.nCTRL  =0;
-	t63_config.nMAXTCHAREA  =0;
-	t63_config.nSIGPWR  =0;
-	t63_config.nSIGRATIO  =0;
-	t63_config.nSIGCNTMAX  =0;
-	t63_config.nXADJUST  =0;
-	t63_config.nYADJUST  =0;
-	t63_config.nCOMMSFILTER  =0;
-	t63_config.nDETADCSPERX  =0;
-	t63_config.nSUPDIST  =0;
-	t63_config.nSUPDISTHYST  =0;
-	t63_config.nSUPTO  =0;
-
+	t63_config.nCTRL  =t63_config_data[i++];
+	t63_config.nMAXTCHAREA  =t63_config_data[i++];
+	t63_config.nSIGPWR  =t63_config_data[i++];
+	t63_config.nSIGRATIO  =t63_config_data[i++];
+	t63_config.nSIGCNTMAX  =t63_config_data[i++];
+	t63_config.nXADJUST  =t63_config_data[i++];
+	t63_config.nYADJUST  =t63_config_data[i++];
+	t63_config.nCOMMSFILTER  =t63_config_data[i++];
+	t63_config.nDETADCSPERX  =t63_config_data[i++];
+	t63_config.nSUPDIST  =t63_config_data[i++];
+	t63_config.nSUPDISTHYST  =t63_config_data[i++];
+	t63_config.nSUPTO  =t63_config_data[i++];
+	
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t63_config);
 
@@ -2809,18 +2370,32 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 #endif
                                 touch_message_flag = 1;
                                 data->fingers[id].z = msg[6];
-                                data->fingers[id].w = msg[5];
-                                data->fingers[id].x =
+                                data->fingers[id].w = msg[5];		
+#if 1 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
+								data->fingers[id].x =
+                                        (((msg[2] << 4) | (msg[4] >> 4))
+                                        >> data->x_dropbits);
+                                data->fingers[id].y =
+                                        (((msg[3] << 4) | (msg[4] & 0xF))                                      
+                                        >> data->y_dropbits);
+
+								//printk("+++++[ATMEL] source temp_x=%d temp_y=%d\n",data->fingers[id].x,data->fingers[id].y);
+
+
+								data->fingers[id].x = (u16)((data->fingers[id].x * 1279) / 4096);
+								data->fingers[id].y = (u16)((data->fingers[id].y * 799) / 4096);
+
+								//printk("+++++[ATMEL] 1280*800 temp_x=%d temp_y=%d\n",data->fingers[id].x,data->fingers[id].y);
+#else
+								data->fingers[id].x =
                                         (((msg[2] << 4) | (msg[4] >> 4))
                                         >> data->x_dropbits);
                                 data->fingers[id].y =
                                         (((msg[3] << 4) | (msg[4] & 0xF))
                                         >> data->y_dropbits);
-
-									//temp_x=((msg[2] << 4) | (msg[4] >> 4));
-									//temp_y=((msg[3] << 4) | (msg[4] & 0xF));									
-									//printk("[ATMEL] temp_x=%d temp_y=%d\n",temp_x,temp_y);
-
+						
+								//printk("[ATMEL] temp_x=%d temp_y=%d\n",data->fingers[id].x,data->fingers[id].y);
+#endif
                                 data->finger_mask |= 1U << id;
 
                                 if (msg[1] & PRESS_MSG_MASK) {
@@ -4691,7 +4266,345 @@ static const struct attribute_group mxt_attr_group = {
 };
 
 #endif
-extern int mxt_config_settings(struct mxt_data *mxt);
+
+#ifdef FEATURE_TOUCH_ACTIVEPEN
+//extern void mxt1664_boost_enable(int onoff);
+u8 activepen_mode = 0;
+
+static ssize_t atm1664_activepen_show(struct device *dev,
+				struct device_attribute *attr, char *buf, size_t size)
+{
+	printk("[ATMEL] %s()\n", __func__);
+	
+	return sprintf(buf, "%d\n",  activepen_mode);
+}
+
+static ssize_t atm1664_activepen_store(struct device *dev,
+					struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	static int tmp=0;
+
+	printk("[ATMEL] %s()\n", __func__);
+	
+	tmp = buf-'0';
+	
+	disable_irq(IRQ_EINT(4));
+	if (tmp) {
+		printk("Active Pen [Enable] : %d\n", tmp);
+		//mxt1664_boost_enable(0);
+		activepen_mode = 1;		
+	}
+	else {
+		printk("Active Pen [Disable] : %d\n", tmp);
+		//mxt1664_boost_enable(1);
+		activepen_mode = 0;		
+	}
+	enable_irq(IRQ_EINT(4));
+
+    return strlen(buf);
+}
+
+static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
+#endif
+
+#ifdef FEATURE_TOUCH_CONFIG_UPDATE 
+static int tsp_GetConfigSize(char * firmware_name)
+{
+	struct file* pfile = NULL;
+	struct inode *inode;
+	unsigned long magic; 
+	off_t fsize = 0; 
+	char filepath[128];memset(filepath, 0, sizeof(filepath));
+
+	printk("[TSP] %s()\n", __func__);
+	sprintf(filepath, "/mnt/ext_sd/tsp_bin/%s", firmware_name);
+	printk("filepath=%s\n", filepath);
+	pr_info("filepath=%s\n", filepath);
+	if(NULL == pfile){
+		pfile = filp_open(filepath, O_RDONLY, 0);
+	}
+	if(IS_ERR(pfile)){
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -1;
+	}
+	inode=pfile->f_dentry->d_inode; 
+	magic=inode->i_sb->s_magic;
+	fsize=inode->i_size; 
+	filp_close(pfile, NULL);
+	return fsize;
+}
+
+static int tsp_ReadConfig(char * firmware_name, unsigned char * firmware_buf)
+{
+	struct file* pfile = NULL;
+	struct inode *inode;
+	unsigned long magic; 
+	off_t fsize; 
+	char filepath[128];
+	loff_t pos;
+
+	mm_segment_t old_fs;
+
+	memset(filepath, 0, sizeof(filepath));
+	printk("[TSP] %s()\n", __func__);
+	sprintf(filepath, "/mnt/ext_sd/tsp_bin/%s", firmware_name);
+	printk("filepath=%s\n", filepath);
+	if(NULL == pfile){
+		pfile = filp_open(filepath, O_RDONLY, 0);
+		//pfile = file_open(filepath, O_RDONLY, 0);
+	}
+	if(IS_ERR(pfile)){
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -1;
+	}
+	inode=pfile->f_dentry->d_inode; 
+	magic=inode->i_sb->s_magic;
+	fsize=inode->i_size; 
+	//char * buf;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	pos = 0;
+
+	vfs_read(pfile, firmware_buf, fsize, &pos);
+
+	filp_close(pfile, NULL);
+	set_fs(old_fs);
+	return 0;
+}
+
+uint8_t dec_num(uint8_t a0, uint8_t a1, uint8_t a2)
+{	
+    uint8_t num;
+
+	if (a1 == ';') {
+		num_digit_index = 1;
+		num = a0-'0';
+	} else if (a2 == ';') {
+		num_digit_index = 2;
+		num = (a0-'0')*10+(a1-'0');
+	} else {	    
+		num_digit_index = 3;
+		num = (a0-'0')*100+(a1-'0')*10+(a2-'0');
+	}
+
+	//printk("dec_num in(%s, %s, %s) = (%d), digit(%d)\n", a0, a1, a2, num, num_digit_index);
+	
+	return num;	
+}
+
+void obect_config_data_out(void)
+{
+	int i=0;	
+
+	// t0_info_data
+	printk("u8 t0_info_data[2] = {%d, %d};\n", t0_info_data[0], t0_info_data[1]);	
+
+	// t7_config_data
+	printk("u8 t7_config_data[4] = {%d", t7_config_data[0]);
+	for (i=1;i<4;i++)
+		printk(", %d", t7_config_data[i]);
+	printk("};\n");
+	
+	// t8_config_data
+	printk("u8 t8_config_data[10] = {%d", t8_config_data[0]);
+	for (i=1;i<10;i++)
+		printk(", %d", t8_config_data[i]);
+	printk("};\n");
+
+	// t9_config_data
+	printk("u8 t9_config_data[34] = {%d", t9_config_data[0]);
+	for (i=1;i<34;i++)
+		printk(", %d", t9_config_data[i]);
+	printk("};\n");
+
+	// t15_config_data
+	printk("u8 t15_config_data[11] = {%d", t15_config_data[0]);
+	for (i=1;i<11;i++)
+		printk(", %d", t15_config_data[i]);	
+	printk("};\n");
+
+	// t25_config_data
+	printk("u8 t25_config_data[9] = {%d", t25_config_data[0]);
+	for (i=1;i<9;i++)
+		printk(", %d", t25_config_data[i]);	
+	printk("};\n");	
+
+	// t40_config_data
+	printk("u8 t40_config_data[5] = {%d", t40_config_data[0]);
+	for (i=1;i<5;i++)
+		printk(", %d", t40_config_data[i]);	
+	printk("};\n");	
+
+	// t42_config_data
+	printk("u8 t42_config_data[46] = {%d", t42_config_data[0]);
+	for (i=1;i<46;i++)
+		printk(", %d", t42_config_data[i]);
+	printk("};\n");
+
+	// t43_config_data
+	printk("u8 t43_config_data[10] = {%d", t43_config_data[0]);
+	for (i=1;i<10;i++)
+		printk(", %d", t43_config_data[i]);
+	printk("};\n");
+
+	// t46_config_data
+	printk("u8 t46_config_data[10] = {%d", t46_config_data[0]);
+	for (i=1;i<10;i++)
+		printk(", %d", t46_config_data[i]);
+	printk("};\n");
+
+	// t47_config_data
+	printk("u8 t47_config_data[13] = {%d", t47_config_data[0]);
+	for (i=1;i<13;i++)
+		printk(", %d", t47_config_data[i]);
+	printk("};\n");
+
+	// t55_config_data
+	printk("u8 t55_config_data[6] = {%d", t55_config_data[0]);
+	for (i=1;i<6;i++)
+		printk(", %d", t55_config_data[i]);
+	printk("};\n");
+
+	// t56_config_data
+	printk("u8 t56_config_data[47] = {%d", t56_config_data[0]);
+	for (i=1;i<47;i++)
+		printk(", %d", t56_config_data[i]);
+	printk("};\n");
+
+	// t62_config_data
+	printk("u8 t62_config_data[74] = {%d", t62_config_data[0]);
+	for (i=1;i<74;i++)
+		printk(", %d", t62_config_data[i]);
+	printk("};\n");
+
+	// t63_config_data
+	printk("u8 t63_config_data[12] = {%d", t63_config_data[0]);
+	for (i=1;i<12;i++) 
+		printk(", %d", t63_config_data[i]);
+	printk("};\n");		
+}
+
+static ssize_t atm1664_config_show(struct device *dev,
+				struct device_attribute *attr, char *buf, size_t size)
+{
+	printk("[ATMEL] %s()\n", __func__);
+	
+	return sprintf(buf, "0x%x\n",  mxt_SPT_USERDATA_T38_read(copy_data));	
+}
+
+static ssize_t atm1664_config_store(struct device *dev,
+					struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	FTS_BYTE*	  pbt_buf = FTS_NULL;
+	int i;
+	int fwsize = tsp_GetConfigSize(FIRMWARE_NAME);
+	uint8_t num=0, cfg_obj=0, cfg_obj_cnt=0;
+	
+	printk("[ATMEL] %s()\n", __func__);
+
+	if (buf[0] != 'c') {
+		printk("%s() - ERROR: request_firmware failed\n", __FUNCTION__);
+		return strlen(buf);
+	}
+
+	printk("[FocalTech] %s() fwsize=%d firmware_name=%s \n", __func__,fwsize,FIRMWARE_NAME);
+	if(fwsize <= 0)
+	{
+		pr_err("%s ERROR:Get firmware size failed\n", __FUNCTION__);
+		return -1;
+	}
+
+	//=========FW upgrade========================*/
+	pbt_buf = (unsigned char *) kmalloc(fwsize+1,GFP_ATOMIC);
+	if(tsp_ReadConfig(FIRMWARE_NAME, pbt_buf))
+	{
+		pr_err("%s() - ERROR: request_firmware failed\n", __FUNCTION__);
+		kfree(pbt_buf);
+		return -1;
+	}	
+
+	for (i=0;i<(fwsize-1);i++) {
+		if (pbt_buf[i] == ':') {			
+			if (cfg_obj) 
+				mxt_defconfig_settings(copy_data, cfg_obj);			
+			
+			cfg_obj = dec_num(pbt_buf[i+1], pbt_buf[i+2], pbt_buf[i+3]);			
+			i = i + num_digit_index;		
+			cfg_obj_cnt = 0;
+			printk("MXT1665S OBJECT : %d\n", cfg_obj);
+		}
+		if (pbt_buf[i] == '=') {			
+			num = dec_num(pbt_buf[i+1], pbt_buf[i+2], pbt_buf[i+3]);
+		
+			if (cfg_obj == 0) t0_info_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 7) t7_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 8) t8_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 9) t9_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 15) t15_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 25) t25_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 40) t40_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 42) t42_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 43) t43_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 46) t46_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 47) t47_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 55) t55_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 56) t56_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 62) t62_config_data[cfg_obj_cnt] = num;
+			if (cfg_obj == 63) t63_config_data[cfg_obj_cnt] = num;	
+			
+			i = i + num_digit_index;					
+			cfg_obj_cnt++;
+		}			
+	}
+
+	kfree(pbt_buf);		
+
+    mxt_backup(copy_data);
+
+	msleep(100);
+	
+    /* reset the touch IC. */
+	mxt_reset(copy_data);
+       
+    msleep(MXT_SW_RESET_TIME);
+
+    calibrate_chip_e();
+
+	if (config_data_out) 
+		obect_config_data_out();
+	
+	disable_irq(IRQ_EINT(4));
+	copy_data->power_off();
+	msleep(100);
+	copy_data->power_on();
+	enable_irq(IRQ_EINT(4));
+
+    return strlen(buf);
+}
+
+static DEVICE_ATTR(tsp_config, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_config_show, atm1664_config_store);
+#endif
+
+//static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
+//static DEVICE_ATTR(tsp_config, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_config_show, atm1664_config_store);
+
+static struct attribute *atm1664_attributes[] = {     
+#ifdef FEATURE_TOUCH_ACTIVEPEN	
+	&dev_attr_tsp_pen.attr,  
+#endif	
+#ifdef FEATURE_TOUCH_CONFIG_UPDATE
+	&dev_attr_tsp_config.attr,  	
+#endif	
+    NULL
+};
+
+static const struct attribute_group atm1664_attr_group = {
+	.attrs = atm1664_attributes,
+};
+
+//extern int mxt_config_settings(struct mxt_data *mxt);
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
         struct mxt_platform_data *pdata = client->dev.platform_data;
@@ -4894,9 +4807,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
     	&size, &obj_address);
 
 	read_mem(data, obj_address, 1, &value);
-	printk("[ATMEL]   obj_address=%d  Touch Config Version =%d New Version=%d\n",obj_address,value,TOUCH_CAL_VER);
-	
-	if(value<TOUCH_CAL_VER && value !=0xFF) // 0xFF Test 
+	printk("[ATMEL]   obj_address=%d  Touch Config Version =%d \n",obj_address,value);
+
+	mxt_SPT_USERDATA_T38_read(data);
+
+	if(value<t0_info_data[1] && value !=0xFF)
 	{
 		printk("[ATMEL] Touch Config wrtie ....   Start  ................\n");	
 
@@ -4911,10 +4826,17 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 #if 1
 #if 1
+
+#if 1 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
+		data->x_dropbits = 0;
+        data->y_dropbits = 0;
+#else
         data->x_dropbits = 0;//(255 &0xc) << 1;
                //!(tsp_config[i][20] & 0xC)) << 1;
         data->y_dropbits =2;//(0 &0xc) << 1;
                //!(tsp_config[i][22] & 0xC)) << 1;
+#endif
+
 #else
         data->x_dropbits =(!(tsp_config[i][22] & 0xC)) << 1;  
                //!(tsp_config[i][20] & 0xC)) << 1;
@@ -4953,6 +4875,12 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
         if (ret < 0)
                 goto err_irq;
+
+#ifdef FEATURE_TOUCH_ACTIVEPEN 
+		ret = sysfs_create_group(&client->dev.kobj, &atm1664_attr_group);
+        if (ret)
+                pr_err("sysfs_create_group()is falled\n");
+#endif
 
 #if SYSFS
         ret = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
