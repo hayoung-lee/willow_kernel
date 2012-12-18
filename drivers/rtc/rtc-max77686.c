@@ -946,8 +946,18 @@ static int __devexit max77686_rtc_remove(struct platform_device *pdev)
 
 static void max77686_rtc_shutdown(struct platform_device *pdev)
 {
-#ifdef MAX77686_RTC_WTSR_SMPL
 	struct max77686_rtc_info *info = platform_get_drvdata(pdev);
+	int ret;
+
+	mutex_lock(&info->lock);
+
+	ret = max77686_rtc_stop_alarm(info);
+	if(ret < 0)
+		printk("%s : max77686_rtc_stop_alarm fail\n",__func__);
+
+	mutex_unlock(&info->lock);
+#ifdef MAX77686_RTC_WTSR_SMPL
+	//struct max77686_rtc_info *info = platform_get_drvdata(pdev);
 	int i;
 	u8 val = 0;
 
