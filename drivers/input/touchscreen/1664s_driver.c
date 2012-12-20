@@ -133,6 +133,7 @@ static bool g_debug_switch;
 static u8 threshold;
 //static int firm_status_data;
 
+#define FEATURE_TOUCH_PASSIVEPEN
 #define FEATURE_TOUCH_ACTIVEPEN
 #define FEATURE_TOUCH_CONFIG_UPDATE
 
@@ -175,47 +176,21 @@ typedef struct _FTS_CTP_PROJECT_SETTING_T
 u8 num_digit_index = 0;
 u8 config_data_out = 0;
 
-u8 t0_info_data[2] = {0, 5};
-u8 t7_config_data[4] = {50, 255, 64, 3};
-u8 t8_config_data[10] = {160, 0, 5, 3, 0, 0, 5, 0, 20, 1};
-u8 t9_config_data[34] = 
-	{131, 0, 0, 32, 52, 0, 150, 68, 2, 3, 
-	 20, 0, 0, 0, 10, 20, 20, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 20, 16, 
-	 0, 0, 0, 0};
+u8 t0_info_data[2] = {0, 6};
+u8 t7_config_data[4] = {64, 255, 50, 3};
+u8 t8_config_data[10] = {80, 0, 5, 3, 0, 0, 5, 0, 20, 1};
+u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 1, 1, 34, 10, 20, 20, 0, 0, 0, 4, 4, 5, 6, 145, 30, 141, 18, 20, 15, 0, 0, 0, 0};
 u8 t15_config_data[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-u8 t25_config_data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t25_config_data[9] = {3, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t40_config_data[5] = {0, 0, 0, 0, 0};
-u8 t42_config_data[46] = 
-	{3, 20, 24, 100, 0, 20, 10, 0, 3, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0};
+u8 t42_config_data[46] = {35, 25, 20, 90, 45, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t43_config_data[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 2, 0, 0, 13};
-u8 t47_config_data[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 1, 0, 0, 12};
+u8 t47_config_data[13] = {9, 25, 45, 4, 2, 50, 40, 254, 1, 16, 0, 0, 3};
 u8 t55_config_data[6] = {0, 0, 0, 0, 0, 0};
-u8 t56_config_data[47] = 
-	{2, 0, 1, 24, 57, 57, 57, 57, 57, 57, 
-	 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 
-	 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 
-	 57, 57, 57, 57, 57, 57, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0};
-u8 t62_config_data[74] = 
-	{3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 
-	 0, 0, 0, 0, 5, 0, 10, 5, 5, 80, 
-	 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-	 0, 0, 0, 0};
-#ifdef FEATURE_TOUCH_ACTIVEPEN
+u8 t56_config_data[47] = {2, 0, 1, 24, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 135, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t63_config_data[12] = {0, 6, 20, 215, 15, 97, 162, 3, 28, 255, 100, 0};
-#else
-u8 t63_config_data[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#endif
 #endif
 
 /* ATMEL CONFIG STRUCTURE Start */
@@ -470,7 +445,7 @@ int mxt_TOUCH_MULTITOUCHSCREEN_T9(struct mxt_data *mxt)
 	t9_config.nMRGHYST=t9_config_data[i++];
 	t9_config.nMRGTHR=t9_config_data[i++];
 	t9_config.nAMPHYST=t9_config_data[i++];  
-#if 1 // FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)	
+#if 0 // FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)	
 	t9_config.nXRANGE=4095; 
 	t9_config.nYRANGE=4095; 
 #else
@@ -2370,8 +2345,16 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 #endif
                                 touch_message_flag = 1;
                                 data->fingers[id].z = msg[6];
+#ifdef FEATURE_TOUCH_PASSIVEPEN
+								if (!msg[5])
+									data->fingers[id].w = 3;
+								else
+									data->fingers[id].w = msg[5];
+#else
                                 data->fingers[id].w = msg[5];		
-#if 1 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
+#endif
+
+#if 0 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
 								data->fingers[id].x =
                                         (((msg[2] << 4) | (msg[4] >> 4))
                                         >> data->x_dropbits);
@@ -2385,7 +2368,7 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 								data->fingers[id].x = (u16)((data->fingers[id].x * 1279) / 4096);
 								data->fingers[id].y = (u16)((data->fingers[id].y * 799) / 4096);
 
-								//printk("+++++[ATMEL] 1280*800 temp_x=%d temp_y=%d\n",data->fingers[id].x,data->fingers[id].y);
+								//printk("[ATMEL] 1280*800 id[%d] area[%d] temp_x=%d temp_y=%d\n",id, msg[5], data->fingers[id].x,data->fingers[id].y);
 #else
 								data->fingers[id].x =
                                         (((msg[2] << 4) | (msg[4] >> 4))
@@ -4809,8 +4792,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	read_mem(data, obj_address, 1, &value);
 	printk("[ATMEL]   obj_address=%d  Touch Config Version =%d \n",obj_address,value);
 
-	mxt_SPT_USERDATA_T38_read(data);
-
 	if(value<t0_info_data[1] && value !=0xFF)
 	{
 		printk("[ATMEL] Touch Config wrtie ....   Start  ................\n");	
@@ -4827,7 +4808,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 #if 1
 #if 1
 
-#if 1 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
+#if 0 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
 		data->x_dropbits = 0;
         data->y_dropbits = 0;
 #else
