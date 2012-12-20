@@ -46,6 +46,26 @@ static struct wlan_mem_prealloc wlan_mem_array[PREALLOC_WLAN_SEC_NUM] = {
 	{NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER)}
 };
 
+
+static int wlan_gpio_ldo(unsigned int onoff)
+{
+        int err;
+
+        err = gpio_request(EXYNOS4_GPX1(4), "WLAN_LDO");
+        if (err)
+                printk(KERN_ERR "#### failed to request GPX1_4 ####\n");
+
+        s3c_gpio_setpull(EXYNOS4_GPX1(4), S3C_GPIO_PULL_NONE);
+        if(onoff)
+                gpio_direction_output(EXYNOS4_GPX1(4), 1);
+        else
+                gpio_direction_output(EXYNOS4_GPX1(4), 0);
+
+        gpio_free(EXYNOS4_GPX1(4));
+        return 0;
+}
+
+
 void *wlan_static_scan_buf0;
 void *wlan_static_scan_buf1;
 static void *brcm_wlan_mem_prealloc(int section, unsigned long size)
@@ -310,6 +330,8 @@ int __init brcm_wlan_init(void)
 {
 	int ret;
 	printk("%s: start\n", __FUNCTION__);
+	
+	wlan_gpio_ldo(1);
 
 #ifdef CONFIG_DHD_USE_STATIC_BUF
 	brcm_init_wlan_mem();
