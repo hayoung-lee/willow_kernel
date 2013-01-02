@@ -234,6 +234,7 @@ static void s3c_csis_set_hs_settle(struct platform_device *pdev, int settle)
 }
 #endif
 
+int mipi_start = 0;
 void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 				int height, int pixel_format)
 {
@@ -277,7 +278,11 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	s3c_csis_phy_on(pdev);
 
 	err_print_cnt = 0;
+
+	mipi_start = 1;
+
 	info("Samsung MIPI-CSIS%d operation started\n", pdev->id);
+
 }
 
 void s3c_csis_stop(int csis_id)
@@ -299,6 +304,9 @@ void s3c_csis_stop(int csis_id)
 		if (s3c_csis[csis_id]->clock != NULL)
 			pdata->clk_off(pdev, &s3c_csis[csis_id]->clock);
 	}
+
+	mipi_start = 0;
+
 }
 
 static irqreturn_t s3c_csis_irq(int irq, void *dev_id)

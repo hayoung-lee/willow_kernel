@@ -31,13 +31,13 @@
 #define as0260_err dev_err
 #endif
 
-int g_capture_done_state = 0;
+#if DEBUG_RETRY_TEST
+int cam_test_cnt = 0;
+int cam_retry_cnt = 0;
+#endif
 
 //#define FEATURE_TW_CAMERA_FIXED_PREVIEW
-
-#if defined(FEATURE_TW_CAMERA_FIXED_PREVIEW)
 extern int willow_capture_status;
-#endif
 
 extern int get_camera_test(void);
 
@@ -1312,8 +1312,6 @@ static int as0260_set_capture_start(struct v4l2_subdev *sd)
 	//refresh(sd);
 	msleep(200);
 
-	g_capture_done_state = 1;
-
 	return 0;
 #else
 	int err=0;
@@ -1520,7 +1518,6 @@ static int as0260_set_framesize_index(struct v4l2_subdev *sd, unsigned int index
 
       return -EINVAL;
 }
-
 static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 {
 	struct as0260_state *state = to_state(sd);
@@ -1528,6 +1525,10 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 	int framesize_index=0;
   struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int buf=0;
+
+#if DEBUG_RETRY_TEST
+	cam_retry_cnt++;
+#endif
 	
 	as0260_info(&client->dev, "as0260_s_fmt__________________ requested res(%d, %d)\n",
 		fmt->width, fmt->height);
@@ -1541,15 +1542,9 @@ static int as0260_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 	framesize_index = as0260_get_framesize_index(sd);
 	err = as0260_set_framesize_index(sd, framesize_index);
 
-	as0260_set_resolution_reg(sd,state->framesize_index);
-	changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-
-	if(g_capture_done_state){
-		g_capture_done_state = 0;
-		startStreaming(sd);
+	if(willow_capture_status==0){
+		as0260_set_resolution_reg(sd,state->framesize_index);
 		changestate(sd,SS_ENTER_CONFIG_CHANGE,HC_SET_STATE);
-		waitForEvent(sd);
-		msleep(200);
 	}
 
 	state->req_fmt.colorspace = fmt->colorspace;
@@ -1972,6 +1967,11 @@ static int as0260_probe(struct i2c_client *client,
 	struct as0260_state *state;
 	struct v4l2_subdev *sd;
 
+#if DEBUG_RETRY_TEST
+	cam_test_cnt ++;
+	printk("[%s] 001 #### (cam_retry_cnt : %d, cam_test_cnt : %d) \n",__func__,cam_retry_cnt,cam_test_cnt);
+#endif
+
 	state = kzalloc(sizeof(struct as0260_state), GFP_KERNEL);
 	if (state == NULL)
 	{
@@ -2005,6 +2005,12 @@ static int as0260_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	printk("[AS0260] as0260_remove   .............................\n");
+
+#if DEBUG_RETRY_TEST
+	if(cam_retry_cnt > 0)
+		cam_retry_cnt--;
+	printk("[%s] 001 #### (cam_retry_cnt : %d, cam_test_cnt : %d) \n",__func__,cam_retry_cnt,cam_test_cnt);
+#endif
 
 #if defined(FEATURE_TW_CAM_MAX_CLOCK)
 	exynos_cpufreq_lock_free(DVFS_LOCK_ID_CAM);

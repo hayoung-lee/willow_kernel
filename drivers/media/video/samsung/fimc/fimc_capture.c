@@ -31,6 +31,7 @@
 #include "fimc.h"
 
 int willow_capture_status=0;
+extern int mipi_start;
 
 void fimc_pixelformat_deb(u32 pformat)
 {
@@ -783,6 +784,9 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 		ctrl->cam->initialized = 0;
 		ctrl->cam = NULL;
 		fimc->active_camera = -1;
+#if defined(CONFIG_VIDEO_AS0260)
+		mipi_start = 0;
+#endif
 	}
 
 	if (ctrl->flite_sd && fimc_cam_use) {
@@ -2236,6 +2240,7 @@ int fimc_streamon_capture(void *fh)
 	cap->irq = 0;
 
 #if defined(CONFIG_VIDEO_AS0260)
+	/*
 	s3c_csis_stop(CSI_CH_1);
 
 	if(willow_capture_status==0)
@@ -2244,6 +2249,7 @@ int fimc_streamon_capture(void *fh)
 				ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
 
 	fimc_hwset_reset(ctrl);
+	*/
 #endif
 	fimc_hwset_enable_irq(ctrl, 0, 1);
 
@@ -2283,6 +2289,9 @@ int fimc_streamon_capture(void *fh)
 			}
 			printk(" fimc_streamon_capture cam->type=%d cam->id=%d cam->width=%d cam->height=%d\n",cam->type,cam->id,cam->width,cam->height);
 			if (cam->type == CAM_TYPE_MIPI) {
+#if defined(CONFIG_VIDEO_AS0260)
+				if(mipi_start == 0){
+#endif
 				if (cam->id == CAMERA_CSI_C)
 					s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
 					cam->mipi_settle, cam->mipi_align,
@@ -2293,6 +2302,9 @@ int fimc_streamon_capture(void *fh)
 					cam->mipi_settle, cam->mipi_align,
 					cam->width, cam->height,
 					cap->fmt.pixelformat);
+#if defined(CONFIG_VIDEO_AS0260)
+				}
+#endif
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
 #if 0
@@ -2491,10 +2503,19 @@ int fimc_streamoff_capture(void *fh)
 			v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 0);
 
 		if (ctrl->cam->type == CAM_TYPE_MIPI) {
+#if defined(CONFIG_VIDEO_AS0260)
+			if(willow_capture_status==0){
+				if (ctrl->cam->id == CAMERA_CSI_C)
+					s3c_csis_stop(CSI_CH_0);
+				else
+					s3c_csis_stop(CSI_CH_1);
+			}
+#else
 			if (ctrl->cam->id == CAMERA_CSI_C)
 				s3c_csis_stop(CSI_CH_0);
 			else
 				s3c_csis_stop(CSI_CH_1);
+#endif
 		}
 		fimc_hwset_reset(ctrl);
 
