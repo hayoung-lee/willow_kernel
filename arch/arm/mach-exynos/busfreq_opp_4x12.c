@@ -505,12 +505,6 @@ void exynos4x12_target(int index)
 {
 	unsigned int tmp;
 
-#ifdef CONFIG_MACH_WILLOW
-       //printk("%s %d\n",__func__,index);
-       if(index > 4)
-               index = 4;
-#endif
-
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[index].clk_dmc0div;
 
@@ -629,6 +623,11 @@ void exynos4x12_target(int index)
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_CAM1);
 	} while (tmp & 0x1111);
 
+	/* if pega-prime, ABB value is not changed */
+	if (samsung_rev() >= EXYNOS4412_REV_2_0)
+		return;
+
+	/* ABB value is changed in below case */
 	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
 		if (index == LV_6) { /* MIF:100 / INT:100 */
 			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
@@ -757,7 +756,7 @@ int exynos4x12_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq)
 }
 EXPORT_SYMBOL_GPL(exynos4x12_find_busfreq_by_volt);
 
-unsigned int exynos4x12_get_int_volt(unsigned int index)
+unsigned int exynos4x12_get_int_volt(unsigned long index)
 {
 	return exynos4_int_volt[asv_group_index][index];
 }

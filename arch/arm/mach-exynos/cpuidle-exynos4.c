@@ -54,6 +54,8 @@
 
 extern unsigned long sys_pwr_conf_addr;
 extern unsigned int l2x0_save[3];
+extern unsigned int scu_save[2];
+
 
 enum hc_type {
 	HC_SDHC,
@@ -407,10 +409,13 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(0);
 
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if (!soc_is_exynos4210()) {
 		abb_val = exynos4x12_get_abb_member(ABB_ARM);
-		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_075V);
 	}
+#endif
+
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -458,7 +463,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 {
 	struct timeval before, after;
 	int idle_time;
-	unsigned long tmp, abb_val;
+	unsigned long tmp, abb_val, abb_val_int;
 
 	s3c_pm_do_save(exynos4_lpa_save, ARRAY_SIZE(exynos4_lpa_save));
 
@@ -500,10 +505,14 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 		/* Waiting for flushing UART fifo */
 	} while (exynos4_check_enter());
 
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if (!soc_is_exynos4210()) {
 		abb_val = exynos4x12_get_abb_member(ABB_ARM);
-		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
+		abb_val_int = exynos4x12_get_abb_member(ABB_INT);
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_075V);
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_075V);
 	}
+#endif
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
@@ -535,8 +544,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 
 early_wakeup:
 #ifdef CONFIG_EXYNOS4_CPUFREQ
-	if ((exynos_result_of_asv > 1) && !soc_is_exynos4210())
+	if ((exynos_result_of_asv > 1) && !soc_is_exynos4210()) {
 		exynos4x12_set_abb_member(ABB_ARM, abb_val);
+		exynos4x12_set_abb_member(ABB_INT, abb_val_int);
+	}
 #endif
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
@@ -700,9 +711,12 @@ static int exynos4_cpuidle_notifier_event(struct notifier_block *this,
 {
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
+	case PM_HIBERNATION_PREPARE:
+	case PM_RESTORE_PREPARE:
 		disable_hlt();
 		pr_debug("PM_SUSPEND_PREPARE for CPUIDLE\n");
 		return NOTIFY_OK;
+	case PM_POST_HIBERNATION:
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
 		enable_hlt();
@@ -778,7 +792,7 @@ static void __init exynos4_core_down_clk(void)
 
 static int __init exynos4_init_cpuidle(void)
 {
-	int i, max_cpuidle_state, cpu_id;
+	int i, max_cpuidle_state, cpu_id, ret;
 	struct cpuidle_device *device;
 	struct platform_device *pdev;
 	struct resource *res;
@@ -792,7 +806,12 @@ static int __init exynos4_init_cpuidle(void)
 	if (use_clock_down == HW_CLK_DWN)
 		exynos4_core_down_clk();
 
-	cpuidle_register_driver(&exynos4_idle_driver);
+	ret = cpuidle_register_driver(&exynos4_idle_driver);
+
+	if(ret < 0){
+		printk(KERN_ERR "exynos4 idle register driver failed\n");
+		return ret;
+	}
 
 	for_each_cpu(cpu_id, cpu_online_mask) {
 		device = &per_cpu(exynos4_cpuidle_device, cpu_id);
@@ -813,6 +832,7 @@ static int __init exynos4_init_cpuidle(void)
 		device->safe_state = &device->states[0];
 
 		if (cpuidle_register_device(device)) {
+			cpuidle_unregister_driver(&exynos4_idle_driver);
 			printk(KERN_ERR "CPUidle register device failed\n,");
 			return -EIO;
 		}

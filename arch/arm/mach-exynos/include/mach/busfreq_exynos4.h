@@ -89,7 +89,7 @@ struct opp *step_down(struct busfreq_data *data, int step);
 
 int exynos4x12_init(struct device *dev, struct busfreq_data *data, bool pop);
 void exynos4x12_target(int index);
-unsigned int exynos4x12_get_int_volt(unsigned int index);
+unsigned int exynos4x12_get_int_volt(unsigned long freq);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
 struct opp *exynos4x12_monitor(struct busfreq_data *data);
 void exynos4x12_prepare(unsigned int index);
