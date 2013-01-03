@@ -119,6 +119,24 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&mfcdev->lock);
 
+#if defined(CONFIG_USE_MFC_CMA) && defined(CONFIG_MACH_WILLOW)
+	if (atomic_read(&mfcdev->inst_cnt) == 0) {
+		size_t size = 0x02800000;
+		mfcdev->cma_vaddr = dma_alloc_coherent(mfcdev->device, size,
+						&mfcdev->cma_dma_addr, 0);
+		if (!mfcdev->cma_vaddr) {
+			printk(KERN_ERR "%s: dma_alloc_coherent returns "
+						"-ENOMEM\n", __func__);
+			mutex_unlock(&mfcdev->lock);
+			return -ENOMEM;
+		}
+		printk(KERN_INFO "%s[%d] size 0x%x, vaddr 0x%x, base 0x%x\n",
+					 __func__, __LINE__, (int)size,
+						(int)mfcdev->cma_vaddr,
+						(int)mfcdev->cma_dma_addr);
+	}
+#endif
+
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	if (mfcdev->drm_playback) {
 		mfc_err("DRM playback was activated, cannot open no more instance\n");
@@ -372,8 +390,18 @@ static int mfc_release(struct inode *inode, struct file *file)
 	ret = 0;
 
 err_pwr_disable:
+#if defined(CONFIG_USE_MFC_CMA) && defined(CONFIG_MACH_WILLOW)
+	if (atomic_read(&mfcdev->inst_cnt) == 0) {
+		size_t size = 0x02800000;
+		dma_free_coherent(mfcdev->device, size, mfcdev->cma_vaddr,
+					mfcdev->cma_dma_addr);
+		printk(KERN_INFO "%s[%d] size 0x%x, vaddr 0x%x, base 0x0%x\n",
+				__func__, __LINE__, (int)size,
+				(int) mfcdev->cma_vaddr,
+				(int)mfcdev->cma_dma_addr);
+	}
+#endif
 	mutex_unlock(&dev->lock);
-
 	return ret;
 }
 

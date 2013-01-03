@@ -3233,11 +3233,13 @@ static void __init exynos4_reserve_mem(void)
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+#ifndef CONFIG_USE_FIMC_CMA
 		{
 			.name = "fimc1",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
 			.start = 0
 		},
+#endif
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_NORMAL
 		{
@@ -3333,11 +3335,13 @@ static void __init exynos4_reserve_mem(void)
 		{
 			.name = "mfc-secure",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_SECURE * SZ_1K,
+			.start = 0x5C100000,
 		},
 #endif
 		{
 			.name = "sectbl",
 			.size = SZ_1M,
+			.start = 0x5C000000,
 		},
 		{
 			.size = 0

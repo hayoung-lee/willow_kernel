@@ -314,8 +314,13 @@ void nfs_commitdata_release(void *data);
 void nfs_commit_release_pages(struct nfs_write_data *data);
 
 #ifdef CONFIG_MIGRATION
+#ifndef CONFIG_DMA_CMA
 extern int nfs_migrate_page(struct address_space *,
 		struct page *, struct page *, enum migrate_mode);
+#else
+extern int nfs_migrate_page(struct address_space *,
+		struct page *, struct page *);
+#endif
 #else
 #define nfs_migrate_page NULL
 #endif
