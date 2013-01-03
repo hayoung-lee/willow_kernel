@@ -31,7 +31,7 @@
 
 //#define SUPPORT_USB_STATE
 #define FULL_VCELL 4250000
-#define FULL_SOC 100
+#define FULL_SOC 99
 #define LOW_SOC 1
 #define WORK_DELAY 1000
 
@@ -202,6 +202,9 @@ static int battery_get_property(struct power_supply *battery,
 			break;
 		case POWER_SUPPLY_PROP_CAPACITY:
 			val->intval = fg_read_soc();
+			if (val->intval >= FULL_SOC) {
+				val->intval = 100;
+			}
 #ifdef BATTERY_DEBUG
 			if (g_force_soc_use) {
 				val->intval = g_force_soc_val;
