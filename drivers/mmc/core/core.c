@@ -2074,7 +2074,6 @@ void mmc_rescan(struct work_struct *work)
 			break;
 	}
 	mmc_release_host(host);
-printk("%s\n",__func__);
  out:
 	if (extend_wakelock)
 		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
