@@ -149,7 +149,6 @@ struct mmc_host_ops {
 	int	(*start_signal_voltage_switch)(struct mmc_host *host, struct mmc_ios *ios);
 	int	(*execute_tuning)(struct mmc_host *host);
 	void	(*enable_preset_value)(struct mmc_host *host, bool enable);
-	int     (*select_drive_strength)(unsigned int max_dtr, int host_drv, int card_drv);
 	void	(*hw_reset)(struct mmc_host *host);
 };
 
@@ -450,25 +449,5 @@ static inline int mmc_host_cmd23(struct mmc_host *host)
 {
 	return host->caps & MMC_CAP_CMD23;
 }
-
-
-#ifdef CONFIG_MMC_CLKGATE
-void mmc_host_clk_hold(struct mmc_host *host);
-void mmc_host_clk_release(struct mmc_host *host);
-unsigned int mmc_host_clk_rate(struct mmc_host *host);
-
-#else
-static inline void mmc_host_clk_hold(struct mmc_host *host)
-{
-}
-
-static inline void mmc_host_clk_release(struct mmc_host *host)
-{
-}
-
-static inline unsigned int mmc_host_clk_rate(struct mmc_host *host)
-{
-	return host->ios.clock;
-}
 #endif
-#endif /* LINUX_MMC_HOST_H */
+

@@ -130,7 +130,6 @@ void mmc_host_clk_hold(struct mmc_host *host)
 {
 	unsigned long flags;
 
-	cancel_work_sync(&host->clk_gate_work);
 	mutex_lock(&host->clk_gate_mutex);
 	spin_lock_irqsave(&host->clk_lock, flags);
 	if (host->clk_gated) {
