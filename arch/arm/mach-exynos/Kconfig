@@ -218,8 +218,6 @@ config EXYNOS4_SETUP_SDHCI_GPIO
 
 config EXYNOS4_SETUP_MSHCI
 	bool
-	depends on S5P_DEV_MSHC
-	default y
 	select EXYNOS4_SETUP_MSHCI_GPIO
 	help
 	  Internal helper functions for EXYNOS4 based MSHCI systems.
@@ -776,6 +774,7 @@ config MACH_WILLOW
 	select EXYNOS_DEV_TMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
+	select EXYNOS4_SETUP_MSHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -844,30 +843,30 @@ endmenu
 menu "MMC/SD slot setup"
 depends on PLAT_S5P
 
-comment "SELECT PLL for SDMMC"
-choice
-	prompt "Use Special PLL for SDMMC"
-	depends on PLAT_S5P
-	help
-		This feature change MMCxOUT's clock source between MPLL and EPLL
-	default EXYNOS4_SDMMC_MPLL_50MHZ
-
-config EXYNOS4_SDMMC_MPLL_50MHZ
-	bool "MPLL"
-
-config EXYNOS4_SDMMC_EPLL_50MHZ
-	bool "EPLL"
-endchoice
-
 comment "SELECT SYNOPSYS CONTROLLER INTERFACE DRIVER"
 config EXYNOS4_DEV_DWMCI
 	bool "DWMCI"
-	depends on PLAT_S5P
+	depends on PLAT_S5P && MMC_DW
 	default n
 	help
 	IF DWMCI is used, SDHC channel 0 is disabled.
 
-config S5P_DEV_MSHC
+config EXYNOS5_DEV_DWMCI1
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 1
+
+config EXYNOS5_DEV_DWMCI2
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 2
+
+config EXYNOS5_DEV_DWMCI3
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 3
+
+config EXYNOS4_DEV_MSHC
 	bool "MSHCI"
 	depends on PLAT_S5P
 	default n
@@ -876,7 +875,7 @@ config S5P_DEV_MSHC
 
 choice
 	prompt "Use Special PLL for MSHC"
-	depends on PLAT_S5P && S5P_DEV_MSHC
+	depends on PLAT_S5P && EXYNOS4_DEV_MSHC
 	help
 		This feature change MMC4OUT's clock source between MPLL and EPLL
 	default EXYNOS4_MSHC_MPLL_40MHZ
@@ -891,18 +890,23 @@ config EXYNOS4_MSHC_EPLL_45MHZ
 	bool "EPLL"
 endchoice
 
+config EXYNOS4_MSHC_SUPPORT_PQPRIME_EPLL
+	bool "Support EPLL 45MHz for PegasusQ Prime dynamically"
+	depends on PLAT_S5P && EXYNOS4_DEV_MSHC && EXYNOS4_MSHC_MPLL_40MHZ
+	default n
+
 comment "Use 8-bit bus width"
 
 config EXYNOS4_MSHC_8BIT
-        bool "MSHC with 8-bit bus"
-	depends on PLAT_S5P && S5P_DEV_MSHC
+	bool "MSHC with 8-bit bus"
+	depends on PLAT_S5P && EXYNOS4_DEV_MSHC
 	default n
 	help
 	  IF MSHC uses 8-bit bus, SDHC channel 1 is disabled.
 
 config EXYNOS4_SDHCI_CH0_8BIT
 	bool "SDHC Channel 0 with 8-bit bus"
-	depends on PLAT_S5P && !EXYNOS4_DEV_DWMCI && !S5P_DEV_MSHC
+	depends on PLAT_S5P && !EXYNOS4_DEV_DWMCI && !EXYNOS4_DEV_MSHC
 	default n
 	help
 	  Support HSMMC Channel 0 8-bit bus.
@@ -915,9 +919,9 @@ config EXYNOS4_SDHCI_CH2_8BIT
 	  If selected, Channel 3 is disabled.
 
 comment "Use DDR"
-	depends on PLAT_S5P && S5P_DEV_MSHC
+	depends on PLAT_S5P && EXYNOS4_DEV_MSHC
 config EXYNOS4_MSHC_DDR
-        depends on PLAT_S5P && S5P_DEV_MSHC
+	depends on PLAT_S5P && EXYNOS4_DEV_MSHC
 	bool "MSHC with DDR mode"
 	default n
 	help

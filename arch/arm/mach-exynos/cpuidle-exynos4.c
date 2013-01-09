@@ -79,7 +79,7 @@ static struct check_device_op chk_sdhc_op[] = {
 #if defined(CONFIG_EXYNOS4_DEV_DWMCI)
 	{.base = 0, .pdev = &exynos_device_dwmci, .type = HC_MSHC},
 #endif
-#if defined(CONFIG_S5P_DEV_MSHC)
+#if defined(CONFIG_EXYNOS4_DEV_MSHC)
 	{.base = 0, .pdev = &s3c_device_mshci, .type = HC_MSHC},
 #endif
 #if defined(CONFIG_S3C_DEV_HSMMC)

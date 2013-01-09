@@ -1105,6 +1105,16 @@ static struct s3c_sdhci_platdata willow_hsmmc2_pdata __initdata = {
 	.host_caps		= MMC_CAP_8_BIT_DATA,
 #endif
 };
+static struct s3c_sdhci_platdata willow_hsmmc2_pdata_MP __initdata = {
+	.cd_type		= S3C_SDHCI_CD_GPIO,
+	.ext_cd_gpio		= EXYNOS4_GPX0(1),
+	.ext_cd_gpio_invert	= true,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+#ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#endif
+};
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC3
@@ -1118,11 +1128,10 @@ static struct s3c_sdhci_platdata willow_hsmmc3_pdata __initdata = {
 };
 #endif
 
-#ifdef CONFIG_S5P_DEV_MSHC
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 	.cd_type		= S3C_MSHCI_CD_PERMANENT,
-	.has_wp_gpio		= true,
-	.wp_gpio		= 0xffffffff,
+	.fifo_depth		= 0x80,
 #if defined(CONFIG_EXYNOS4_MSHC_8BIT) && \
 	defined(CONFIG_EXYNOS4_MSHC_DDR)
 	.max_width		= 8,
@@ -1134,6 +1143,7 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 #elif defined(CONFIG_EXYNOS4_MSHC_DDR)
 	.host_caps		= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50,
 #endif
+	.int_power_gpio		= GPIO_XMMC0_CDn,
 };
 #endif
 
@@ -2976,7 +2986,7 @@ static struct platform_device *willow_devices[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
 #endif
-#ifdef CONFIG_S5P_DEV_MSHC
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 	&s3c_device_mshci,
 #endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
@@ -3641,12 +3651,15 @@ static void __init willow_machine_init(void)
 	s3c_sdhci1_set_platdata(&willow_hsmmc1_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC2
-	s3c_sdhci2_set_platdata(&willow_hsmmc2_pdata);
+	if(willow_get_hw_version() == WILLOW_HW_MP)
+		s3c_sdhci2_set_platdata(&willow_hsmmc2_pdata_MP);
+	else
+		s3c_sdhci2_set_platdata(&willow_hsmmc2_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&willow_hsmmc3_pdata);
 #endif
-#ifdef CONFIG_S5P_DEV_MSHC
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
 #endif
 #if defined(CONFIG_VIDEO_EXYNOS_TV) && defined(CONFIG_VIDEO_EXYNOS_HDMI)

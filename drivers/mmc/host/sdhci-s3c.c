@@ -24,6 +24,7 @@
 
 #include <plat/sdhci.h>
 #include <plat/regs-sdhci.h>
+#include <plat/gpio-cfg.h>
 
 #include "sdhci.h"
 
@@ -47,6 +48,7 @@ struct sdhci_s3c {
 	unsigned int		cur_clk;
 	int			ext_cd_irq;
 	int			ext_cd_gpio;
+	int			ext_cd_gpio_invert;
 
 	struct clk		*clk_io;
 	struct clk		*clk_bus[MAX_BUS_CLK];
@@ -212,6 +214,7 @@ static void sdhci_s3c_set_clock(struct sdhci_host *host, unsigned int clock)
 		if (ourhost->pdata->cfg_card)
 			(ourhost->pdata->cfg_card)(ourhost->pdev, host->ioaddr,
 						   &ios, NULL);
+
 	}
 }
 
@@ -288,6 +291,7 @@ static void sdhci_cmu_set_clock(struct sdhci_host *host, unsigned int clock)
 static int sdhci_s3c_platform_8bit_width(struct sdhci_host *host, int width)
 {
 	u8 ctrl;
+	struct sdhci_s3c *ourhost = to_s3c(host);
 
 	ctrl = sdhci_readb(host, SDHCI_HOST_CONTROL);
 
@@ -295,14 +299,23 @@ static int sdhci_s3c_platform_8bit_width(struct sdhci_host *host, int width)
 	case MMC_BUS_WIDTH_8:
 		ctrl |= SDHCI_CTRL_8BITBUS;
 		ctrl &= ~SDHCI_CTRL_4BITBUS;
+		/* call cfg_gpio with 8bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 8);
 		break;
 	case MMC_BUS_WIDTH_4:
 		ctrl |= SDHCI_CTRL_4BITBUS;
 		ctrl &= ~SDHCI_CTRL_8BITBUS;
+		/* call cfg_gpio with 4bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 4);
 		break;
 	default:
-		ctrl &= ~SDHCI_CTRL_4BITBUS;
 		ctrl &= ~SDHCI_CTRL_8BITBUS;
+		ctrl &= ~SDHCI_CTRL_4BITBUS;
+		/* call cfg_gpio with 1bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 1);
 		break;
 	}
 
@@ -327,11 +340,13 @@ static void sdhci_s3c_notify_change(struct platform_device *dev, int state)
 		spin_lock_irqsave(&host->lock, flags);
 		if (state) {
 			dev_dbg(&dev->dev, "card inserted.\n");
-			host->flags &= ~SDHCI_DEVICE_DEAD;
+			pr_info("%s: card inserted.\n",
+					mmc_hostname(host->mmc));
 			host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
 		} else {
 			dev_dbg(&dev->dev, "card removed.\n");
-			host->flags |= SDHCI_DEVICE_DEAD;
+			pr_info("%s: card removed.\n",
+					mmc_hostname(host->mmc));
 			host->quirks &= ~SDHCI_QUIRK_BROKEN_CARD_DETECTION;
 		}
 		tasklet_schedule(&host->card_tasklet);
@@ -345,6 +360,17 @@ static irqreturn_t sdhci_s3c_gpio_card_detect_thread(int irq, void *dev_id)
 	int status = gpio_get_value(sc->ext_cd_gpio);
 	if (sc->pdata->ext_cd_gpio_invert)
 		status = !status;
+
+	if (sc->host->mmc) {
+		if (status)
+			mmc_host_sd_set_present(sc->host->mmc);
+		else
+			mmc_host_sd_clear_present(sc->host->mmc);
+
+		pr_debug("SDcard present state=%d.\n",
+			 mmc_host_sd_present(sc->host->mmc));
+	}
+
 	sdhci_s3c_notify_change(sc->pdev, status);
 	return IRQ_HANDLED;
 }
@@ -354,8 +380,7 @@ static void sdhci_s3c_setup_card_detect_gpio(struct sdhci_s3c *sc)
 	struct s3c_sdhci_platdata *pdata = sc->pdata;
 	struct device *dev = &sc->pdev->dev;
 
-	if (gpio_request(pdata->ext_cd_gpio, "SDHCI EXT CD") == 0) {
-		sc->ext_cd_gpio = pdata->ext_cd_gpio;
+	if (sc->ext_cd_gpio > 0) {
 		sc->ext_cd_irq = gpio_to_irq(pdata->ext_cd_gpio);
 		if (sc->ext_cd_irq &&
 		    request_threaded_irq(sc->ext_cd_irq, NULL,
@@ -365,6 +390,15 @@ static void sdhci_s3c_setup_card_detect_gpio(struct sdhci_s3c *sc)
 			int status = gpio_get_value(sc->ext_cd_gpio);
 			if (pdata->ext_cd_gpio_invert)
 				status = !status;
+
+			if (status)
+				mmc_host_sd_set_present(sc->host->mmc);
+			else
+				mmc_host_sd_clear_present(sc->host->mmc);
+
+			/* T-Flash EINT for CD SHOULD be wakeup source */
+			//irq_set_irq_wake(sc->ext_cd_irq, 1);
+
 			sdhci_s3c_notify_change(sc->pdev, status);
 		} else {
 			dev_warn(dev, "cannot request irq for card detect\n");
@@ -472,7 +506,7 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	if (!host->ioaddr) {
 		dev_err(dev, "failed to map registers\n");
 		ret = -ENXIO;
-		goto err_req_regs;
+		goto err_add_host;
 	}
 
 	/* Ensure we have minimal gpio selected CMD/CLK/Detect */
@@ -501,11 +535,7 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	 * SDHCI block, or a missing configuration that needs to be set. */
 	host->quirks |= SDHCI_QUIRK_NO_BUSY_IRQ;
 
-	/* This host supports the Auto CMD12 */
-	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
-
-	if (pdata->cd_type == S3C_SDHCI_CD_NONE ||
-	    pdata->cd_type == S3C_SDHCI_CD_PERMANENT)
+	if (pdata->cd_type == S3C_SDHCI_CD_NONE)
 		host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
 
 	if (pdata->cd_type == S3C_SDHCI_CD_PERMANENT)
@@ -538,11 +568,34 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	if (pdata->pm_flags)
 		host->mmc->pm_flags |= pdata->pm_flags;
 
+	/* To turn on vmmc regulator only if sd card exists,
+	   GPIO pin for card detection should be initialized.
+	   Moved from sdhci_s3c_setup_card_detect_gpio() function */
+	if (pdata->cd_type == S3C_SDHCI_CD_GPIO &&
+	    gpio_is_valid(pdata->ext_cd_gpio)) {
+		if (gpio_request(pdata->ext_cd_gpio, "SDHCI EXT CD") == 0) {
+			sc->ext_cd_gpio = pdata->ext_cd_gpio;
+			sc->ext_cd_gpio_invert = pdata->ext_cd_gpio_invert;
+
+			mmc_host_sd_set_present(host->mmc);
+		} else {
+			dev_err(dev, "cannot request gpio for card detect\n");
+		}
+	}
+
 	ret = sdhci_add_host(host);
 	if (ret) {
 		dev_err(dev, "sdhci_add_host() failed\n");
 		goto err_add_host;
 	}
+
+	/* if it is set SDHCI_QUIRK_BROKEN_CARD_DETECTION before calling
+	   sdhci_add_host, in sdhci_add_host, MMC_CAP_NEEDS_POLL flag will
+	   be set. The flag S3C_SDHCI_CD_PERMANENT dose not need to
+	   detect a card by polling. */
+	if (pdata->cd_type == S3C_SDHCI_CD_PERMANENT || \
+		pdata->cd_type == S3C_SDHCI_CD_GPIO)
+		host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
 
 	/* The following two methods of card detection might call
 	   sdhci_s3c_notify_change() immediately, so they can be called
@@ -556,8 +609,9 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	return 0;
 
  err_add_host:
-	release_resource(sc->ioarea);
-	kfree(sc->ioarea);
+	if (host->ioaddr)
+		iounmap(host->ioaddr);
+	release_mem_region(sc->ioarea->start, resource_size(sc->ioarea));
 
  err_req_regs:
 	for (ptr = 0; ptr < MAX_BUS_CLK; ptr++) {
@@ -617,17 +671,27 @@ static int __devexit sdhci_s3c_remove(struct platform_device *pdev)
 static int sdhci_s3c_suspend(struct platform_device *dev, pm_message_t pm)
 {
 	struct sdhci_host *host = platform_get_drvdata(dev);
+	int ret = 0;
 
-	sdhci_suspend_host(host, pm);
-	return 0;
+	ret = sdhci_suspend_host(host, pm);
+
+	return ret;
+}
+
+static void sdhci_s3c_shutdown(struct platform_device *dev)
+{
+	struct sdhci_host *host = platform_get_drvdata(dev);
+
+	sdhci_shutdown_host(host);
 }
 
 static int sdhci_s3c_resume(struct platform_device *dev)
 {
 	struct sdhci_host *host = platform_get_drvdata(dev);
+	int ret = 0;
 
-	sdhci_resume_host(host);
-	return 0;
+	ret = sdhci_resume_host(host);
+	return ret;
 }
 
 #else
@@ -640,6 +704,7 @@ static struct platform_driver sdhci_s3c_driver = {
 	.remove		= __devexit_p(sdhci_s3c_remove),
 	.suspend	= sdhci_s3c_suspend,
 	.resume	        = sdhci_s3c_resume,
+	.shutdown	= sdhci_s3c_shutdown,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= "s3c-sdhci",

@@ -319,6 +319,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	if (card->ext_csd.rev >= 3) {
 		u8 sa_shift = ext_csd[EXT_CSD_S_A_TIMEOUT];
 		card->ext_csd.part_config = ext_csd[EXT_CSD_PART_CONFIG];
+		card->ext_csd.boot_part_prot = ext_csd[EXT_CSD_BOOT_CONFIG_PROT];
 
 		/* EXT_CSD value is in units of 10ms, but we store in ms */
 		card->ext_csd.part_time = 10 * ext_csd[EXT_CSD_PART_SWITCH_TIME];
@@ -475,9 +476,6 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 			err = -EINVAL;
 		goto out;
 	}
-
-	if (bus_width == MMC_BUS_WIDTH_1)
-		goto out;
 
 	/* only compare read only fields */
 	err = (!(card->ext_csd.raw_partition_support ==
@@ -825,7 +823,21 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err && err != -EBADMSG)
 			goto free_card;
 	}
-
+#if 0
+	/*
+	 * Ensure eMMC boot config is protected.
+	 */
+	if (!(card->ext_csd.boot_part_prot & (0x1<<4)) &&
+		!(card->ext_csd.boot_part_prot & (0x1<<0))) {
+		card->ext_csd.boot_part_prot |= (0x1<<0);
+		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+				 EXT_CSD_BOOT_CONFIG_PROT,
+				 card->ext_csd.boot_part_prot,
+				 card->ext_csd.part_time);
+		if (err && err != -EBADMSG)
+			goto free_card;
+	}
+#endif
 	/*
 	 * If the host supports the power_off_notify capability then
 	 * set the notification byte in the ext_csd register of device

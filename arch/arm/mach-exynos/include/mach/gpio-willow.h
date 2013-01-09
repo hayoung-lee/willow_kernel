@@ -119,7 +119,7 @@
 #define GPIO_TOUCH_INT			EXYNOS4_GPX0(4)
 #define GPIO_TOUCH_RESET		EXYNOS4_GPB(4)
 #define GPIO_TOUCH_BOOTST_EN	EXYNOS4212_GPM3(3)
-
+
 /* CAMERA */
 #define GPIO_CAMERA_RESET			EXYNOS4212_GPM1(4)
 #define GPIO_CAMERA_SHUTDOWN		EXYNOS4212_GPM1(5)
@@ -129,6 +129,9 @@
 
 /* LSENSOR */
 #define GPIO_LSENSOR_INT		EXYNOS4_GPX2(2)
+
+/* EMMC */
+#define GPIO_XMMC0_CDn            EXYNOS4_GPK0(2)
 
 extern void willow_config_sleep_gpio_table(void);
 extern void willow_config_gpio_table(void);
