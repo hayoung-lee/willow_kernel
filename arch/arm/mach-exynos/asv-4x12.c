@@ -263,7 +263,9 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 			else
 				exynos_result_of_asv = exynos_cal_asv;
 		}
-
+#ifdef CONFIG_MACH_WILLOW
+		exynos_result_of_asv = DEFAULT_ASV_GROUP;
+#endif
 		pr_info("EXYNOS4X12(SG):  ORIG : %d MOD : %d RESULT : %d\n",
 			exynos_orig_sp, exynos_mod_sp, exynos_result_of_asv);
 
