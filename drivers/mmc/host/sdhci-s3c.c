@@ -291,6 +291,7 @@ static void sdhci_cmu_set_clock(struct sdhci_host *host, unsigned int clock)
 static int sdhci_s3c_platform_8bit_width(struct sdhci_host *host, int width)
 {
 	u8 ctrl;
+	struct sdhci_s3c *ourhost = to_s3c(host);
 
 	ctrl = sdhci_readb(host, SDHCI_HOST_CONTROL);
 
@@ -298,14 +299,23 @@ static int sdhci_s3c_platform_8bit_width(struct sdhci_host *host, int width)
 	case MMC_BUS_WIDTH_8:
 		ctrl |= SDHCI_CTRL_8BITBUS;
 		ctrl &= ~SDHCI_CTRL_4BITBUS;
+		/* call cfg_gpio with 8bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 8);
 		break;
 	case MMC_BUS_WIDTH_4:
 		ctrl |= SDHCI_CTRL_4BITBUS;
 		ctrl &= ~SDHCI_CTRL_8BITBUS;
+		/* call cfg_gpio with 4bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 4);
 		break;
 	default:
 		ctrl &= ~SDHCI_CTRL_8BITBUS;
 		ctrl &= ~SDHCI_CTRL_4BITBUS;
+		/* call cfg_gpio with 1bit data bus */
+		if (ourhost->pdata->cfg_gpio)
+			ourhost->pdata->cfg_gpio(ourhost->pdev, 1);
 		break;
 	}
 
