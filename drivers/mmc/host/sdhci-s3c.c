@@ -291,7 +291,8 @@ static void sdhci_cmu_set_clock(struct sdhci_host *host, unsigned int clock)
 static int sdhci_s3c_platform_8bit_width(struct sdhci_host *host, int width)
 {
 	u8 ctrl;
-	struct sdhci_s3c *ourhost = to_s3c(host);
+
+	ctrl = sdhci_readb(host, SDHCI_HOST_CONTROL);
 
 	switch (width) {
 	case MMC_BUS_WIDTH_8:
