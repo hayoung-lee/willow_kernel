@@ -128,6 +128,7 @@ void exynos4_setup_sdhci2_cfg_gpio(struct platform_device *dev, int width)
 
 void exynos4_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width)
 {
+#ifndef CONFIG_MACH_WILLOW
 	struct s3c_sdhci_platdata *pdata = dev->dev.platform_data;
 	unsigned int gpio;
 
@@ -150,6 +151,7 @@ void exynos4_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width)
 		s3c_gpio_setpull(EXYNOS4_GPK3(2), S3C_GPIO_PULL_NONE);
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 	}
+#endif
 }
 
 #endif /* CONFIG_ARCH_EXYNOS4 */
