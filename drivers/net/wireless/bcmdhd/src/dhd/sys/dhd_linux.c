@@ -4173,6 +4173,18 @@ static int dhd_device_event(struct notifier_block *this,
 		return NOTIFY_DONE;
 	if (!ifa || !(ifa->ifa_dev->dev))
 		return NOTIFY_DONE;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31))
+	/* Filter notifications meant for non Broadcom devices */
+	if ((ifa->ifa_dev->dev->netdev_ops != &dhd_ops_pri) &&
+			(ifa->ifa_dev->dev->netdev_ops != &dhd_ops_virt)) {
+#ifdef WLP2P
+		if (!wl_cfgp2p_is_ifops(ifa->ifa_dev->dev->netdev_ops))
+#endif
+			return NOTIFY_DONE;
+    }
+#endif /* LINUX_VERSION_CODE */
+
 	dhd = *(dhd_info_t **)netdev_priv(ifa->ifa_dev->dev);
 	if (!dhd)
 		return NOTIFY_DONE;
