@@ -4,6 +4,8 @@ SUBLEVEL = 40
 EXTRAVERSION =
 NAME = Sneaky Weasel
 
+# merge google android-3.0(Linux 3.0.50) 
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
