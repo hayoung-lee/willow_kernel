@@ -1719,6 +1719,7 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 	struct fb_var_screeninfo *var = &fb->var;
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
+	struct s3cfb_lcd *lcd = fbdev->lcd;
 	void *argp = (void *)arg;
 	int ret = 0;
 #if defined(CONFIG_CPU_EXYNOS4210)
@@ -1786,10 +1787,6 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 				   sizeof(p.user_window)))
 			ret = -EFAULT;
 		else {
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
-			win->x = p.user_window.x;
-			win->y = p.user_window.y;
-#else
 			if (p.user_window.x < 0)
 				p.user_window.x = 0;
 
@@ -1807,7 +1804,6 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 				win->y = p.user_window.y;
 
 			s3cfb_set_window_position(fbdev, win->id);
-#endif
 		}
 		break;
 

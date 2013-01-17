@@ -35,6 +35,7 @@
 #include <mach/media.h>
 #include <mach/map.h>
 #include "s3cfb.h"
+#include <linux/time.h>
 
 #ifdef CONFIG_BUSFREQ_OPP
 #include <mach/dev.h>
@@ -125,6 +126,52 @@ static void s3cfb_deactivate_vsync(struct s3cfb_global *fbdev)
 
 	mutex_unlock(&fbdev->vsync_info.irq_lock);
 }
+#else
+/////////////////////////////////////////////////////
+//For vsync report
+static long long s3cfb_get_system_time(void)
+{
+    long long vsync;
+#if 0// much more precise
+    struct timeval tv;
+    do_gettimeofday(&tv);
+    vsync = (long long)(tv.tv_sec)*1000000000LL + tv.tv_usec*1000;
+    //printk("do_gettimeofday sec:%d usec:%d\n",tv.tv_sec,tv.tv_usec);
+#else//do_gettimeofday is preciser than current_kernel_time and ktime_get_ts, but not match with userspace.
+    struct timespec ts;
+    //ts = current_kernel_time();
+    ktime_get_ts(&ts);
+    vsync = (long long)(ts.tv_sec)*1000000000LL + ts.tv_nsec;
+    //printk("current_kernel_time sec:%d nsec:%d\n",ts.tv_sec,ts.tv_nsec);
+#endif
+    return vsync;
+}
+static void s3c_vsync_kobject_uevent(void)
+{
+    char env_buf[120];
+    char *envp[2];
+    int env_offset = 0;
+    long long cur_vsync;
+
+    cur_vsync = s3cfb_get_system_time();
+    sprintf(env_buf, "VSYNC=%lld",cur_vsync);
+    envp[env_offset++] = env_buf;
+    envp[env_offset] = NULL;
+    kobject_uevent_env(&( fbfimd->fbdev[0]->dev->kobj), KOBJ_CHANGE, envp);
+
+}
+static DECLARE_WORK(vsync_work, (void *)s3c_vsync_kobject_uevent);
+static ssize_t s3cfb_sysfs_show_vsync_report(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+    long long cur_vsync;
+    cur_vsync = s3cfb_get_system_time();
+    return sprintf(buf, "%lld\n",cur_vsync);
+}
+
+static DEVICE_ATTR(vsync_report, S_IRUGO | S_IWUSR, s3cfb_sysfs_show_vsync_report, NULL);
+
+/////////////////////////////////////////////////////
 #endif
 
 static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
@@ -132,8 +179,9 @@ static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
 	struct s3cfb_global *fbdev[2];
 	fbdev[0] = fbfimd->fbdev[0];
 
+#if defined(CONFIG_FB_S5P_VSYNC_THREAD)
 	spin_lock(&fbdev[0]->vsync_slock);
-
+#endif
 	if (fbdev[0]->regs != 0)
 		s3cfb_clear_interrupt(fbdev[0]);
 
@@ -145,8 +193,11 @@ static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
 	fbdev[0]->wq_count++;
 	wake_up(&fbdev[0]->wq);
 
+#if defined(CONFIG_FB_S5P_VSYNC_THREAD)
 	spin_unlock(&fbdev[0]->vsync_slock);
-
+#else
+	schedule_work(&vsync_work);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -334,7 +385,6 @@ static int s3cfb_wait_for_vsync_thread(void *data)
 
 	return 0;
 }
-#endif
 
 static void s3c_fb_update_regs_handler(struct kthread_work *work)
 {
@@ -354,6 +404,7 @@ static void s3c_fb_update_regs_handler(struct kthread_work *work)
 		kfree(data);
 	}
 }
+#endif
 
 static int s3cfb_probe(struct platform_device *pdev)
 {
@@ -540,7 +591,11 @@ static int s3cfb_probe(struct platform_device *pdev)
 			pdata->lcd_on(pdev);
 #endif
 #endif
-
+#if !defined(CONFIG_FB_S5P_VSYNC_THREAD)
+       ret = device_create_file(&(pdev->dev), &dev_attr_vsync_report);
+	if (ret < 0)
+              dev_err(fbdev[0]->dev, "failed to add sysfs entries\n");
+#endif
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
 	if (ret < 0)
 		dev_err(fbdev[0]->dev, "failed to add sysfs entries\n");
@@ -581,6 +636,8 @@ static int s3cfb_remove(struct platform_device *pdev)
 	struct s3cfb_global *fbdev[2];
 	int i;
 	int j;
+
+	device_remove_file(&(pdev->dev), &dev_attr_vsync_report);
 
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];
