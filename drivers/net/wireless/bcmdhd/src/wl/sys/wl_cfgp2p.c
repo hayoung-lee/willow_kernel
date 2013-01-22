@@ -2381,3 +2381,8 @@ static int wl_cfgp2p_if_stop(struct net_device *net)
 					BIT(NL80211_IFTYPE_P2P_GO)));
 	return 0;
 }
+
+bool wl_cfgp2p_is_ifops(const struct net_device_ops *if_ops)
+{
+	return (if_ops == &wl_cfgp2p_if_ops);
+}

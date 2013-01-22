@@ -211,6 +211,9 @@ enum cam_mclk_status {
 
 /* for reserved memory */
 struct fimc_meminfo {
+#ifdef CONFIG_USE_FIMC_CMA
+	void		*cpu_addr;
+#endif
 	dma_addr_t	base;		/* buffer base */
 	size_t		size;		/* total length */
 	dma_addr_t	curr;		/* current addr */

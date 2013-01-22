@@ -189,7 +189,7 @@ config S3C_DEV_HSMMC3
 	help
 	  Compile in platform device definitions for HSMMC channel 3
 
-config S5P_DEV_MSHC
+config EXYNOS4_DEV_MSHC
 	bool
 	help
 	  Compile in platform device definitions for MSHC

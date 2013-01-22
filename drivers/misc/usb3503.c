@@ -13,6 +13,13 @@
 #include <linux/pm_runtime.h>
 #include <plat/devs.h>
 #include <plat/ehci.h>
+#include <linux/switch.h>
+
+#if USB3503_DOCK_SWITCH
+struct switch_dev switch_dock_detection = {
+	.name = "dock",
+};
+#endif
 
 #if USB3503_I2C_CONTROL
 static int usb3503_register_write(struct i2c_client *i2c_dev, char reg,
@@ -154,6 +161,9 @@ exit:
 
 static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached) {
 	hc->new_dock_status = gpio_get_value(hc->usb_doc_det);
+#if USB3503_DOCK_SWITCH
+	switch_set_state(&switch_dock_detection, hc->new_dock_status ? 0 : 1);
+#endif
 	if (force_detached)
 		hc->cur_dock_status = DOCK_STATE_DETACHED;
 	else if (hc->cur_dock_status == hc->new_dock_status)
@@ -166,6 +176,7 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 		hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
 		pm_runtime_get_sync(&s5p_device_ehci.dev);
 		pm_runtime_get_sync(&s5p_device_ohci.dev);
+
 	} else {
 		pm_runtime_put(&s5p_device_ohci.dev);
 		pm_runtime_put(&s5p_device_ehci.dev);
@@ -327,6 +338,13 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	pr_info(HUB_TAG "%s:%d\n", __func__, __LINE__);
 
+#if USB3503_DOCK_SWITCH
+	if (switch_dev_register(&switch_dock_detection)) {
+		pr_err(HUB_TAG "Failed to register switch device\n", __func__);
+		return -EBUSY;
+	}
+#endif
+
 	hc = kzalloc(sizeof(struct usb3503_hubctl), GFP_KERNEL);
 	if (!hc) {
 		pr_err(HUB_TAG "private data alloc fail\n");
@@ -392,6 +410,9 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	return 0;
 
 exit:
+#if USB3503_DOCK_SWITCH
+	switch_dev_unregister(&switch_dock_detection);
+#endif
 	cancel_work_sync(&hc->dock_work);
 	return err;
 }
@@ -401,6 +422,9 @@ static int usb3503_remove(struct i2c_client *client)
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
 	pr_debug(HUB_TAG "%s\n", __func__);
+#if USB3503_DOCK_SWITCH
+	switch_dev_unregister(&switch_dock_detection);
+#endif
 	free_irq(hc->dock_irq, hc->i2c_dev);
 	cancel_work_sync(&hc->dock_work);
 	kfree(hc);

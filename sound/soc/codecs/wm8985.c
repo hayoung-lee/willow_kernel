@@ -736,6 +736,26 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_update_bits(codec, WM8985_AUDIO_INTERFACE,
 			    WM8985_WL_MASK, blen << WM8985_WL_SHIFT);
 
+#if 1//enable upper 10khz sound
+	/* disable the PLL before reprogramming it */
+	snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+			    WM8985_PLLEN_MASK, 0);
+
+	/* set PLLN and PRESCALE */
+	snd_soc_write(codec,WM8985_PLL_N,0x007);
+
+	/* set PLLK */
+	snd_soc_write(codec,WM8985_PLL_K_1,0x016);
+	snd_soc_write(codec,WM8985_PLL_K_2,0x0CC);
+	snd_soc_write(codec,WM8985_PLL_K_3,0x19A);
+
+	/* set the source of the clock to be the PLL */
+	snd_soc_write(codec,WM8985_CLOCK_GEN_CONTROL,0);
+
+	/* enable the PLL */
+	snd_soc_update_bits(codec, WM8985_POWER_MANAGEMENT_1,
+			    WM8985_PLLEN_MASK, WM8985_PLLEN);
+#else
 	/*
 	 * match to the nearest possible sample rate and rely
 	 * on the array index to configure the SR register
@@ -787,6 +807,7 @@ static int wm8985_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(dai->dev, "BCLK div = %d\n", i);
 	snd_soc_update_bits(codec, WM8985_CLOCK_GEN_CONTROL,
 			    WM8985_BCLKDIV_MASK, i << WM8985_BCLKDIV_SHIFT);
+#endif
 	return 0;
 }
 

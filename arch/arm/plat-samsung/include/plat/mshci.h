@@ -60,12 +60,15 @@ enum ms_cd_types {
 struct s3c_mshci_platdata {
 	unsigned int	max_width;
 	unsigned int	host_caps;
+	unsigned int 	host_caps2;
 	enum ms_cd_types	cd_type;
 
 	char		**clocks;	/* set of clock sources */
 
 	int		wp_gpio;
 	int		ext_cd_gpio;
+	int		int_power_gpio;
+	int		fifo_depth;
 	bool		ext_cd_gpio_invert;
 	bool		has_wp_gpio;
 	int	(*ext_cd_init)(void (*notify_func)(struct platform_device *,
@@ -74,16 +77,14 @@ struct s3c_mshci_platdata {
 						      int state));
 
 	void	(*cfg_gpio)(struct platform_device *dev, int width);
-#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-		defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	void	(*cfg_ddr)(struct platform_device *dev, int ddr);
-#endif
 	void	(*init_card)(struct platform_device *dev);
-
+	void	(*set_power)(struct platform_device *dev, int en);
 	void	(*cfg_card)(struct platform_device *dev,
 			    void __iomem *regbase,
 			    struct mmc_ios *ios,
 			    struct mmc_card *card);
+	void	(*shutdown)(void);
 };
 
 /**
@@ -116,11 +117,11 @@ extern void s5p6450_setup_mshci_cfg_card(struct platform_device *dev,
 
 static inline void s5p6450_default_mshci(void)
 {
-#ifdef CONFIG_S5P_DEV_MSHC
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 	s3c_mshci_def_platdata.clocks = s5p6450_mshc_clksrcs;
 	s3c_mshci_def_platdata.cfg_gpio = s5p6450_setup_mshci_cfg_gpio;
 	s3c_mshci_def_platdata.cfg_card = s5p6450_setup_mshci_cfg_card;
-#endif /* CONFIG_S3C_DEV_MSHC */
+#endif /* CONFIG_EXYNOS4_DEV_MSHC */
 }
 
 extern void exynos4_setup_mshci_cfg_gpio(struct platform_device *, int w);
@@ -135,29 +136,26 @@ extern void exynos4_setup_mshci_cfg_card(struct platform_device *dev,
 					   struct mmc_ios *ios,
 					   struct mmc_card *card);
 
-#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 extern void exynos4_setup_mshci_cfg_ddr(struct platform_device *dev,
 						int ddr);
-#endif
-
 extern void exynos4_setup_mshci_init_card(struct platform_device *dev);
+extern void exynos4_setup_mshci_shutdown(void);
 
-#ifdef CONFIG_S5P_DEV_MSHC
+extern void exynos4_setup_mshci_set_power(struct platform_device *dev, int en);
+
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 static inline void exynos4_default_mshci(void)
 {
 	s3c_mshci_def_platdata.clocks = exynos4_mshci_clksrcs;
 	s3c_mshci_def_platdata.cfg_gpio = exynos4_setup_mshci_cfg_gpio;
 	s3c_mshci_def_platdata.cfg_card = exynos4_setup_mshci_cfg_card;
-#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-		defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	s3c_mshci_def_platdata.cfg_ddr = exynos4_setup_mshci_cfg_ddr;
-#endif
-
 	s3c_mshci_def_platdata.init_card = exynos4_setup_mshci_init_card;
+	s3c_mshci_def_platdata.set_power = exynos4_setup_mshci_set_power;
+	s3c_mshci_def_platdata.shutdown = exynos4_setup_mshci_shutdown;
 }
 #else
 static inline void exynos4_default_mshci(void) { }
-#endif /* CONFIG_S5P_DEV_MSHC */
+#endif /* CONFIG_EXYNOS4_DEV_MSHC */
 
 #endif /* __PLAT_S3C_MSHCI_H */

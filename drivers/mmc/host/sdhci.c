@@ -25,6 +25,7 @@
 
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
+#include <linux/mmc/card.h>
 
 #include "sdhci.h"
 
@@ -1256,7 +1257,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			/* Restore original mmc_request structure */
 			host->mrq = mrq;
 		}
-
 		if (mrq->sbc && !(host->flags & SDHCI_AUTO_CMD23))
 			sdhci_send_command(host, mrq->sbc);
 		else
@@ -1274,6 +1274,17 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	u8 ctrl;
 
 	host = mmc_priv(mmc);
+
+	if ((!mmc_host_sd_present(mmc) ||
+			(mmc_host_sd_present(mmc) &&
+			!mmc_host_sd_init_stat(mmc) &&
+			mmc_host_sd_prev_stat(mmc))) &&
+			ios->power_mode == MMC_POWER_OFF) {
+		mmc_host_sd_clear_prev_stat(mmc);
+	} else if (mmc_host_sd_present(mmc) &&
+			!mmc_host_sd_prev_stat(mmc)) {
+		mmc_host_sd_set_prev_stat(mmc);
+	}
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1415,7 +1426,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	 * signalling timeout and CRC errors even on CMD0. Resetting
 	 * it on each ios seems to solve the problem.
 	 */
-	if(host->quirks & SDHCI_QUIRK_RESET_CMD_DATA_ON_IOS)
+	if (host->quirks & SDHCI_QUIRK_RESET_CMD_DATA_ON_IOS)
 		sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
 
 out:
@@ -1828,16 +1839,16 @@ static void sdhci_tasklet_card(unsigned long param)
 	struct sdhci_host *host;
 	unsigned long flags;
 
-	host = (struct sdhci_host*)param;
+	host = (struct sdhci_host *)param;
 
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) & SDHCI_CARD_PRESENT)) {
 		if (host->mrq) {
 			printk(KERN_ERR "%s: Card removed during transfer!\n",
-				mmc_hostname(host->mmc));
+			       mmc_hostname(host->mmc));
 			printk(KERN_ERR "%s: Resetting controller.\n",
-				mmc_hostname(host->mmc));
+			       mmc_hostname(host->mmc));
 
 			sdhci_reset(host, SDHCI_RESET_CMD);
 			sdhci_reset(host, SDHCI_RESET_DATA);
@@ -1849,7 +1860,11 @@ static void sdhci_tasklet_card(unsigned long param)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
+	if (host->vmmc &&
+	    !(host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION))
+		mmc_detect_change(host->mmc, msecs_to_jiffies(0));
+	else
+		mmc_detect_change(host->mmc, msecs_to_jiffies(200));
 }
 
 static void sdhci_tasklet_finish(unsigned long param)
@@ -1858,12 +1873,12 @@ static void sdhci_tasklet_finish(unsigned long param)
 	unsigned long flags;
 	struct mmc_request *mrq;
 
-	host = (struct sdhci_host*)param;
+	host = (struct sdhci_host *)param;
 
-        /*
-         * If this tasklet gets rescheduled while running, it will
-         * be run again afterwards but without any active request.
-         */
+	/*
+	 * If this tasklet gets rescheduled while running, it will
+	 * be run again afterwards but without any active request.
+	 */
 	if (!host->mrq)
 		return;
 
@@ -1918,7 +1933,7 @@ static void sdhci_timeout_timer(unsigned long data)
 	struct sdhci_host *host;
 	unsigned long flags;
 
-	host = (struct sdhci_host*)data;
+	host = (struct sdhci_host *)data;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1976,11 +1991,20 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		return;
 	}
 
-	if (intmask & SDHCI_INT_TIMEOUT)
+	if (intmask & SDHCI_INT_TIMEOUT) {
+		printk(KERN_INFO "%s: cmd %d command timeout error\n",
+			 mmc_hostname(host->mmc), host->cmd->opcode);
 		host->cmd->error = -ETIMEDOUT;
-	else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
-			SDHCI_INT_INDEX))
+	} else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
+			SDHCI_INT_INDEX)) {
+		printk(KERN_ERR "%s: cmd %d %s error\n",
+			mmc_hostname(host->mmc), host->cmd->opcode,
+			(intmask & SDHCI_INT_CRC) ? "command crc" :
+			(intmask & SDHCI_INT_END_BIT) ? "command end bit" :
+			"command index error");
 		host->cmd->error = -EILSEQ;
+	}
+
 
 	if (host->cmd->error) {
 		tasklet_schedule(&host->finish_tasklet);
@@ -2077,15 +2101,17 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		return;
 	}
 
-	if (intmask & SDHCI_INT_DATA_TIMEOUT)
-		host->data->error = -ETIMEDOUT;
-	else if (intmask & SDHCI_INT_DATA_END_BIT)
+	if (intmask & SDHCI_INT_DATA_TIMEOUT) {
+		printk(KERN_ERR "%s: cmd %d data timeout error\n",
+			mmc_hostname(host->mmc), host->mrq->cmd->opcode);
+			host->data->error = -ETIMEDOUT;
+	} else if (intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_END_BIT)) {
+		printk(KERN_ERR "%s: cmd %d %s error\n",
+			mmc_hostname(host->mmc), host->mrq->cmd->opcode,
+			(intmask & SDHCI_INT_DATA_CRC) ? "data crc" :
+			"command end bit");
 		host->data->error = -EILSEQ;
-	else if ((intmask & SDHCI_INT_DATA_CRC) &&
-		SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))
-			!= MMC_BUS_TEST_R)
-		host->data->error = -EILSEQ;
-	else if (intmask & SDHCI_INT_ADMA_ERROR) {
+	} else if (intmask & SDHCI_INT_ADMA_ERROR) {
 		printk(KERN_ERR "%s: ADMA error\n", mmc_hostname(host->mmc));
 		sdhci_show_adma_error(host);
 		host->data->error = -EIO;
@@ -2142,7 +2168,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 static irqreturn_t sdhci_irq(int irq, void *dev_id)
 {
 	irqreturn_t result;
-	struct sdhci_host* host = dev_id;
+	struct sdhci_host *host = dev_id;
 	u32 intmask;
 	int cardint = 0;
 
@@ -2257,6 +2283,19 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 }
 
 EXPORT_SYMBOL_GPL(sdhci_suspend_host);
+
+void sdhci_shutdown_host(struct sdhci_host *host)
+{
+	sdhci_disable_card_detection(host);
+
+	free_irq(host->irq, host);
+
+	if (host->vmmc) {
+		regulator_disable(host->vmmc);
+		mdelay(5);
+	}
+}
+EXPORT_SYMBOL_GPL(sdhci_shutdown_host);
 
 int sdhci_resume_host(struct sdhci_host *host)
 {
@@ -2502,7 +2541,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	else
 		mmc->max_discard_to = (1 << 27) / host->timeout_clk;
 
-	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE | MMC_CAP_CMD23;
+	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE;
 
 	if (host->quirks & SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12)
 		host->flags |= SDHCI_AUTO_CMD12;
@@ -2534,8 +2573,9 @@ int sdhci_add_host(struct sdhci_host *host)
 	    mmc_card_is_removable(mmc))
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
-	/* UHS-I mode(s) supported by the host controller. */
-	if (host->version >= SDHCI_SPEC_300)
+	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
+	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
+		       SDHCI_SUPPORT_DDR50))
 		mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25;
 
 	/* SDR104 supports also implies SDR50 support */
@@ -2750,7 +2790,9 @@ int sdhci_add_host(struct sdhci_host *host)
 		printk(KERN_INFO "%s: no vmmc regulator found\n", mmc_hostname(mmc));
 		host->vmmc = NULL;
 	} else {
+		printk(KERN_INFO "%s: vmmc regulator found\n", mmc_hostname(mmc));
 		regulator_enable(host->vmmc);
+		mdelay(100);
 	}
 
 	sdhci_init(host, 0);

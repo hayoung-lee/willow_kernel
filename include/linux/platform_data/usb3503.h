@@ -2,6 +2,7 @@
 #define USB3503_H
 
 #define USB3503_I2C_CONTROL 0
+#define USB3503_DOCK_SWITCH 0
 #define USB3503_I2C_NAME "usb3503"
 #define HUB_TAG "usb3503: "
 

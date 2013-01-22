@@ -281,6 +281,22 @@ struct mmc_host {
 #ifdef CONFIG_MMC_DEBUG
 	unsigned int		removed:1;	/* host is being removed */
 #endif
+	unsigned int            state;          /* card slot state for SD */
+#define MMC_SD_STATE_PRESENT	(1<<0)		/* present state for SD */
+#define MMC_SD_INIT_STATUS	(1<<1)		/* present state for SD */
+#define MMC_SD_PREV_STATUS	(1<<2)		/* present state for SD */
+
+#define mmc_host_sd_present(h)		((h)->state & MMC_SD_STATE_PRESENT)
+#define mmc_host_sd_set_present(h)      ((h)->state |= MMC_SD_STATE_PRESENT)
+#define mmc_host_sd_clear_present(h)    ((h)->state &= ~MMC_SD_STATE_PRESENT)
+
+#define mmc_host_sd_init_stat(h)	((h)->state & MMC_SD_INIT_STATUS)
+#define mmc_host_sd_set_init_stat(h)	((h)->state |= MMC_SD_INIT_STATUS)
+#define mmc_host_sd_clear_init_stat(h)	((h)->state &= ~MMC_SD_INIT_STATUS)
+
+#define mmc_host_sd_prev_stat(h)	((h)->state & MMC_SD_PREV_STATUS)
+#define mmc_host_sd_set_prev_stat(h)	((h)->state |= MMC_SD_PREV_STATUS)
+#define mmc_host_sd_clear_prev_stat(h)	((h)->state &= ~MMC_SD_PREV_STATUS)
 
 	/* Only used with MMC_CAP_DISABLE */
 	int			enabled;	/* host is enabled */

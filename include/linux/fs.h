@@ -608,12 +608,18 @@ struct address_space_operations {
 			loff_t offset, unsigned long nr_segs);
 	int (*get_xip_mem)(struct address_space *, pgoff_t, int,
 						void **, unsigned long *);
+#ifndef CONFIG_DMA_CMA
 	/*
 	 * migrate the contents of a page to the specified target. If sync
 	 * is false, it must not block.
 	 */
 	int (*migratepage) (struct address_space *,
 			struct page *, struct page *, enum migrate_mode);
+#else
+	/* migrate the contents of a page to the specified target */
+	int (*migratepage) (struct address_space *,
+			struct page *, struct page *);
+#endif
 	int (*launder_page) (struct page *);
 	int (*is_partially_uptodate) (struct page *, read_descriptor_t *,
 					unsigned long);
@@ -2481,9 +2487,14 @@ extern int generic_file_fsync(struct file *, int);
 extern int generic_check_addressable(unsigned, u64);
 
 #ifdef CONFIG_MIGRATION
+#ifndef CONFIG_DMA_CMA
 extern int buffer_migrate_page(struct address_space *,
 				struct page *, struct page *,
 				enum migrate_mode);
+#else
+extern int buffer_migrate_page(struct address_space *,
+				struct page *, struct page *);
+#endif
 #else
 #define buffer_migrate_page NULL
 #endif

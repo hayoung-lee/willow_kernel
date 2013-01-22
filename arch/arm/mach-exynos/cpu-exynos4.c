@@ -259,7 +259,7 @@ void __init exynos4_map_io(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	exynos4_default_sdhci3();
 #endif
-#ifdef CONFIG_S5P_DEV_MSHC
+#ifdef CONFIG_EXYNOS4_DEV_MSHC
 	exynos4_default_mshci();
 #endif
 	exynos4_i2sv3_setup_resource();

@@ -15,6 +15,8 @@
 
 #include <plat/irqs.h>
 
+#define FIQ_START         IRQ_EINT0
+
 /* SGI: Software Generated Interrupt */
 
 #define IRQ_SGI(x)		S5P_IRQ(x)
