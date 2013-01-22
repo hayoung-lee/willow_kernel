@@ -432,7 +432,7 @@ static unsigned int willow_pp_sleep_gpio_table[][3] = {
 static unsigned int willow_mp_sleep_gpio_table[][3] = {
 	{EXYNOS4_GPL2(0),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN},		// HW_VER2 (0)
 	{EXYNOS4_GPL2(1),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_UP}, 		// HW_VER1 (1)
-	{EXYNOS4_GPL2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_DOWN}, 	// HW_VER0 (1)
+	{EXYNOS4_GPL2(2),  S3C_GPIO_SLP_INPUT, S3C_GPIO_PULL_UP}, 	// HW_VER0 (1)
 
 	{EXYNOS4212_GPM0(0),  S3C_GPIO_SLP_OUT0,  S3C_GPIO_PULL_DOWN}, 		//VDD_5V0_EN
 
