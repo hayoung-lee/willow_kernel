@@ -2329,6 +2329,9 @@ void touch_interrupt_low_gpio(void)
 	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_DOWN);
 }
 
+bool g_activepen_mode = 0;
+EXPORT_SYMBOL(g_activepen_mode);
+
 void touch_on(void)
 {
 	int err=0;
@@ -2377,7 +2380,10 @@ void touch_on(void)
 	regulator_put(tsp_vdd3v3);
 
 	/* enable touch xvdd */
-	gpio_set_value(GPIO_TOUCH_BOOTST_EN, 1);
+	if (!g_activepen_mode) 
+		gpio_set_value(GPIO_TOUCH_BOOTST_EN, 1);
+	else
+		gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);	
 
 	/* reset ic */
 	mdelay(1);

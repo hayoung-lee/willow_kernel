@@ -30,65 +30,14 @@
 #include <linux/firmware.h>
 #include <linux/string.h>
 
-/* ATMEL Defined  Start */
-#define OBJECT_TABLE_START_ADDRESS      7
-#define OBJECT_TABLE_ELEMENT_SIZE       6
-
-#define CMD_RESET_OFFSET                0
-#define CMD_BACKUP_OFFSET               1
-#define CMD_CALIBRATE_OFFSET    2
-#define CMD_REPORTATLL_OFFSET   3
-#define CMD_DEBUG_CTRL_OFFSET   4
-#define CMD_DIAGNOSTIC_OFFSET   5
-
-
-#define DETECT_MSG_MASK         0x80
-#define PRESS_MSG_MASK                  0x40
-#define RELEASE_MSG_MASK                0x20
-#define MOVE_MSG_MASK                   0x10
-#define AMPLITUDE_MSG_MASK      0x04
-#define SUPPRESS_MSG_MASK               0x02
-
-/* Slave addresses */
-/* need to check +  */
-#define MXT_APP_LOW             0x4a
-#define MXT_APP_HIGH            0x4d
-#define MXT_BOOT_LOW            0x24 //0x26
-#define MXT_BOOT_HIGH           0x25 //0x27
-/* need to check -  */
-
-/* FIRMWARE NAME */
-#define MXT_FW_NAME                     "tsp_atmel/mXT1664S.fw"
-#define MXT_BOOT_VALUE          0xa5
-#define MXT_BACKUP_VALUE                0x55
-
-/* Bootloader mode status */
-#define MXT_WAITING_BOOTLOAD_CMD        0xc0    /* valid 7 6 bit only */
-#define MXT_WAITING_FRAME_DATA  0x80    /* valid 7 6 bit only */
-#define MXT_FRAME_CRC_CHECK     0x02
-#define MXT_FRAME_CRC_FAIL              0x03
-#define MXT_FRAME_CRC_PASS              0x04
-#define MXT_APP_CRC_FAIL                0x40    /* valid 7 8 bit only */
-#define MXT_BOOT_STATUS_MASK    0x3f
-
-/* Command to unlock bootloader */
-#define MXT_UNLOCK_CMD_MSB              0xaa
-#define MXT_UNLOCK_CMD_LSB              0xdc
-
-#define ID_BLOCK_SIZE                   7
-
-#define MXT_STATE_INACTIVE              -1
-#define MXT_STATE_RELEASE               0
-#define MXT_STATE_PRESS         1
-#define MXT_STATE_MOVE          2
-
-#define MAX_USING_FINGER_NUM 10
 
 /* touch booster */
 #if TOUCH_BOOSTER
 #include <mach/cpufreq.h>
 #define TOUCH_BOOSTER_TIME              3000
-#define TOUCH_BOOSTER_LIMIT_CLK 500000
+#define TOUCH_BOOSTER_LIMIT_CLK 800000
+uint32_t touch_dvfs_cpufreq = 800000;
+
 
 static bool tsp_press_status;
 static bool touch_cpu_lock_status;
@@ -133,9 +82,34 @@ static bool g_debug_switch;
 static u8 threshold;
 //static int firm_status_data;
 
-#define FEATURE_TOUCH_PASSIVEPEN
-#define FEATURE_TOUCH_ACTIVEPEN
-#define FEATURE_TOUCH_CONFIG_UPDATE
+#ifdef FEATURE_TOUCH_DEBUG
+u8 g_touch_debug = 0;
+#endif
+
+#ifdef FEATURE_TOUCH_ACTIVEPEN
+extern bool g_activepen_mode;
+#endif
+
+#ifdef FEATURE_TOUCH_1ST_POINT
+#include <linux/hrtimer.h>
+
+#define POLLING_TIMER_NS 1500 //15000000
+
+u8 g_touch_1st_point_count = 0;
+#endif
+
+#ifdef FEATURE_TOUCH_PASSIVEPEN
+bool g_passivepen_mode = 0;
+#endif
+
+#ifdef FEATURE_TOUCH_NOISE
+#define TOUCH_NOISE_LEVEL	30
+#define TOUCH_NOISE_THRESHOLD	40
+
+bool g_power_noise = 0;
+bool g_touch_noise_detect = 0;
+#endif
+
 
 #ifdef FEATURE_TOUCH_CONFIG_UPDATE 
 #include <linux/fs.h>
@@ -173,23 +147,23 @@ typedef struct _FTS_CTP_PROJECT_SETTING_T
 
 #define FIRMWARE_NAME "mXT_1664_config.cfg"
 
-u8 num_digit_index = 0;
-u8 config_data_out = 0;
+u8 g_num_digit_index = 0;
+u8 g_config_data_out = 0;
 
-u8 t0_info_data[2] = {0, 7};
+u8 t0_info_data[2] = {0, 8};
 u8 t7_config_data[4] = {64, 255, 50, 3};
 u8 t8_config_data[10] = {80, 0, 5, 3, 0, 0, 5, 0, 20, 1};
-u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 1, 1, 0, 10, 20, 20, 0, 0, 0, 4, 4, 5, 6, 145, 30, 141, 18, 20, 15, 0, 0, 0, 0};
+u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 0, 0, 0, 10, 20, 20, 0, 31, 127, 4, 4, 5, 6, 145, 30, 141, 18, 20, 15, 0, 0, 0, 0};
 u8 t15_config_data[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t25_config_data[9] = {3, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t40_config_data[5] = {0, 0, 0, 0, 0};
-u8 t42_config_data[46] = {35, 40, 20, 90, 160, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t42_config_data[46] = {0, 25, 29, 90, 45, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t43_config_data[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 1, 0, 0, 12};
-u8 t47_config_data[13] = {9, 25, 45, 4, 2, 50, 40, 254, 1, 16, 0, 0, 3};
+u8 t47_config_data[13] = {0, 25, 45, 4, 2, 50, 40, 254, 1, 16, 0, 0, 3};
 u8 t55_config_data[6] = {0, 0, 0, 0, 0, 0};
-u8 t56_config_data[47] = {2, 0, 1, 24, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 135, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t56_config_data[47] = {3, 0, 0, 43, 23, 24, 23, 23, 23, 23, 23, 23, 22, 22, 22, 22, 21, 21, 21, 20, 20, 19, 19, 18, 18, 18, 18, 18, 17, 17, 17, 16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 160, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 135, 120, 2, 1, 0, 0, 10, 20, 20, 4, 4, 5, 6, 145, 30, 141, 18, 20, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t63_config_data[12] = {0, 6, 20, 215, 15, 97, 162, 3, 28, 255, 100, 0};
 #endif
 
@@ -788,7 +762,17 @@ int mxt_PROCI_TOUCHSUPPRESSION_T42(struct mxt_data *mxt)
 	
 	memset(&t42_config, 0, sizeof(t42_config));
 
+#if 1 //def FEATURE_TOUCH_PASSIVEPEN
+	if (!g_power_noise && g_passivepen_mode) {
+	//if (g_passivepen_mode) {
+		t42_config.nCTRL=35;
+		i++;
+	}
+	else
+		t42_config_data[i++];	
+#else
 	t42_config.nCTRL=t42_config_data[i++];
+#endif
 	t42_config.nAPPRTHR=t42_config_data[i++];
 	t42_config.nMAXAPPRAREA=t42_config_data[i++];
 	t42_config.nMAXTCHAREA=t42_config_data[i++];
@@ -899,7 +883,18 @@ int mxt_PROCI_STYLUS_T47(struct mxt_data *mxt)
 	//printk("mxt_PROCI_STYLUS_T47 obj_size=%d obj_addr=%d  OBJECT_SIZE=22  OBJECT_ADDRESS=674 \n",obj_size,obj_addr );
 	memset(&t47_config, 0, sizeof(t47_config));
 
-	t47_config.nCTRL=t47_config_data[i++];
+#if 1 //def FEATURE_TOUCH_PASSIVEPEN
+		if (!g_power_noise && g_passivepen_mode) {
+		//if (g_passivepen_mode) {
+			t47_config.nCTRL=9;
+			i++;
+		}
+		else
+			t42_config_data[i++];	
+#else
+		t47_config.nCTRL=t47_config_data[i++];
+#endif
+
 	t47_config.nCONTMIN=t47_config_data[i++];
 	t47_config.nCONTMAX=t47_config_data[i++];
 	t47_config.nSTABILITY=t47_config_data[i++];
@@ -1051,6 +1046,10 @@ int mxt_SPT_GENERICDATA_T57(struct mxt_data *mxt)
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t57_config);
 
+	t57_config.nCTRL = 227;
+	t57_config.nAREATHR = 80;
+	t57_config.nAREAHYST = 15;
+
 	memset(&t57_config, 0, sizeof(t57_config));
 	error = mxt_write_block(client, 786,
 			3, (u8 *)&t57_config);
@@ -1111,10 +1110,24 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	//printk("mxt_PROCG_NOISESUPPRESSION_T62 obj_size=%d obj_addr=%d OBJECT_SIZE=74  OBJECT_ADDRESS=799 \n",obj_size,obj_addr );
 	memset(&t62_config, 0, sizeof(t62_config));
 
-	t62_config.nCTRL=t62_config_data[i++];
+	if (g_power_noise) {
+		t62_config.nCTRL=39; //t62_config_data[i++];
+		i++;
+	}
+	else
+		t62_config.nCTRL=t62_config_data[i++];
+	
 	t62_config.nCALCFG1=t62_config_data[i++];
 	t62_config.nCALCFG2=t62_config_data[i++];
-	t62_config.nCALCFG3=t62_config_data[i++];
+
+	if (g_power_noise) {
+		t62_config.nCALCFG3=7; //t62_config_data[i++];
+		i++;
+	}
+	else
+		t62_config.nCALCFG3=t62_config_data[i++];
+	
+	//t62_config.nCALCFG3=t62_config_data[i++];
 	t62_config.nCFG1=t62_config_data[i++];
 	t62_config.nRESERVED1=t62_config_data[i++];
 	t62_config.nRESERVED2=t62_config_data[i++];
@@ -1146,47 +1159,47 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	t62_config.nRESERVED[3]=t62_config_data[i++];
 	t62_config.nRESERVED[4]=t62_config_data[i++];
 
-	t62_config.nBLEN[0]=t62_config_data[i++];
-	t62_config.nTCHTHR[0]=t62_config_data[i++];
-	t62_config.nTCHDI[0]=t62_config_data[i++];
-	t62_config.nMOVHYSTI[0]=t62_config_data[i++];
-	t62_config.nMOVHYSTN[0]=t62_config_data[i++];
-	t62_config.nMOVFILTER[0]=t62_config_data[i++];
-	t62_config.nNUMTOUCH[0]=t62_config_data[i++];
-	t62_config.nMRGHYST[0]=t62_config_data[i++];
-	t62_config.nMRGTHR[0]=t62_config_data[i++];
-	t62_config.nXLOCLIP[0]=t62_config_data[i++];
-	t62_config.nXHICLIP[0]=t62_config_data[i++];
-	t62_config.nYLOCLIP[0]=t62_config_data[i++];
-	t62_config.nYHICLIP[0]=t62_config_data[i++];
-	t62_config.nXEDGECTRL[0]=t62_config_data[i++];
-	t62_config.nXEDGEDIST[0]=t62_config_data[i++];
-	t62_config.nYEDGECTRL[0]=t62_config_data[i++];
-	t62_config.nYEDGEDIST[0]=t62_config_data[i++];
-	t62_config.nJUMPLIMIT[0]=t62_config_data[i++];
-	t62_config.nTCHHYST[0]=t62_config_data[i++];
-	t62_config.nNEXTTCHDI[0]=t62_config_data[i++];
+	t62_config.nBLEN_0=t62_config_data[i++];
+	t62_config.nTCHTHR_0=t62_config_data[i++];
+	t62_config.nTCHDI_0=t62_config_data[i++];
+	t62_config.nMOVHYSTI_0=t62_config_data[i++];
+	t62_config.nMOVHYSTN_0=t62_config_data[i++];
+	t62_config.nMOVFILTER_0=t62_config_data[i++];
+	t62_config.nNUMTOUCH_0=t62_config_data[i++];
+	t62_config.nMRGHYST_0=t62_config_data[i++];
+	t62_config.nMRGTHR_0=t62_config_data[i++];
+	t62_config.nXLOCLIP_0=t62_config_data[i++];
+	t62_config.nXHICLIP_0=t62_config_data[i++];
+	t62_config.nYLOCLIP_0=t62_config_data[i++];
+	t62_config.nYHICLIP_0=t62_config_data[i++];
+	t62_config.nXEDGECTRL_0=t62_config_data[i++];
+	t62_config.nXEDGEDIST_0=t62_config_data[i++];
+	t62_config.nYEDGECTRL_0=t62_config_data[i++];
+	t62_config.nYEDGEDIST_0=t62_config_data[i++];
+	t62_config.nJUMPLIMIT_0=t62_config_data[i++];
+	t62_config.nTCHHYST_0=t62_config_data[i++];
+	t62_config.nNEXTTCHDI_0=t62_config_data[i++];
 
-	t62_config.nBLEN[1]=t62_config_data[i++];
-	t62_config.nTCHTHR[1]=t62_config_data[i++];
-	t62_config.nTCHDI[1]=t62_config_data[i++];
-	t62_config.nMOVHYSTI[1]=t62_config_data[i++];
-	t62_config.nMOVHYSTN[1]=t62_config_data[i++];
-	t62_config.nMOVFILTER[1]=t62_config_data[i++];
-	t62_config.nNUMTOUCH[1]=t62_config_data[i++];
-	t62_config.nMRGHYST[1]=t62_config_data[i++];
-	t62_config.nMRGTHR[1]=t62_config_data[i++];
-	t62_config.nXLOCLIP[1]=t62_config_data[i++];
-	t62_config.nXHICLIP[1]=t62_config_data[i++];
-	t62_config.nYLOCLIP[1]=t62_config_data[i++];
-	t62_config.nYHICLIP[1]=t62_config_data[i++];
-	t62_config.nXEDGECTRL[1]=t62_config_data[i++];
-	t62_config.nXEDGEDIST[1]=t62_config_data[i++];
-	t62_config.nYEDGECTRL[1]=t62_config_data[i++];
-	t62_config.nYEDGEDIST[1]=t62_config_data[i++];
-	t62_config.nJUMPLIMIT[1]=t62_config_data[i++];
-	t62_config.nTCHHYST[1]=t62_config_data[i++];
-	t62_config.nNEXTTCHDI[1]=t62_config_data[i++];
+	t62_config.nBLEN_1=t62_config_data[i++];
+	t62_config.nTCHTHR_1=t62_config_data[i++];
+	t62_config.nTCHDI_1=t62_config_data[i++];
+	t62_config.nMOVHYSTI_1=t62_config_data[i++];
+	t62_config.nMOVHYSTN_1=t62_config_data[i++];
+	t62_config.nMOVFILTER_1=t62_config_data[i++];
+	t62_config.nNUMTOUCH_1=t62_config_data[i++];
+	t62_config.nMRGHYST_1=t62_config_data[i++];
+	t62_config.nMRGTHR_1=t62_config_data[i++];
+	t62_config.nXLOCLIP_1=t62_config_data[i++];
+	t62_config.nXHICLIP_1=t62_config_data[i++];
+	t62_config.nYLOCLIP_1=t62_config_data[i++];
+	t62_config.nYHICLIP_1=t62_config_data[i++];
+	t62_config.nXEDGECTRL_1=t62_config_data[i++];
+	t62_config.nXEDGEDIST_1=t62_config_data[i++];
+	t62_config.nYEDGECTRL_1=t62_config_data[i++];
+	t62_config.nYEDGEDIST_1=t62_config_data[i++];
+	t62_config.nJUMPLIMIT_1=t62_config_data[i++];
+	t62_config.nTCHHYST_1=t62_config_data[i++];
+	t62_config.nNEXTTCHDI_1=t62_config_data[i++];
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t62_config);
@@ -1893,9 +1906,10 @@ static void mxt_set_dvfs_off(struct work_struct *work)
 
 static void mxt_set_dvfs_on(struct mxt_data *data)
 {
+		if (g_touch_debug == 1) printk("+++mxt_set_dvfs_on \n");
         cancel_delayed_work(&data->dvfs_dwork);
         if (cpu_lv < 0)
-                exynos_cpufreq_get_level(TOUCH_BOOSTER_LIMIT_CLK, &cpu_lv);
+                exynos_cpufreq_get_level(touch_dvfs_cpufreq/*TOUCH_BOOSTER_LIMIT_CLK*/, &cpu_lv);
         exynos_cpufreq_lock(DVFS_LOCK_ID_TSP, cpu_lv);
         touch_cpu_lock_status = 1;
 }
@@ -2111,6 +2125,35 @@ err:
         return ret;
 }
 
+#ifdef FEATURE_TOUCH_1ST_POINT
+static enum hrtimer_restart touch_1st_point_timer_func(struct hrtimer *timer)
+{
+	struct mxt_data *ts = container_of(timer, struct mxt_data, timer);
+
+	mdelay(5);
+
+	input_mt_slot(ts->input_dev, 0);
+    input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, true);
+    input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->fingers[0].x);
+    input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->fingers[0].y);
+    input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, ts->fingers[0].z);
+    input_report_abs(ts->input_dev, ABS_MT_PRESSURE,ts->fingers[0].w);
+	input_sync(ts->input_dev);
+
+	if(g_touch_debug == 2) printk("1st point (%d, %d)\n", ts->fingers[0].x, ts->fingers[0].y);
+
+ 	if(g_touch_1st_point_count < 1) {
+		ts->fingers[0].x = ts->fingers[0].x - 1;
+		ts->fingers[0].y = ts->fingers[0].y - 1;
+  		hrtimer_start(&ts->timer, ktime_set(0, POLLING_TIMER_NS), HRTIMER_MODE_REL);
+ 	} 
+
+	g_touch_1st_point_count++;
+
+ 	return HRTIMER_NORESTART;
+}
+#endif
+
 static void report_input_data(struct mxt_data *data)
 {
         int i;
@@ -2208,6 +2251,16 @@ static void report_input_data(struct mxt_data *data)
 #if TOUCH_BOOSTER
         if (count == 0) {
                 if (touch_cpu_lock_status) {
+					/*
+					if (touch_passivepen_status) {
+										touch_passivepen_status = 0;
+										//touch_passivepen_id = id;
+										mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+										printk("+++touch_passivepen_status (%d)\n", touch_passivepen_status);
+									}
+									*/
+					
+					if(g_touch_debug == 1) printk("cancel_delayed .. touch_cpu_lock_status (%d) \n", touch_cpu_lock_status);
                         cancel_delayed_work(&data->dvfs_dwork);
                         schedule_delayed_work(&data->dvfs_dwork,
                                 msecs_to_jiffies(TOUCH_BOOSTER_TIME));
@@ -2217,7 +2270,53 @@ static void report_input_data(struct mxt_data *data)
                 tsp_press_status = 1;
 #endif
         data->finger_mask = 0;
+#ifdef FEATURE_TOUCH_1ST_POINT	
+	if ((!data->fingers[0].mcount)&&(!g_touch_1st_point_count)&&(data->fingers[0].state == 2)) {	
+		data->fingers[0].x = data->fingers[0].x + 1;
+		data->fingers[0].y = data->fingers[0].y + 1;
+		hrtimer_start(&data->timer, ktime_set(0, POLLING_TIMER_NS), HRTIMER_MODE_REL);			
+	}	
+#endif
 }
+
+#if 0
+int getTouch(struct lgreftouch_ts* ts) {
+.. 전략 ..
+// T57(extra touchscreen data):id=52
+  // T62(Noise suppression):id=56, 
+  else if(calibration_mode && (buf[0] == 22 | buf[0] == 19)) 
+  {  
+    if(buf[0] == 19)
+    {        
+      tch_area= (buf[5] << 8) | buf[4];
+      atch_area= (buf[7] << 8) | buf[6];
+    }
+    else if(buf[0] == 22)
+    {        
+      noise_level= buf[6];
+    }
+    PRINTK(">>>>> tch_area= %d, atch_area= %d, noise_level= %d\n", tch_area, atch_area, noise_level);
+  
+    if(tch_area >= 0 && atch_area >= 0 && noise_level >= 0) 
+    {
+      if( atch_area > 0 || tch_area == 0 || noise_level >= 100)
+      {  
+          mXT336S_Calibration(ts);
+          msleep(10);  
+          mXT336S_NoseSuppressionReset(ts);
+          msleep(10);
+      } 
+      else
+      {  // ATCHArea = 0 && TCHArea > 1 && NoiseLevel < 100
+    
+        mXT336S_DiableCalibration(ts);
+      }    
+      PRINTK(">>>>> noise_level_error_count= %d, noise_level_no_error_count= %d\n", noise_level_error_count, noise_level_no_error_count);
+    }
+}
+.. 후략 .. 
+}
+#endif
 
 static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 {
@@ -2229,9 +2328,13 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
         u16 size;
         u8 value;
         int error;
-        u8 object_type, instance;
-		 //int temp_x=0 , temp_y=0;
-		
+        u8 object_type, instance, finger_cnt=0;		
+
+#ifdef FEATURE_TOUCH_1ST_POINT
+		hrtimer_cancel(&data->timer);
+		g_touch_1st_point_count = 0;
+#endif		
+		g_touch_noise_detect = 0;
         do {
 
                 touch_message_flag = 0;
@@ -2316,6 +2419,16 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                         }
                 }
 
+				if (object_type == PROCG_NOISESUPPRESSION_T62) {
+					//printk("T62 : massage data (0x%x, %d, %d, %d, %d, %d, %d)\n", msg[0], msg[1], msg[2], msg[3], msg[4], msg[5], msg[6]);	
+					if ((msg[5] > TOUCH_NOISE_LEVEL)&&(msg[5] > TOUCH_NOISE_THRESHOLD)) {
+						g_touch_noise_detect = 1;
+						if(g_touch_debug == 2) printk("T62 Touch Noise Detect, NOISELVL(%d) NLTHR(%d)\n");
+					}
+					else
+						g_touch_noise_detect = 0;
+                }
+
 #if USE_SUMSIZE
                 if (object_type == SPT_GENERICDATA_T57) {
                         sum_size = msg[1];
@@ -2326,17 +2439,24 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                 if (object_type == TOUCH_MULTITOUCHSCREEN_T9) {
                         id = msg[0] - data->finger_type;
 							//printk("[ATMEL] id=%d data->num_fingers=%d \n",id,data->num_fingers);
+
+							finger_cnt++;
+							
                         /* If not a touch event, then keep going */
                         if (id < 0 || id >= data->num_fingers)
-                                        continue;
-                        if (data->finger_mask & (1U << id))
-                                report_input_data(data);
+                                        continue;						
+                        if (data->finger_mask & (1U << id)) {
+								if(g_touch_debug == 2) printk("T9 report_input_data\n");
+								if (!g_touch_noise_detect)
+									report_input_data(data);								
+                        	}
 
                         if (msg[1] & RELEASE_MSG_MASK) {
                                 data->fingers[id].z = 0;
                                 data->fingers[id].w = msg[5];
                                 data->finger_mask |= 1U << id;
                                 data->fingers[id].state = MXT_STATE_RELEASE;
+								if(g_touch_debug == 1) printk("MXT_STATE_RELEASE (%d) \n", id);
                         } else if ((msg[1] & DETECT_MSG_MASK) && (msg[1] &
                                         (PRESS_MSG_MASK | MOVE_MSG_MASK))) {
 #if TOUCH_BOOSTER
@@ -2345,9 +2465,12 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 #endif
                                 touch_message_flag = 1;
                                 data->fingers[id].z = msg[6];
+
+								if(g_touch_debug == 2) printk("INFO fm o/n(%d, %d), z/w(%d,%d)", data->finger_mask, (1U << id), data->fingers[id].z, data->fingers[id].w);								
 #ifdef FEATURE_TOUCH_PASSIVEPEN
-								if (!msg[5])
-									data->fingers[id].w = 3;
+								if ((msg[6]<15)&&(!msg[5])) {
+									data->fingers[id].w = 3;								
+								}	
 								else
 									data->fingers[id].w = msg[5];
 #else
@@ -2385,9 +2508,13 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                                         data->fingers[id].state =
                                                 MXT_STATE_PRESS;
                                         data->fingers[id].mcount = 0;
+										if(g_touch_debug == 1) printk("MXT_STATE_PRESS (%d) \n", id); 
+                                } else if (msg[1] & MOVE_MSG_MASK) {
+                                		//printk("data->fingers[%d].mcount(%d)\n", id, data->fingers[id].mcount);
+                                        data->fingers[id].mcount += 1;										
+                                }		
 
-                                } else if (msg[1] & MOVE_MSG_MASK)
-                                        data->fingers[id].mcount += 1;
+								if(g_touch_debug == 2) printk("fcnt/m(%d,%d),id(%d), pos(%d,%d,)\n", finger_cnt, data->fingers[id].mcount, id, data->fingers[id].x, data->fingers[id].y);
 
                                 #ifdef _SUPPORT_SHAPE_TOUCH_
                                 data->fingers[id].component = msg[7];
@@ -2409,6 +2536,8 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                         }
                 }
         } while (!gpio_get_value(data->gpio_read_done));
+
+		finger_cnt = 0;
 		 //printk("[ATMEL] data->finger_mask=%d \n",data->finger_mask);
         if (data->finger_mask) {
 #if USE_SUMSIZE
@@ -2445,7 +2574,9 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
                         report_input_data(data);
                 }
 #else
-                report_input_data(data);
+				if(g_touch_debug == 2) printk("T9 out report_input_data : fm (%d)\n", data->finger_mask);
+				if (!g_touch_noise_detect)
+                	report_input_data(data);				
 #endif
         }
 
@@ -4250,16 +4381,123 @@ static const struct attribute_group mxt_attr_group = {
 
 #endif
 
-#ifdef FEATURE_TOUCH_ACTIVEPEN
-//extern void mxt1664_boost_enable(int onoff);
-u8 activepen_mode = 0;
+#ifdef FEATURE_TOUCH_DEBUG
+static ssize_t atm1664_debug_show(struct device *dev,
+				struct device_attribute *attr, char *buf, size_t size)
+{
+	printk("[ATMEL] %s()\n", __func__);
 
+#if TOUCH_BOOSTER	
+	printk("touch_dvfs_cpufreq : %d KHz\n", touch_dvfs_cpufreq);	
+#endif
+
+	return sprintf(buf, "%d\n",  g_touch_debug);
+}
+
+static ssize_t atm1664_debug_store(struct device *dev,
+					struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	static int tmp=0;
+
+	printk("[ATMEL] %s()\n", __func__);
+	
+	tmp = buf[0]-'0';	
+
+	g_touch_debug = tmp;
+
+	printk("Active Pen [Enable] : %d\n", tmp);
+	
+#if TOUCH_BOOSTER	
+	if (g_touch_debug == 7) touch_dvfs_cpufreq = (g_touch_debug-1) * 100000;
+	if (g_touch_debug == 8) touch_dvfs_cpufreq = g_touch_debug * 100000;
+	if (g_touch_debug == 9) touch_dvfs_cpufreq = (g_touch_debug+1) * 100000;
+	printk("touch_dvfs_cpufreq : %d KHz\n", touch_dvfs_cpufreq);				
+#endif
+
+    return strlen(buf);
+}
+
+static DEVICE_ATTR(tsp_debug, S_PEN_USER, atm1664_debug_show, atm1664_debug_store);
+#endif
+
+#ifdef FEATURE_TOUCH_NOISE
+void atm1664_power_noise(bool power_detect)
+{	
+	if (power_detect)
+		g_power_noise = 1;
+	else
+		g_power_noise = 0;
+
+	printk("atm1664_power_noise (%d)\n", g_power_noise);
+	
+	mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+	mxt_PROCI_STYLUS_T47(copy_data);
+	mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
+
+	mxt_backup(copy_data);
+	msleep(100);	
+    /* reset the touch IC. */
+	mxt_reset(copy_data);       
+    msleep(MXT_SW_RESET_TIME);
+    calibrate_chip_e();
+}
+EXPORT_SYMBOL(atm1664_power_noise);
+#endif
+
+#ifdef FEATURE_TOUCH_PASSIVEPEN
+static ssize_t atm1664_passivepen_show(struct device *dev,
+				struct device_attribute *attr, char *buf, size_t size)
+{
+	printk("[ATMEL] %s()\n", __func__);
+	
+	return sprintf(buf, "%d\n",  g_passivepen_mode);
+}
+
+static ssize_t atm1664_passivepen_store(struct device *dev,
+					struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	static int tmp=0;
+
+	printk("[ATMEL] %s()\n", __func__);
+	
+	tmp = buf[0]-'0';	
+	
+	if (tmp) {
+		printk("Passive Pen [Enable] : %d\n", tmp);
+		g_passivepen_mode = 1;		
+	}
+	else {
+		printk("Passive Pen [Disable] : %d\n", tmp);
+		g_passivepen_mode = 0;		
+	}
+
+	mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+	mxt_PROCI_STYLUS_T47(copy_data);
+	mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
+
+	mxt_backup(copy_data);
+	msleep(100);	
+    /* reset the touch IC. */
+	mxt_reset(copy_data);       
+    msleep(MXT_SW_RESET_TIME);
+    calibrate_chip_e();
+
+    return strlen(buf);
+}
+
+static DEVICE_ATTR(tsp_passivepen, S_PEN_USER, atm1664_passivepen_show, atm1664_passivepen_store);
+//static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
+#endif
+
+#ifdef FEATURE_TOUCH_ACTIVEPEN
 static ssize_t atm1664_activepen_show(struct device *dev,
 				struct device_attribute *attr, char *buf, size_t size)
 {
 	printk("[ATMEL] %s()\n", __func__);
 	
-	return sprintf(buf, "%d\n",  activepen_mode);
+	return sprintf(buf, "%d\n",  g_activepen_mode);
 }
 
 static ssize_t atm1664_activepen_store(struct device *dev,
@@ -4270,25 +4508,40 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 
 	printk("[ATMEL] %s()\n", __func__);
 	
-	tmp = buf-'0';
+	tmp = buf[0]-'0';	
 	
 	disable_irq(IRQ_EINT(4));
 	if (tmp) {
 		printk("Active Pen [Enable] : %d\n", tmp);
-		//mxt1664_boost_enable(0);
-		activepen_mode = 1;		
+		g_activepen_mode = 1;		
 	}
 	else {
 		printk("Active Pen [Disable] : %d\n", tmp);
-		//mxt1664_boost_enable(1);
-		activepen_mode = 0;		
+		g_activepen_mode = 0;		
 	}
+
+#if 0
+	mxt_TOUCH_MULTITOUCHSCREEN_T9(copy_data);
+
+	mxt_backup(copy_data);
+	msleep(100);	
+    /* reset the touch IC. */
+	mxt_reset(copy_data);       
+    msleep(MXT_SW_RESET_TIME);
+    calibrate_chip_e();
+#endif
+
+	disable_irq(IRQ_EINT(4));
+	copy_data->power_off();
+	mdelay(100);
+	copy_data->power_on();
 	enable_irq(IRQ_EINT(4));
 
     return strlen(buf);
 }
 
-static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
+static DEVICE_ATTR(tsp_pen, S_PEN_USER, atm1664_activepen_show, atm1664_activepen_store);
+//static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
 #endif
 
 #ifdef FEATURE_TOUCH_CONFIG_UPDATE 
@@ -4361,17 +4614,17 @@ uint8_t dec_num(uint8_t a0, uint8_t a1, uint8_t a2)
     uint8_t num;
 
 	if (a1 == ';') {
-		num_digit_index = 1;
+		g_num_digit_index = 1;
 		num = a0-'0';
 	} else if (a2 == ';') {
-		num_digit_index = 2;
+		g_num_digit_index = 2;
 		num = (a0-'0')*10+(a1-'0');
 	} else {	    
-		num_digit_index = 3;
+		g_num_digit_index = 3;
 		num = (a0-'0')*100+(a1-'0')*10+(a2-'0');
 	}
 
-	//printk("dec_num in(%s, %s, %s) = (%d), digit(%d)\n", a0, a1, a2, num, num_digit_index);
+	//printk("dec_num in(%s, %s, %s) = (%d), digit(%d)\n", a0, a1, a2, num, g_num_digit_index);
 	
 	return num;	
 }
@@ -4514,7 +4767,7 @@ static ssize_t atm1664_config_store(struct device *dev,
 				mxt_defconfig_settings(copy_data, cfg_obj);			
 			
 			cfg_obj = dec_num(pbt_buf[i+1], pbt_buf[i+2], pbt_buf[i+3]);			
-			i = i + num_digit_index;		
+			i = i + g_num_digit_index;		
 			cfg_obj_cnt = 0;
 			printk("MXT1665S OBJECT : %d\n", cfg_obj);
 		}
@@ -4537,7 +4790,7 @@ static ssize_t atm1664_config_store(struct device *dev,
 			if (cfg_obj == 62) t62_config_data[cfg_obj_cnt] = num;
 			if (cfg_obj == 63) t63_config_data[cfg_obj_cnt] = num;	
 			
-			i = i + num_digit_index;					
+			i = i + g_num_digit_index;					
 			cfg_obj_cnt++;
 		}			
 	}
@@ -4555,7 +4808,7 @@ static ssize_t atm1664_config_store(struct device *dev,
 
     calibrate_chip_e();
 
-	if (config_data_out) 
+	if (t0_info_data[1]) 
 		obect_config_data_out();
 	
 	disable_irq(IRQ_EINT(4));
@@ -4574,12 +4827,18 @@ static DEVICE_ATTR(tsp_config, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_config_show, atm
 //static DEVICE_ATTR(tsp_config, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_config_show, atm1664_config_store);
 
 static struct attribute *atm1664_attributes[] = {     
+#ifdef FEATURE_TOUCH_PASSIVEPEN	
+	&dev_attr_tsp_passivepen.attr,  
+#endif
 #ifdef FEATURE_TOUCH_ACTIVEPEN	
 	&dev_attr_tsp_pen.attr,  
 #endif	
 #ifdef FEATURE_TOUCH_CONFIG_UPDATE
 	&dev_attr_tsp_config.attr,  	
 #endif	
+#ifdef FEATURE_TOUCH_DEBUG
+	&dev_attr_tsp_debug.attr,
+#endif
     NULL
 };
 
@@ -4723,7 +4982,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                 goto err_init_drv;
         }
 				
-#if 1
+
         /* tsp_family_id - 0xA2 : MXT-1446-S series */
         if (data->family_id == 0xA2) {
                 tsp_config = (u8 **)data->pdata->config;
@@ -4759,32 +5018,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                 printk("ERROR : There is no valid TSP ID\n");
                 goto err_config;
         }
-#if 0
-        for (i = 0; tsp_config[i][0] != RESERVED_T255; i++) {
-                ret = init_write_config(data, tsp_config[i][0],
-                                                        tsp_config[i] + 1);
-                if (ret)
-                        goto err_config;
 
-                if (tsp_config[i][0] == TOUCH_MULTITOUCHSCREEN_T9) {
-                        /* Are x and y inverted? */
-                        if (tsp_config[i][10] & 0x1) {
-                                data->x_dropbits =
-                                        (!(tsp_config[i][22] & 0xC)) << 1;
-                                data->y_dropbits =
-                                        (!(tsp_config[i][20] & 0xC)) << 1;
-                        } else {
-                                data->x_dropbits =
-                                        (!(tsp_config[i][20] & 0xC)) << 1;
-                                data->y_dropbits =
-                                        (!(tsp_config[i][22] & 0xC)) << 1;
-                        }
-                }
-        }
-        ret = mxt_backup(data);
-        if (ret)
-                goto err_backup;
-#else
 
     get_object_info(data, SPT_USERDATA_T38,
     	&size, &obj_address);
@@ -4804,39 +5038,29 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 							
         }
 	}
+#if 0 //def FEATURE_TOUCH_ACTIVEPEN	
+	else {
+		mxt_TOUCH_MULTITOUCHSCREEN_T9(data);
+	}
+#endif	
 
-#if 1
-#if 1
+#ifdef FEATURE_TOUCH_1ST_POINT
+	hrtimer_init(&data->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	data->timer.function = touch_1st_point_timer_func;
+#endif	
 
-#if 0 //FEATURE_TOUCH_ACTIVEPEN // Active Pen (4096*4096)
-		data->x_dropbits = 0;
-        data->y_dropbits = 0;
-#else
         data->x_dropbits = 0;//(255 &0xc) << 1;
                //!(tsp_config[i][20] & 0xC)) << 1;
         data->y_dropbits =2;//(0 &0xc) << 1;
                //!(tsp_config[i][22] & 0xC)) << 1;
-#endif
 
-#else
-        data->x_dropbits =(!(tsp_config[i][22] & 0xC)) << 1;  
-               //!(tsp_config[i][20] & 0xC)) << 1;
-        data->y_dropbits =(!(tsp_config[i][20] & 0xC)) << 1;
-               //!(tsp_config[i][22] & 0xC)) << 1;
-#endif
 		printk("[ATMEL]  x_dropbits=%d  y_dropbits=%d \n", data->x_dropbits,data->y_dropbits);
-
-#else
-        data->x_dropbits = (0 &0xc) << 1;
-               //!(tsp_config[i][20] & 0xC)) << 1;
-        data->y_dropbits = 2; //(8 &0xc) << 1;
-               //!(tsp_config[i][22] & 0xC)) << 1;
-#endif               
+             
 		//mxt_config_settings(data);
         ret = mxt_backup(data);
         if (ret)
                 goto err_backup;
-#endif
+
 		msleep(100);
         /* reset the touch IC. */
         ret = mxt_reset(data);
@@ -4847,7 +5071,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
         calibrate_chip_e();
 
-#endif
+
         for (i = 0; i < data->num_fingers; i++)
                 data->fingers[i].state = MXT_STATE_INACTIVE;
 
@@ -4857,11 +5081,9 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
         if (ret < 0)
                 goto err_irq;
 
-#ifdef FEATURE_TOUCH_ACTIVEPEN 
 		ret = sysfs_create_group(&client->dev.kobj, &atm1664_attr_group);
         if (ret)
                 pr_err("sysfs_create_group()is falled\n");
-#endif
 
 #if SYSFS
         ret = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);

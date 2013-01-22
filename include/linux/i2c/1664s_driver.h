@@ -22,7 +22,7 @@
 
 /* Feature */
 /*#######################################*/
-#define TOUCH_BOOSTER                           0
+#define TOUCH_BOOSTER                           1
 #define USE_SUMSIZE                                     0
 #define SYSFS   0
 #define FOR_BRINGUP  1
@@ -32,7 +32,70 @@
 #define ITDEV   1
 #define SHOW_COORDINATE 0
 #define DEBUG_INFO     0
+
+#define FEATURE_TOUCH_PASSIVEPEN
+#define FEATURE_TOUCH_ACTIVEPEN
+#define FEATURE_TOUCH_CONFIG_UPDATE
+#define FEATURE_TOUCH_1ST_POINT
+#define FEATURE_TOUCH_DEBUG
+#define FEATURE_TOUCH_NOISE
+
+#define S_PEN_USER 00666
 /*#######################################*/
+
+/* ATMEL Defined  Start */
+#define OBJECT_TABLE_START_ADDRESS      7
+#define OBJECT_TABLE_ELEMENT_SIZE       6
+
+#define CMD_RESET_OFFSET                0
+#define CMD_BACKUP_OFFSET               1
+#define CMD_CALIBRATE_OFFSET    2
+#define CMD_REPORTATLL_OFFSET   3
+#define CMD_DEBUG_CTRL_OFFSET   4
+#define CMD_DIAGNOSTIC_OFFSET   5
+
+
+#define DETECT_MSG_MASK         0x80
+#define PRESS_MSG_MASK                  0x40
+#define RELEASE_MSG_MASK                0x20
+#define MOVE_MSG_MASK                   0x10
+#define AMPLITUDE_MSG_MASK      0x04
+#define SUPPRESS_MSG_MASK               0x02
+
+/* Slave addresses */
+/* need to check +  */
+#define MXT_APP_LOW             0x4a
+#define MXT_APP_HIGH            0x4d
+#define MXT_BOOT_LOW            0x24 //0x26
+#define MXT_BOOT_HIGH           0x25 //0x27
+/* need to check -  */
+
+/* FIRMWARE NAME */
+#define MXT_FW_NAME                     "tsp_atmel/mXT1664S.fw"
+#define MXT_BOOT_VALUE          0xa5
+#define MXT_BACKUP_VALUE                0x55
+
+/* Bootloader mode status */
+#define MXT_WAITING_BOOTLOAD_CMD        0xc0    /* valid 7 6 bit only */
+#define MXT_WAITING_FRAME_DATA  0x80    /* valid 7 6 bit only */
+#define MXT_FRAME_CRC_CHECK     0x02
+#define MXT_FRAME_CRC_FAIL              0x03
+#define MXT_FRAME_CRC_PASS              0x04
+#define MXT_APP_CRC_FAIL                0x40    /* valid 7 8 bit only */
+#define MXT_BOOT_STATUS_MASK    0x3f
+
+/* Command to unlock bootloader */
+#define MXT_UNLOCK_CMD_MSB              0xaa
+#define MXT_UNLOCK_CMD_LSB              0xdc
+
+#define ID_BLOCK_SIZE                   7
+
+#define MXT_STATE_INACTIVE              -1
+#define MXT_STATE_RELEASE               0
+#define MXT_STATE_PRESS         1
+#define MXT_STATE_MOVE          2
+
+#define MAX_USING_FINGER_NUM 10
 
 #define MXT_SW_RESET_TIME               300             /* msec */
 #define MXT_HW_RESET_TIME               300     /* msec */
@@ -158,12 +221,18 @@ struct report_id_map_t {
 	u8 instance;        /*!< Instance number. */
 };
 
+#include <linux/hrtimer.h>
+
 struct mxt_data 
 {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	struct mxt_platform_data *pdata;
 	struct early_suspend early_suspend;
+#ifdef FEATURE_TOUCH_1ST_POINT	
+	struct hrtimer timer;
+#endif
+	//struct work_struct work;
 	u8 family_id;
 	u32 finger_mask;
 	int gpio_read_done;
@@ -629,26 +698,47 @@ typedef struct {
  	uint8_t  nMAXGCLIMIT ;
  	uint8_t  nRESERVED[5] ;
 
- 	uint8_t  nBLEN[2] ;
- 	uint8_t  nTCHTHR[2] ;
- 	uint8_t  nTCHDI[2] ;
- 	uint8_t  nMOVHYSTI[2] ;
- 	uint8_t  nMOVHYSTN[2] ;
- 	uint8_t  nMOVFILTER[2] ;
- 	uint8_t  nNUMTOUCH[2] ;
- 	uint8_t  nMRGHYST[2] ;
- 	uint8_t  nMRGTHR[2] ;
- 	uint8_t  nXLOCLIP[2] ;
- 	uint8_t  nXHICLIP[2] ;
- 	uint8_t  nYLOCLIP[2] ;
- 	uint8_t  nYHICLIP[2] ;
- 	uint8_t  nXEDGECTRL[2] ;
- 	uint8_t  nXEDGEDIST[2] ;
- 	uint8_t  nYEDGECTRL[2] ;
- 	uint8_t  nYEDGEDIST[2] ;
- 	uint8_t  nJUMPLIMIT[2] ;
- 	uint8_t  nTCHHYST[2] ;
- 	uint8_t  nNEXTTCHDI[2] ;
+	uint8_t  nBLEN_0 ;
+ 	uint8_t  nTCHTHR_0 ;
+ 	uint8_t  nTCHDI_0 ;
+ 	uint8_t  nMOVHYSTI_0 ;
+ 	uint8_t  nMOVHYSTN_0 ;
+ 	uint8_t  nMOVFILTER_0 ;
+ 	uint8_t  nNUMTOUCH_0 ;
+ 	uint8_t  nMRGHYST_0 ;
+ 	uint8_t  nMRGTHR_0 ;
+ 	uint8_t  nXLOCLIP_0 ;
+ 	uint8_t  nXHICLIP_0 ;
+ 	uint8_t  nYLOCLIP_0 ;
+ 	uint8_t  nYHICLIP_0 ;
+ 	uint8_t  nXEDGECTRL_0 ;
+ 	uint8_t  nXEDGEDIST_0 ;
+ 	uint8_t  nYEDGECTRL_0 ;
+ 	uint8_t  nYEDGEDIST_0 ;
+ 	uint8_t  nJUMPLIMIT_0 ;
+ 	uint8_t  nTCHHYST_0 ;
+ 	uint8_t  nNEXTTCHDI_0 ;
+
+	uint8_t  nBLEN_1 ;
+ 	uint8_t  nTCHTHR_1 ;
+ 	uint8_t  nTCHDI_1 ;
+ 	uint8_t  nMOVHYSTI_1 ;
+ 	uint8_t  nMOVHYSTN_1 ;
+ 	uint8_t  nMOVFILTER_1 ;
+ 	uint8_t  nNUMTOUCH_1 ;
+ 	uint8_t  nMRGHYST_1 ;
+ 	uint8_t  nMRGTHR_1 ;
+ 	uint8_t  nXLOCLIP_1 ;
+ 	uint8_t  nXHICLIP_1 ;
+ 	uint8_t  nYLOCLIP_1 ;
+ 	uint8_t  nYHICLIP_1 ;
+ 	uint8_t  nXEDGECTRL_1 ;
+ 	uint8_t  nXEDGEDIST_1 ;
+ 	uint8_t  nYEDGECTRL_1 ;
+ 	uint8_t  nYEDGEDIST_1 ;
+ 	uint8_t  nJUMPLIMIT_1 ;
+ 	uint8_t  nTCHHYST_1 ;
+ 	uint8_t  nNEXTTCHDI_1 ;
 } __packed proci_noisesupperssion_t62_t;
 
 typedef struct {

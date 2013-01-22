@@ -49,6 +49,11 @@ extern int fg_read_soc(void);
 extern int fg_read_vcell(void);
 #endif
 
+#include <linux/i2c/1664s_driver.h>
+#ifdef FEATURE_TOUCH_NOISE
+extern void atm1664_power_noise(bool power_detect);
+#endif
+
 bool usb_is_connected = false;
 bool dc_is_connected = false;
 EXPORT_SYMBOL(usb_is_connected);
@@ -339,6 +344,13 @@ static irqreturn_t max8903_dcin(int irq, void *_data)
 
 	dev_dbg(data->dev, "TA(DC-IN) Charger %s.\n", ta_in ?
 			"Connected" : "Disconnected");
+	
+#ifdef FEATURE_TOUCH_NOISE
+	if (ta_in)
+	  	atm1664_power_noise(ta_in);
+	else
+		atm1664_power_noise(ta_in);
+#endif
 
 #if 0
 	old_type = data->psy.type;
