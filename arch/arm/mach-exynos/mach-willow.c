@@ -29,6 +29,12 @@
 #include <linux/v4l2-mediabus.h>
 #include <linux/memblock.h>
 #include <linux/delay.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #ifdef CONFIG_HAPTIC_ISA1200
@@ -2380,10 +2386,10 @@ void touch_on(void)
 	regulator_put(tsp_vdd3v3);
 
 	/* enable touch xvdd */
-	if (!g_activepen_mode) 
+	if (!g_activepen_mode)
 		gpio_set_value(GPIO_TOUCH_BOOTST_EN, 1);
 	else
-		gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);	
+		gpio_set_value(GPIO_TOUCH_BOOTST_EN, 0);
 
 	/* reset ic */
 	mdelay(1);
@@ -2759,6 +2765,48 @@ static struct i2c_board_info i2c_devs8[] __initdata = {
 };
 #endif
 
+#ifdef CONFIG_ANDROID_PMEM
+static struct android_pmem_platform_data pmem_pdata = {
+	.name		= "pmem",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= 0,
+	.size		= 0
+};
+
+static struct android_pmem_platform_data pmem_gpu1_pdata = {
+	.name		= "pmem_gpu1",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= 0,
+	.size		= 0,
+};
+
+static struct platform_device pmem_device = {
+	.name	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &pmem_pdata
+	},
+};
+
+static struct platform_device pmem_gpu1_device = {
+	.name	= "android_pmem",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &pmem_gpu1_pdata
+	},
+};
+
+static void __init android_pmem_set_platdata(void)
+{
+#if defined(CONFIG_S5P_MEM_CMA)
+	pmem_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K;
+	pmem_gpu1_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K;
+#endif
+}
+#endif
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -2913,6 +2961,10 @@ static struct platform_device bcm4334_bluetooth_device = {
 #endif
 
 static struct platform_device *willow_devices[] __initdata = {
+#ifdef CONFIG_ANDROID_PMEM
+	&pmem_device,
+	&pmem_gpu1_device,
+#endif
 #ifdef CONFIG_SEC_WATCHDOG_RESET
 	&watchdog_reset_device,
 #endif
@@ -3188,9 +3240,156 @@ static void __init smdk4x12_set_camera_flite_platdata(void)
 #endif
 
 #if defined(CONFIG_CMA)
+static void __init exynos4_cma_region_reserve(
+			struct cma_region *regions_normal,
+			struct cma_region *regions_secure)
+{
+	struct cma_region *reg;
+	phys_addr_t paddr_last = 0xFFFFFFFF;
+
+	for (reg = regions_normal; reg->size != 0; reg++) {
+		phys_addr_t paddr;
+
+		if (!IS_ALIGNED(reg->size, PAGE_SIZE)) {
+			pr_err("S5P/CMA: size of '%s' is NOT page-aligned\n",
+								reg->name);
+			reg->size = PAGE_ALIGN(reg->size);
+		}
+
+
+		if (reg->reserved) {
+			pr_err("S5P/CMA: '%s' alread reserved\n", reg->name);
+			continue;
+		}
+
+		if (reg->alignment) {
+			if ((reg->alignment & ~PAGE_MASK) ||
+				(reg->alignment & ~reg->alignment)) {
+				pr_err("S5P/CMA: Failed to reserve '%s': "
+						"incorrect alignment 0x%08x.\n",
+						reg->name, reg->alignment);
+				continue;
+			}
+		} else {
+			reg->alignment = PAGE_SIZE;
+		}
+
+		if (reg->start) {
+			if (!memblock_is_region_reserved(reg->start, reg->size)
+			    && (memblock_reserve(reg->start, reg->size) == 0))
+				reg->reserved = 1;
+			else
+				pr_err("S5P/CMA: Failed to reserve '%s'\n",
+								reg->name);
+
+			continue;
+		}
+
+		paddr = memblock_find_in_range(0, MEMBLOCK_ALLOC_ACCESSIBLE,
+						reg->size, reg->alignment);
+		if (paddr != MEMBLOCK_ERROR) {
+			if (memblock_reserve(paddr, reg->size)) {
+				pr_err("S5P/CMA: Failed to reserve '%s'\n",
+								reg->name);
+				continue;
+			}
+
+			reg->start = paddr;
+			reg->reserved = 1;
+		} else {
+			pr_err("S5P/CMA: No free space in memory for '%s'\n",
+								reg->name);
+		}
+
+		if (cma_early_region_register(reg)) {
+			pr_err("S5P/CMA: Failed to register '%s'\n",
+								reg->name);
+			memblock_free(reg->start, reg->size);
+		} else {
+			paddr_last = min(paddr, paddr_last);
+		}
+	}
+
+	if (regions_secure && regions_secure->size) {
+		size_t size_secure = 0;
+		size_t align_secure, size_region2, aug_size, order_region2;
+
+		for (reg = regions_secure; reg->size != 0; reg++)
+			size_secure += reg->size;
+
+		reg--;
+
+		/* Entire secure regions will be merged into 2
+		 * consecutive regions. */
+		align_secure = 1 <<
+			(get_order((size_secure + 1) / 2) + PAGE_SHIFT);
+		/* Calculation of a subregion size */
+		size_region2 = size_secure - align_secure;
+		order_region2 = get_order(size_region2) + PAGE_SHIFT;
+		if (order_region2 < 20)
+			order_region2 = 20; /* 1MB */
+		order_region2 -= 3; /* divide by 8 */
+		size_region2 = ALIGN(size_region2, 1 << order_region2);
+
+		aug_size = align_secure + size_region2 - size_secure;
+		if (aug_size > 0)
+			reg->size += aug_size;
+
+		size_secure = ALIGN(size_secure, align_secure);
+
+		if (paddr_last >= memblock.current_limit) {
+			paddr_last = memblock_find_in_range(0,
+					MEMBLOCK_ALLOC_ACCESSIBLE,
+					size_secure, reg->alignment);
+		} else {
+			paddr_last -= size_secure;
+			paddr_last = round_down(paddr_last, align_secure);
+		}
+
+		if (paddr_last) {
+			while (memblock_reserve(paddr_last, size_secure))
+				paddr_last -= align_secure;
+
+			do {
+				reg->start = paddr_last;
+				reg->reserved = 1;
+				paddr_last += reg->size;
+
+				if (cma_early_region_register(reg)) {
+					memblock_free(reg->start, reg->size);
+					pr_err("S5P/CMA: "
+					"Failed to register secure region "
+					"'%s'\n", reg->name);
+				} else {
+					size_secure -= reg->size;
+				}
+			} while (reg-- != regions_secure);
+
+			if (size_secure > 0)
+				memblock_free(paddr_last, size_secure);
+		} else {
+			pr_err("S5P/CMA: Failed to reserve secure regions\n");
+		}
+	}
+}
+
 static void __init exynos4_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
+		{
+			.name = "pmem",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
+		{
+			.name = "pmem_gpu1",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
+			.start = 0,
+		},
+#endif
 #ifndef CONFIG_VIDEOBUF2_ION
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV
 		{
@@ -3367,6 +3566,7 @@ static void __init exynos4_reserve_mem(void)
 	struct cma_region *regions_secure = NULL;
 #endif
 	static const char map[] __initconst =
+		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0/fimd=fimd;exynos4-fb.0/fimd=fimd;"
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 		"s3cfb.0/video=video;exynos4-fb.0/video=video;"
@@ -3398,10 +3598,11 @@ static void __init exynos4_reserve_mem(void)
 #endif
 		"s5p-smem/mfc=mfc0,mfc-secure;"
 		"s5p-smem/fimc=fimc3;"
-		"s5p-smem/mfc-shm=mfc1,mfc-normal;"
-		"s5p-smem/fimd=fimd;";
+		"s5p-smem/mfc-shm=mfc1,mfc-normal;";
 
-	s5p_cma_region_reserve(regions, regions_secure, 0, map);
+	cma_set_defaults(NULL, map);
+
+	exynos4_cma_region_reserve(regions, regions_secure);
 }
 #else
 static inline void exynos4_reserve_mem(void)
@@ -3582,6 +3783,9 @@ static void __init willow_machine_init(void)
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+	android_pmem_set_platdata();
 #endif
 #ifdef CONFIG_FB_S3C
 	dev_set_name(&s5p_device_fimd0.dev, "s3cfb.0");
