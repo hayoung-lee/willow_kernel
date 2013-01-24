@@ -69,7 +69,9 @@ config VIDEO_SAMSUNG_MEMSIZE_FIMC2
 config VIDEO_SAMSUNG_MEMSIZE_FIMC3
 	int "Memory size in kbytes for FIMC3"
 	depends on VIDEO_FIMC || VIDEO_SAMSUNG_S5P_FIMC
-	default "5120"
+	default "19380"
+	help
+	 This is hdmi reserved momemry size, 19380 = 1920*1088*1.5(video) + 1920*1088*4(graphic0) + 1920*1088*4(graphic1)
 
 config VIDEO_SAMSUNG_MEMSIZE_MFC
 	int "Memory size in kbytes for MFC"
