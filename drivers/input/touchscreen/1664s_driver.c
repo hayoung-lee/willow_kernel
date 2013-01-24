@@ -99,7 +99,7 @@ u8 g_touch_1st_point_count = 0;
 #endif
 
 #ifdef FEATURE_TOUCH_PASSIVEPEN
-bool g_passivepen_mode = 0;
+bool g_passivepen_mode = 1;
 #endif
 
 #ifdef FEATURE_TOUCH_NOISE
@@ -157,13 +157,13 @@ u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 0, 0, 0, 10, 2
 u8 t15_config_data[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t25_config_data[9] = {3, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t40_config_data[5] = {0, 0, 0, 0, 0};
-u8 t42_config_data[46] = {0, 25, 29, 90, 45, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t42_config_data[46] = {0, 25, 29, 90, 254, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t43_config_data[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 1, 0, 0, 12};
 u8 t47_config_data[13] = {0, 25, 45, 4, 2, 50, 40, 254, 1, 16, 0, 0, 3};
 u8 t55_config_data[6] = {0, 0, 0, 0, 0, 0};
 u8 t56_config_data[47] = {3, 0, 0, 43, 23, 24, 23, 23, 23, 23, 23, 23, 22, 22, 22, 22, 21, 21, 21, 20, 20, 19, 19, 18, 18, 18, 18, 18, 17, 17, 17, 16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 160, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 135, 120, 2, 1, 0, 0, 10, 20, 20, 4, 4, 5, 6, 145, 30, 141, 18, 20, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 135, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 135, 120, 2, 1, 0, 0, 10, 20, 20, 4, 4, 5, 6, 145, 30, 141, 18, 20, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t63_config_data[12] = {0, 6, 20, 215, 15, 97, 162, 3, 28, 255, 100, 0};
 #endif
 
@@ -1045,7 +1045,7 @@ int mxt_SPT_GENERICDATA_T57(struct mxt_data *mxt)
 
 	error = mxt_write_block(client, obj_addr,
 			obj_size, (u8 *)&t57_config);
-
+	
 	t57_config.nCTRL = 227;
 	t57_config.nAREATHR = 80;
 	t57_config.nAREAHYST = 15;
@@ -1143,7 +1143,15 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	t62_config.nHOPCNTPER=t62_config_data[i++];
 	t62_config.nHOPEVALTO=t62_config_data[i++];
 	t62_config.nHOPST=t62_config_data[i++];
-	t62_config.nNLGAIN=t62_config_data[i++];
+
+	if (g_power_noise) {
+		t62_config.nNLGAIN=160; //t62_config_data[i++];
+		i++;
+	}
+	else
+		t62_config.nNLGAIN=t62_config_data[i++];
+
+	//t62_config.nNLGAIN=t62_config_data[i++];
 	t62_config.nMINNLTHR=t62_config_data[i++];
 	t62_config.nINCNLTHR=t62_config_data[i++];
 	t62_config.nADCSPERXTHR=t62_config_data[i++];
@@ -1225,7 +1233,14 @@ int mxt_PROCI_ACTIVESTYLUS_T63(struct mxt_data *mxt)
 	//printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
 	memset(&t63_config, 0, sizeof(t63_config));
 
-	t63_config.nCTRL  =t63_config_data[i++];
+	if (g_activepen_mode) {
+		t63_config.nCTRL  = 1; //t63_config_data[i++];
+		i++;
+	}
+	else
+		t63_config.nCTRL  =t63_config_data[i++];
+	
+	//t63_config.nCTRL  =t63_config_data[i++];
 	t63_config.nMAXTCHAREA  =t63_config_data[i++];
 	t63_config.nSIGPWR  =t63_config_data[i++];
 	t63_config.nSIGRATIO  =t63_config_data[i++];
@@ -2468,7 +2483,7 @@ static irqreturn_t mxt_irq_thread(int irq, void *ptr)
 
 								if(g_touch_debug == 2) printk("INFO fm o/n(%d, %d), z/w(%d,%d)", data->finger_mask, (1U << id), data->fingers[id].z, data->fingers[id].w);								
 #ifdef FEATURE_TOUCH_PASSIVEPEN
-								if ((msg[6]<15)&&(!msg[5])) {
+								if (!msg[5]/*(msg[6]<15)&&(!msg[5])*/) {
 									data->fingers[id].w = 3;								
 								}	
 								else
@@ -4488,7 +4503,6 @@ static ssize_t atm1664_passivepen_store(struct device *dev,
 }
 
 static DEVICE_ATTR(tsp_passivepen, S_PEN_USER, atm1664_passivepen_show, atm1664_passivepen_store);
-//static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
 #endif
 
 #ifdef FEATURE_TOUCH_ACTIVEPEN
@@ -4520,8 +4534,8 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 		g_activepen_mode = 0;		
 	}
 
-#if 0
-	mxt_TOUCH_MULTITOUCHSCREEN_T9(copy_data);
+#if 0	
+	mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
 
 	mxt_backup(copy_data);
 	msleep(100);	
@@ -4541,7 +4555,6 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 }
 
 static DEVICE_ATTR(tsp_pen, S_PEN_USER, atm1664_activepen_show, atm1664_activepen_store);
-//static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
 #endif
 
 #ifdef FEATURE_TOUCH_CONFIG_UPDATE 
@@ -5038,11 +5051,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 							
         }
 	}
-#if 0 //def FEATURE_TOUCH_ACTIVEPEN	
 	else {
-		mxt_TOUCH_MULTITOUCHSCREEN_T9(data);
-	}
-#endif	
+		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+		mxt_PROCI_STYLUS_T47(copy_data);
+		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
+	}	
 
 #ifdef FEATURE_TOUCH_1ST_POINT
 	hrtimer_init(&data->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
