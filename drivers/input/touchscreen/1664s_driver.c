@@ -108,6 +108,7 @@ bool g_passivepen_mode = 1;
 
 bool g_power_noise = 0;
 bool g_touch_noise_detect = 0;
+bool g_touch_suspend = 0;
 #endif
 
 
@@ -1233,14 +1234,16 @@ int mxt_PROCI_ACTIVESTYLUS_T63(struct mxt_data *mxt)
 	//printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
 	memset(&t63_config, 0, sizeof(t63_config));
 
+#if 0
 	if (g_activepen_mode) {
-		t63_config.nCTRL  = 1; //t63_config_data[i++];
+		t63_config.nCTRL  = 3; 
 		i++;
 	}
 	else
 		t63_config.nCTRL  =t63_config_data[i++];
-	
-	//t63_config.nCTRL  =t63_config_data[i++];
+#else	
+	t63_config.nCTRL  =t63_config_data[i++];
+#endif	
 	t63_config.nMAXTCHAREA  =t63_config_data[i++];
 	t63_config.nSIGPWR  =t63_config_data[i++];
 	t63_config.nSIGRATIO  =t63_config_data[i++];
@@ -2157,9 +2160,7 @@ static enum hrtimer_restart touch_1st_point_timer_func(struct hrtimer *timer)
 
 	if(g_touch_debug == 2) printk("1st point (%d, %d)\n", ts->fingers[0].x, ts->fingers[0].y);
 
- 	if(g_touch_1st_point_count < 1) {
-		ts->fingers[0].x = ts->fingers[0].x - 1;
-		ts->fingers[0].y = ts->fingers[0].y - 1;
+ 	if(g_touch_1st_point_count < 1) {		
   		hrtimer_start(&ts->timer, ktime_set(0, POLLING_TIMER_NS), HRTIMER_MODE_REL);
  	} 
 
@@ -2286,9 +2287,7 @@ static void report_input_data(struct mxt_data *data)
 #endif
         data->finger_mask = 0;
 #ifdef FEATURE_TOUCH_1ST_POINT	
-	if ((!data->fingers[0].mcount)&&(!g_touch_1st_point_count)&&(data->fingers[0].state == 2)) {	
-		data->fingers[0].x = data->fingers[0].x + 1;
-		data->fingers[0].y = data->fingers[0].y + 1;
+	if ((!data->fingers[0].mcount)&&(!g_touch_1st_point_count)&&(data->fingers[0].state == 2)) {			
 		hrtimer_start(&data->timer, ktime_set(0, POLLING_TIMER_NS), HRTIMER_MODE_REL);			
 	}	
 #endif
@@ -2621,6 +2620,10 @@ static int mxt_internal_suspend(struct mxt_data *data)
                 touch_cpu_lock_status = 0;
         }
 #endif
+
+#ifdef FEATURE_TOUCH_NOISE
+		g_touch_suspend = 1;
+#endif		
         data->power_off();
 
         return 0;
@@ -2628,8 +2631,17 @@ static int mxt_internal_suspend(struct mxt_data *data)
 
 static int mxt_internal_resume(struct mxt_data *data)
 {
-        data->power_on();
+		data->power_on();
 
+#ifdef FEATURE_TOUCH_NOISE		
+		if(g_touch_debug == 1) printk("mxt_internal_resume : g_power_noise (%d)", g_power_noise);
+
+		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+		mxt_PROCI_STYLUS_T47(copy_data);
+		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);
+
+		g_touch_suspend = 0;
+#endif
         return 0;
 }
 
@@ -4444,18 +4456,13 @@ void atm1664_power_noise(bool power_detect)
 	else
 		g_power_noise = 0;
 
-	printk("atm1664_power_noise (%d)\n", g_power_noise);
-	
-	mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
-	mxt_PROCI_STYLUS_T47(copy_data);
-	mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
+	if(g_touch_debug == 1) printk("atm1664_power_noise (%d)\n", g_power_noise);
 
-	mxt_backup(copy_data);
-	msleep(100);	
-    /* reset the touch IC. */
-	mxt_reset(copy_data);       
-    msleep(MXT_SW_RESET_TIME);
-    calibrate_chip_e();
+	if (!g_touch_suspend) {
+		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
+		mxt_PROCI_STYLUS_T47(copy_data);
+		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
+	}
 }
 EXPORT_SYMBOL(atm1664_power_noise);
 #endif
@@ -4492,13 +4499,6 @@ static ssize_t atm1664_passivepen_store(struct device *dev,
 	mxt_PROCI_STYLUS_T47(copy_data);
 	mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
 
-	mxt_backup(copy_data);
-	msleep(100);	
-    /* reset the touch IC. */
-	mxt_reset(copy_data);       
-    msleep(MXT_SW_RESET_TIME);
-    calibrate_chip_e();
-
     return strlen(buf);
 }
 
@@ -4533,7 +4533,6 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 		printk("Active Pen [Disable] : %d\n", tmp);
 		g_activepen_mode = 0;		
 	}
-
 #if 0	
 	mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
 
