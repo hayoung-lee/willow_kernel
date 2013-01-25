@@ -1234,7 +1234,7 @@ int mxt_PROCI_ACTIVESTYLUS_T63(struct mxt_data *mxt)
 	//printk("PROCI_ACTIVESTYLUS_T63 obj_size=%d obj_addr=%d OBJECT_SIZE=12  OBJECT_ADDRESS=873 \n",obj_size,obj_addr );
 	memset(&t63_config, 0, sizeof(t63_config));
 
-#if 0
+#if 1
 	if (g_activepen_mode) {
 		t63_config.nCTRL  = 3; 
 		i++;
@@ -2639,6 +2639,7 @@ static int mxt_internal_resume(struct mxt_data *data)
 		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
 		mxt_PROCI_STYLUS_T47(copy_data);
 		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);
+		mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
 
 		g_touch_suspend = 0;
 #endif
@@ -4522,9 +4523,8 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 
 	printk("[ATMEL] %s()\n", __func__);
 	
-	tmp = buf[0]-'0';	
+	tmp = buf[0]-'0';		
 	
-	disable_irq(IRQ_EINT(4));
 	if (tmp) {
 		printk("Active Pen [Enable] : %d\n", tmp);
 		g_activepen_mode = 1;		
@@ -4533,16 +4533,8 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 		printk("Active Pen [Disable] : %d\n", tmp);
 		g_activepen_mode = 0;		
 	}
-#if 0	
-	mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
 
-	mxt_backup(copy_data);
-	msleep(100);	
-    /* reset the touch IC. */
-	mxt_reset(copy_data);       
-    msleep(MXT_SW_RESET_TIME);
-    calibrate_chip_e();
-#endif
+	mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
 
 	disable_irq(IRQ_EINT(4));
 	copy_data->power_off();
