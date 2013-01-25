@@ -52,7 +52,8 @@ unsigned int mfc_mem_hole_size(void);
 #endif
 unsigned long mfc_mem_data_ofs(unsigned long addr, int contig);
 unsigned long mfc_mem_base_ofs(unsigned long addr);
-unsigned long mfc_mem_addr_ofs(unsigned long ofs, int port);
+unsigned long mfc_mem_addr_ofs(unsigned long ofs, int from);
+long mfc_mem_ext_ofs(unsigned long addr, unsigned int size, int from);
 
 void mfc_mem_cache_clean(const void *start_addr, unsigned long size);
 void mfc_mem_cache_inv(const void *start_addr, unsigned long size);

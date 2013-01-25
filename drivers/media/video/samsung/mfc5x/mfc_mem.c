@@ -177,13 +177,45 @@ unsigned long mfc_mem_base_ofs(unsigned long addr)
 	return addr - mem_infos[port].base;
 }
 
-unsigned long mfc_mem_addr_ofs(unsigned long ofs, int port)
+unsigned long mfc_mem_addr_ofs(unsigned long ofs, int from)
 {
-	/* FIXME: right position? */
-	if (port > (mfc_mem_count() - 1))
-		port = mfc_mem_count() - 1;
+	if (from >= mem_ports)
+		from = mem_ports - 1;
 
-	return mem_infos[port].base + ofs;
+	return mem_infos[from].base + ofs;
+}
+
+long mfc_mem_ext_ofs(unsigned long addr, unsigned int size, int from)
+{
+	int port;
+	long ofs;
+
+	if (from >= mem_ports)
+		from = mem_ports - 1;
+
+	port = mfc_mem_addr_port(addr);
+	if (port < 0) {
+		mfc_dbg("given address is out of MFC: "
+			"0x%08lx\n", addr);
+		port = from;
+	} else if (port != from) {
+		mfc_warn("given address is in the port#%d [%d]",
+			port, from);
+		port = from;
+	}
+
+	ofs = addr - mem_infos[port].base;
+
+	if ((ofs < 0) || (ofs >= MAX_MEM_OFFSET)) {
+		mfc_err("given address cannot access by MFC: "
+			"0x%08lx\n", addr);
+		ofs = -MAX_MEM_OFFSET;
+	} else if ((ofs + size) > MAX_MEM_OFFSET) {
+		mfc_warn("some part of given address cannot access: "
+			"0x%08lx\n", addr);
+	}
+
+	return ofs;
 }
 
 #ifdef SYSMMU_MFC_ON
