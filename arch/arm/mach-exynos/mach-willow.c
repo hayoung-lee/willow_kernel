@@ -2650,14 +2650,15 @@ static int __init usb3503_init(void)
         s3c_gpio_setpull(GPIO_USB_HUB_CONNECT, S3C_GPIO_PULL_UP);
     }
 
-    err = gpio_request(GPIO_USB_BOOT_EN, "USB_BOOT_EN");
-    if (err) {
-        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_BOOT_EN");
-    } else {
-        /* GPIO_USB_BOOT_EN, TBD */
-        gpio_direction_output(GPIO_USB_BOOT_EN, 1);
-        s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
-    }
+    //  moved to machine_init
+    //    err = gpio_request(GPIO_USB_BOOT_EN, "USB_BOOT_EN");
+    //    if (err) {
+    //        printk(KERN_ERR "ERR: fail to request gpio %s\n", "USB_BOOT_EN");
+    //    } else {
+    //        /* GPIO_USB_BOOT_EN, TBD */
+    //        gpio_direction_output(GPIO_USB_BOOT_EN, 1);
+    //        s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
+    //    }
 
     err = gpio_request(GPIO_USB_HUB_RST, "HUB_RST");
     if (err) {
@@ -3695,6 +3696,16 @@ static void __init willow_machine_init(void)
 {
 	arm_pm_restart = willow_pm_restart;
 	pm_power_off = willow_power_off;
+
+	/* IP4791CZ12 Enable */
+	gpio_request(GPIO_HDMI_PWR_EN, "HDMI_PWR_EN");
+	gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
+	s3c_gpio_setpull(GPIO_HDMI_PWR_EN, S3C_GPIO_PULL_NONE);
+
+	/* VDD_5V0_EN Enable */
+	gpio_request(GPIO_USB_BOOT_EN, "USB_BOOT_EN");
+	gpio_direction_output(GPIO_USB_BOOT_EN, 1);
+	s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
 
 	willow_config_gpio_table();
 	willow_check_hw_version();

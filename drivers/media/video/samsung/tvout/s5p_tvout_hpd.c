@@ -471,13 +471,17 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	last_uevent_state = -1;
 
-	/* IP4791CZ12 Enable */
-	ret = gpio_request(GPIO_HDMI_PWR_EN, "HDMI_PWR_EN");
-	if (ret) {
-		printk(KERN_ERR "HDMI_HPD: fail to request gpio %s\n", "HDMI_PWR_EN");
-	} else {
-		gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
-		s3c_gpio_setpull(GPIO_HDMI_PWR_EN, S3C_GPIO_PULL_NONE);
+	if ((pdata->read_gpio) && (hpd_struct.read_gpio() == 1)) {
+		//  moved to machine_init
+		//	/* IP4791CZ12 Enable */
+		//	ret = gpio_request(GPIO_HDMI_PWR_EN, "HDMI_PWR_EN");
+		//	if (ret) {
+		//		printk(KERN_ERR "HDMI_HPD: fail to request gpio %s\n", "HDMI_PWR_EN");
+		//	} else {
+		//		gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
+		//		s3c_gpio_setpull(GPIO_HDMI_PWR_EN, S3C_GPIO_PULL_NONE);
+		//	}
+		switch_set_state(&switch_hdmi_detection, 1);
 	}
 
 	return 0;
