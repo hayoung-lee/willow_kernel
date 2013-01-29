@@ -4446,7 +4446,7 @@ static ssize_t atm1664_debug_store(struct device *dev,
     return strlen(buf);
 }
 
-static DEVICE_ATTR(tsp_debug, S_PEN_USER, atm1664_debug_show, atm1664_debug_store);
+static DEVICE_ATTR(tsp_debug, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_debug_show, atm1664_debug_store);
 #endif
 
 #ifdef FEATURE_TOUCH_NOISE
@@ -4503,7 +4503,7 @@ static ssize_t atm1664_passivepen_store(struct device *dev,
     return strlen(buf);
 }
 
-static DEVICE_ATTR(tsp_passivepen, S_PEN_USER, atm1664_passivepen_show, atm1664_passivepen_store);
+static DEVICE_ATTR(tsp_passivepen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_passivepen_show, atm1664_passivepen_store);
 #endif
 
 #ifdef FEATURE_TOUCH_ACTIVEPEN
@@ -4527,7 +4527,7 @@ static ssize_t atm1664_activepen_store(struct device *dev,
 	
 	if (tmp) {
 		printk("Active Pen [Enable] : %d\n", tmp);
-		g_activepen_mode = 1;		
+		g_activepen_mode = 1;
 	}
 	else {
 		printk("Active Pen [Disable] : %d\n", tmp);
@@ -4545,7 +4545,7 @@ static ssize_t atm1664_activepen_store(struct device *dev,
     return strlen(buf);
 }
 
-static DEVICE_ATTR(tsp_pen, S_PEN_USER, atm1664_activepen_show, atm1664_activepen_store);
+static DEVICE_ATTR(tsp_pen, S_IRUGO|S_IWUSR|S_IWGRP, atm1664_activepen_show, atm1664_activepen_store);
 #endif
 
 #ifdef FEATURE_TOUCH_CONFIG_UPDATE 
