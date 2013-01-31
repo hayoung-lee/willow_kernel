@@ -14,11 +14,13 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/poll.h>
-#include <linux/switch.h>
 
 #include <plat/tvout.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
+#ifdef CONFIG_HDMI_SWITCH_HPD
+#include <linux/switch.h>
+#endif
 
 #include <mach/gpio.h>
 #include <plat/gpio-cfg.h>
@@ -52,7 +54,19 @@ struct hpd_struct {
 	void (*int_src_ext_hpd)(void);
 	int (*read_gpio)(void);
 	int irq_n;
+#ifdef CONFIG_HDMI_SWITCH_HPD
+	struct switch_dev hpd_switch;
+#endif
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+	void (*ext_ic_control) (bool ic_on);
+#endif
 };
+
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+static work_func_t  ext_ic_control_func(void) ;
+static DECLARE_DELAYED_WORK(ext_ic_control_dwork,
+		(work_func_t)ext_ic_control_func);
+#endif
 
 static struct hpd_struct hpd_struct;
 
@@ -84,15 +98,13 @@ static struct miscdevice hpd_misc_device = {
 	&hpd_fops,
 };
 
-struct switch_dev switch_hdmi_detection = {
-    .name = "hdmi",
-};
-
 static void s5p_hpd_kobject_uevent(void)
 {
 	char env_buf[120];
+#ifndef CONFIG_HDMI_SWITCH_HPD
 	char *envp[2];
 	int env_offset = 0;
+#endif
 	int i = 0;
 	int hpd_state = atomic_read(&hpd_struct.state);
 
@@ -102,13 +114,13 @@ static void s5p_hpd_kobject_uevent(void)
 	if (hpd_state)	{
 		while (on_stop_process && (i < RETRY_COUNT)) {
 			HPDIFPRINTK("on_stop_process\n");
-			msleep(5);
+			usleep_range(5000, 5000);
 			i++;
 		};
 	} else {
 		while (on_start_process && (i < RETRY_COUNT)) {
 			HPDIFPRINTK("on_start_process\n");
-			msleep(5);
+			usleep_range(5000, 5000);
 			i++;
 		};
 	}
@@ -121,24 +133,45 @@ static void s5p_hpd_kobject_uevent(void)
 	hpd_state = atomic_read(&hpd_struct.state);
 	if (hpd_state) {
 		if (last_uevent_state == -1 || last_uevent_state == HPD_LO) {
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+			HPDPRINTK("ext_ic power ON\n");
+			hpd_struct.ext_ic_control(true);
+			msleep(20);
+#endif
+#ifdef CONFIG_HDMI_SWITCH_HPD
+			hpd_struct.hpd_switch.state = 0;
+			switch_set_state(&hpd_struct.hpd_switch, 1);
+#else
 			sprintf(env_buf, "HDMI_STATE=online");
 			envp[env_offset++] = env_buf;
 			envp[env_offset] = NULL;
 			HPDIFPRINTK("online event\n");
 			kobject_uevent_env(&(hpd_misc_device.this_device->kobj), KOBJ_CHANGE, envp);
-			on_start_process = true;
-			switch_set_state(&switch_hdmi_detection, 1);
+#endif
+			if (atomic_read(&hdmi_status) == HDMI_OFF) {
+				on_start_process = true;
+			} else {
+				on_start_process = false;
+			}
 		}
 		last_uevent_state = HPD_HI;
 	} else {
 		if (last_uevent_state == -1 || last_uevent_state == HPD_HI) {
+#ifdef CONFIG_HDMI_SWITCH_HPD
+			hpd_struct.hpd_switch.state = 1;
+			switch_set_state(&hpd_struct.hpd_switch, 0);
+#else
 			sprintf(env_buf, "HDMI_STATE=offline");
 			envp[env_offset++] = env_buf;
 			envp[env_offset] = NULL;
 			HPDIFPRINTK("offline event\n");
 			kobject_uevent_env(&(hpd_misc_device.this_device->kobj), KOBJ_CHANGE, envp);
-			on_stop_process = true;
-			switch_set_state(&switch_hdmi_detection, 0);
+#endif
+			if (atomic_read(&hdmi_status) == HDMI_ON) {
+				on_stop_process = true;
+			} else {
+				on_stop_process = false;
+			}
 		}
 		last_uevent_state = HPD_LO;
 	}
@@ -274,7 +307,7 @@ int s5p_hpd_get_status(void)
 
 }
 
-static int s5p_hdp_irq_eint(int irq)
+static int s5p_hpd_irq_eint(int irq)
 {
 
 	HPDIFPRINTK("\n");
@@ -301,6 +334,10 @@ static int s5p_hdp_irq_eint(int irq)
 
 		last_hpd_state = HPD_LO;
 
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+		schedule_delayed_work(&ext_ic_control_dwork ,
+				msecs_to_jiffies(1000));
+#endif
 		wake_up_interruptible(&hpd_struct.waitq);
 	}
 	schedule_work(&hpd_work);
@@ -368,6 +405,10 @@ static int s5p_hpd_irq_hdmi(int irq)
 		atomic_set(&poll_state, 1);
 
 		last_hpd_state = HPD_LO;
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+		schedule_delayed_work(&ext_ic_control_dwork ,
+				msecs_to_jiffies(1000));
+#endif
 
 		wake_up_interruptible(&hpd_struct.waitq);
 
@@ -398,22 +439,31 @@ static irqreturn_t s5p_hpd_irq_handler(int irq, void *dev_id)
 		HPDIFPRINTK("HDMI HPD interrupt\n");
 	} else {
 		/* HDMI off */
-		ret = s5p_hdp_irq_eint(irq);
+		ret = s5p_hpd_irq_eint(irq);
 		HPDIFPRINTK("EINT HPD interrupt\n");
 	}
 
 	return ret;
 }
 
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+static work_func_t  ext_ic_control_func(void)
+{
+	if (!hpd_struct.read_gpio()) {
+		hpd_struct.ext_ic_control(false);
+		HPDPRINTK("HDMI_EXT_IC Power Off\n");
+	} else {
+		HPDPRINTK("HDMI_EXT_IC Delay work do nothing\n");
+	}
+	return 0;
+}
+#endif
+
+
 static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 {
 	struct s5p_platform_hpd *pdata;
 	int ret;
-
-	if (switch_dev_register(&switch_hdmi_detection)) {
-		printk(KERN_WARNING "%s : Failed to register switch device\n", __func__);
-		return -EBUSY;
-	}
 
 	if (misc_register(&hpd_misc_device)) {
 		printk(KERN_WARNING " Couldn't register device 10, %d.\n",
@@ -440,18 +490,29 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 			(void (*)(void))pdata->int_src_ext_hpd;
 	if (pdata->read_gpio)
 		hpd_struct.read_gpio = (int (*)(void))pdata->read_gpio;
-
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+	if (pdata->ext_ic_control)
+		hpd_struct.ext_ic_control = pdata->ext_ic_control;
+#endif
 	hpd_struct.irq_n = platform_get_irq(pdev, 0);
 
 	hpd_struct.int_src_ext_hpd();
 	if (hpd_struct.read_gpio()) {
 		atomic_set(&hpd_struct.state, HPD_HI);
 		last_hpd_state = HPD_HI;
+#ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
+		hpd_struct.ext_ic_control(true);
+#endif
 	} else {
 		atomic_set(&hpd_struct.state, HPD_LO);
 		last_hpd_state = HPD_LO;
 	}
 
+#ifdef CONFIG_HDMI_SWITCH_HPD
+	hpd_struct.hpd_switch.name = "hdmi";
+	switch_dev_register(&hpd_struct.hpd_switch);
+	switch_set_state(&hpd_struct.hpd_switch, last_hpd_state);
+#endif
 	irq_set_irq_type(hpd_struct.irq_n, IRQ_TYPE_EDGE_BOTH);
 
 	ret = request_irq(hpd_struct.irq_n, (irq_handler_t)s5p_hpd_irq_handler,
@@ -459,7 +520,6 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	if (ret) {
 		printk(KERN_ERR  "failed to install hpd irq\n");
-		switch_dev_unregister(&switch_hdmi_detection);
 		misc_deregister(&hpd_misc_device);
 		return -EIO;
 	}
@@ -471,24 +531,14 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	last_uevent_state = -1;
 
-	if ((pdata->read_gpio) && (hpd_struct.read_gpio() == 1)) {
-		//  moved to machine_init
-		//	/* IP4791CZ12 Enable */
-		//	ret = gpio_request(GPIO_HDMI_PWR_EN, "HDMI_PWR_EN");
-		//	if (ret) {
-		//		printk(KERN_ERR "HDMI_HPD: fail to request gpio %s\n", "HDMI_PWR_EN");
-		//	} else {
-		//		gpio_direction_output(GPIO_HDMI_PWR_EN, 1);
-		//		s3c_gpio_setpull(GPIO_HDMI_PWR_EN, S3C_GPIO_PULL_NONE);
-		//	}
-		switch_set_state(&switch_hdmi_detection, 1);
-	}
-
 	return 0;
 }
 
 static int __devexit s5p_hpd_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_HDMI_SWITCH_HPD
+	switch_dev_unregister(&hpd_struct.hpd_switch);
+#endif
 	return 0;
 }
 
@@ -550,7 +600,6 @@ static int __init s5p_hpd_init(void)
 
 static void __exit s5p_hpd_exit(void)
 {
-	switch_dev_unregister(&switch_hdmi_detection);
 	misc_deregister(&hpd_misc_device);
 }
 

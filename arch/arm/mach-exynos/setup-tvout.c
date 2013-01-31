@@ -71,8 +71,10 @@ void s5p_v4l2_int_src_ext_hpd(void)
 
 void s5p_cec_cfg_gpio(struct platform_device *pdev)
 {
+#ifdef CONFIG_HDMI_CEC
 	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(HDMI_GPX(6), S3C_GPIO_PULL_NONE);
+#endif
 }
 
 #ifdef CONFIG_VIDEO_EXYNOS_TV
@@ -83,11 +85,12 @@ void s5p_tv_setup(void)
 	gpio_direction_input(HDMI_GPX(7));
 	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_NONE);
-
+#ifdef CONFIG_HDMI_CEC
 	/* HDMI CEC */
 	gpio_request(HDMI_GPX(6), "hdmi-cec");
 	gpio_direction_input(HDMI_GPX(6));
 	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(HDMI_GPX(6), S3C_GPIO_PULL_NONE);
+#endif
 }
 #endif
