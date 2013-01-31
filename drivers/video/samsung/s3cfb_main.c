@@ -636,9 +636,9 @@ static int s3cfb_remove(struct platform_device *pdev)
 	struct s3cfb_global *fbdev[2];
 	int i;
 	int j;
-
+#if !defined(CONFIG_FB_S5P_VSYNC_THREAD)
 	device_remove_file(&(pdev->dev), &dev_attr_vsync_report);
-
+#endif
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];
 
