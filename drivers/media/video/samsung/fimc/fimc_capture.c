@@ -1646,7 +1646,7 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 		fimc_info1("%s : 2plane for NV21 w %d h %d\n", __func__,
 				cap->fmt.width, cap->fmt.height);
 		ret = fimc_alloc_buffers(ctrl, 2,
-			cap->fmt.width * cap->fmt.height, SZ_4K, bpp, 0);
+			cap->fmt.width * cap->fmt.height, 0, bpp, 0);
 		break;
 
 	case V4L2_PIX_FMT_NV12:
