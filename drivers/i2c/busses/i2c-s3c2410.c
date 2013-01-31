@@ -102,7 +102,7 @@ static inline void dump_i2c_register(struct s3c24xx_i2c *i2c)
 		, readl(i2c->regs + S3C2410_IICSTAT)
 		, readl(i2c->regs + S3C2410_IICADD)
 		, readl(i2c->regs + S3C2410_IICDS)
-		, readl(i2c->regs + S3C2440_IICLC));
+		, readl(i2c->regs + S3C2440_IICLC) );
 }
 
 /* s3c24xx_i2c_is2440()
@@ -571,10 +571,13 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 	/* having these next two as dev_err() makes life very
 	 * noisy when doing an i2cdetect */
 
-	if (timeout == 0) {
+	if (timeout == 0)
+	{
 		dev_dbg(i2c->dev, "timeout\n");
 		dump_i2c_register(i2c);
-	} else if (ret != num) {
+	}
+	else if (ret != num)
+	{
 		dev_dbg(i2c->dev, "incomplete xfer (%d)\n", ret);
 		dump_i2c_register(i2c);
 	}
@@ -586,16 +589,17 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 	/* first, try busy waiting briefly */
 	do {
 		iicstat = readl(i2c->regs + S3C2410_IICSTAT);
-	} while ((iicstat & S3C2410_IICSTAT_BUSBUSY) && --spins);
+	} while ((iicstat & S3C2410_IICSTAT_START) && --spins);
 
 	/* if that timed out sleep */
 	if (!spins) {
-		msleep(1);
+		usleep_range(1000, 1000);
 		iicstat = readl(i2c->regs + S3C2410_IICSTAT);
 	}
 
 	/* if still not finished, clean it up */
 	spin_lock_irq(&i2c->lock);
+
 	if (iicstat & S3C2410_IICSTAT_BUSBUSY) {
 		dev_dbg(i2c->dev, "timeout waiting for bus idle\n");
 		dump_i2c_register(i2c);
@@ -629,7 +633,8 @@ static int s3c24xx_i2c_xfer(struct i2c_adapter *adap,
 	int retry;
 	int ret;
 
-	if (i2c->suspended) {
+	if (i2c->suspended)
+	{
 		dev_err(i2c->dev, "I2C is not initialzed.\n");
 		dump_i2c_register(i2c);
 		return -EIO;
@@ -1133,7 +1138,7 @@ static int s3c24xx_i2c_suspend_noirq(struct device *dev)
 	return 0;
 }
 
-static int s3c24xx_i2c_resume(struct device *dev)
+static int s3c24xx_i2c_resume_noirq(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct s3c24xx_i2c *i2c = platform_get_drvdata(pdev);
@@ -1148,7 +1153,12 @@ static int s3c24xx_i2c_resume(struct device *dev)
 
 static const struct dev_pm_ops s3c24xx_i2c_dev_pm_ops = {
 	.suspend_noirq = s3c24xx_i2c_suspend_noirq,
-	.resume = s3c24xx_i2c_resume,
+	.resume_noirq = s3c24xx_i2c_resume_noirq,
+#ifdef CONFIG_HIBERNATION
+	.freeze_noirq = s3c24xx_i2c_suspend_noirq,
+	.thaw_noirq = s3c24xx_i2c_resume_noirq,
+	.restore_noirq = s3c24xx_i2c_resume_noirq,
+#endif
 };
 
 #define S3C24XX_DEV_PM_OPS (&s3c24xx_i2c_dev_pm_ops)
