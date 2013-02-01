@@ -376,6 +376,9 @@ static int s5p_tvout_tvif_s_std(
 	if (i == S5P_TVOUT_TVIF_NO_OF_STANDARD) {
 		tvout_err("There is no TV standard(0x%08Lx)\n", std_id);
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+		s5p_tvout_mutex_unlock();
+#endif
 		return -EINVAL;
 	}
 
@@ -855,8 +858,11 @@ static int s5p_tvout_tvif_release(struct file *file)
 	tvout_dbg("on_stop_process(%d)\n", on_stop_process);
 	atomic_dec(&s5p_tvout_v4l2_private.tvif_use);
 
-	if (atomic_read(&s5p_tvout_v4l2_private.tvif_use) == 0)
+	if (atomic_read(&s5p_tvout_v4l2_private.tvif_use) == 0) {
+		s5p_tvout_mutex_lock();
 		s5p_tvif_ctrl_stop();
+		s5p_tvout_mutex_unlock();
+	}
 
 	on_stop_process = false;
 	tvout_dbg("on_stop_process(%d)\n", on_stop_process);

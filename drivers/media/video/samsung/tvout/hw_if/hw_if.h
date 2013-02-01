@@ -398,7 +398,8 @@ extern int s5p_hdmi_audio_init(
 		u32 sample_rate, u32 bits, u32 frame_size_code,
 		struct s5p_hdmi_audio *audio);
 extern irqreturn_t s5p_hdmi_irq(int irq, void *dev_id);
-extern void s5p_hdmi_init(void __iomem *hdmi_addr, void __iomem *hdmi_phy_addr);
+extern void s5p_hdmi_init(void __iomem *hdmi_addr);
+extern void s5p_hdmi_phy_init(void __iomem *hdmi_phy_addr);
 extern void s5p_hdmi_reg_output(struct s5p_hdmi_o_reg *reg);
 extern void s5p_hdmi_reg_packet_trans(struct s5p_hdmi_o_trans *trans);
 extern void s5p_hdmi_reg_mute(bool en);
@@ -736,12 +737,14 @@ extern int s5p_hdcp_encrypt_stop(bool on);
 extern int __init s5p_hdcp_init(void);
 extern int s5p_hdcp_start(void);
 extern int s5p_hdcp_stop(void);
+extern void s5p_hdcp_flush_work(void);
 
 /****************************************
  * Definitions for sdo ctrl class
  ***************************************/
 #if defined(CONFIG_BUSFREQ_OPP)
 #define BUSFREQ_400MHZ	400200
+#define BUSFREQ_133MHZ	133133
 #endif
 
 #ifdef CONFIG_ANALOG_TVENC

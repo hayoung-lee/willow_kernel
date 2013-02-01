@@ -1757,6 +1757,8 @@ static void s5p_sdo_ctrl_clock(bool on)
 #ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_get();
 #endif
+		/* Restore sdo_base address */
+		s5p_sdo_init(s5p_sdo_ctrl_private.reg_mem.base);
 
 		clk_enable(s5p_sdo_ctrl_private.clk[SDO_PCLK].ptr);
 	} else {
@@ -1767,6 +1769,9 @@ static void s5p_sdo_ctrl_clock(bool on)
 #endif
 
 		clk_disable(s5p_sdo_ctrl_private.clk[SDO_MUX].ptr);
+
+		/* Set sdo_base address to NULL */
+		s5p_sdo_init(NULL);
 	}
 
 	mdelay(50);
@@ -1905,6 +1910,7 @@ void s5p_sdo_ctrl_destructor(void)
 				clk_disable(s5p_sdo_ctrl_private.clk[i].ptr);
 			clk_put(s5p_sdo_ctrl_private.clk[i].ptr);
 	}
+	s5p_sdo_init(NULL);
 }
 #endif
 
@@ -2321,8 +2327,10 @@ static void s5p_hdmi_ctrl_internal_stop(void)
 #ifdef CONFIG_HDMI_HPD
 	s5p_hpd_set_eint();
 #endif
-	if (ctrl->hdcp_en)
+	if (ctrl->hdcp_en) {
 		s5p_hdcp_stop();
+		s5p_hdcp_flush_work();
+	}
 
 	s5p_hdmi_reg_enable(false);
 
@@ -2335,6 +2343,8 @@ int s5p_hdmi_ctrl_phy_power(bool on)
 	if (on) {
 		/* on */
 		clk_enable(s5ptv_status.i2c_phy_clk);
+		/* Restore i2c_hdmi_phy_base address */
+		s5p_hdmi_phy_init(s5p_hdmi_ctrl_private.reg_mem[HDMI_PHY].base);
 
 		s5p_hdmi_phy_power(true);
 
@@ -2354,6 +2364,8 @@ int s5p_hdmi_ctrl_phy_power(bool on)
 		s5p_hdmi_phy_power(false);
 
 		clk_disable(s5ptv_status.i2c_phy_clk);
+		/* Set i2c_hdmi_phy_base to NULL */
+		s5p_hdmi_phy_init(NULL);
 	}
 
 	return 0;
@@ -2371,8 +2383,10 @@ void s5p_hdmi_ctrl_clock(bool on)
 #ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_get();
 #endif
-
 		clk_enable(clk[HDMI_PCLK].ptr);
+
+		/* Restore hdmi_base address */
+		s5p_hdmi_init(s5p_hdmi_ctrl_private.reg_mem[HDMI].base);
 	} else {
 		clk_disable(clk[HDMI_PCLK].ptr);
 
@@ -2381,6 +2395,9 @@ void s5p_hdmi_ctrl_clock(bool on)
 #endif
 
 		clk_disable(clk[HDMI_MUX].ptr);
+
+		/* Set hdmi_base to NULL */
+		s5p_hdmi_init(NULL);
 	}
 }
 
@@ -2454,14 +2471,14 @@ int s5p_hdmi_ctrl_start(
 
 	s5p_hdmi_ctrl_set_reg(mode, out);
 
+	if (ctrl->hdcp_en)
+		s5p_hdcp_start();
+
 	s5p_hdmi_reg_enable(true);
 
 #ifdef CONFIG_HDMI_HPD
 	s5p_hpd_set_hdmiint();
 #endif
-
-	if (ctrl->hdcp_en)
-		s5p_hdcp_start();
 
 	return 0;
 
@@ -2504,6 +2521,9 @@ int s5p_hdmi_ctrl_constructor(struct platform_device *pdev)
 		goto err_on_irq;
 	}
 
+	s5p_hdmi_init(reg_mem[HDMI].base);
+	s5p_hdmi_phy_init(reg_mem[HDMI_PHY].base);
+
 	ret = request_irq(irq->no, irq->handler, IRQF_DISABLED,
 			irq->name, NULL);
 	if (ret) {
@@ -2512,13 +2532,10 @@ int s5p_hdmi_ctrl_constructor(struct platform_device *pdev)
 	}
 
 	s5p_hdmi_ctrl_init_private();
-	s5p_hdmi_init(reg_mem[HDMI].base, reg_mem[HDMI_PHY].base);
 
-#if defined(CONFIG_MACH_SMDKC210) || defined(CONFIG_MACH_SMDKV310) || defined(CONFIG_MACH_SMDK4X12)
 	/* set initial state of HDMI PHY power to off */
 	s5p_hdmi_ctrl_phy_power(1);
 	s5p_hdmi_ctrl_phy_power(0);
-#endif
 
 	ret = s5p_hdcp_init();
 
@@ -2563,6 +2580,9 @@ void s5p_hdmi_ctrl_destructor(void)
 				clk_disable(clk[i].ptr);
 			clk_put(clk[i].ptr);
 		}
+
+	s5p_hdmi_phy_init(NULL);
+	s5p_hdmi_init(NULL);
 }
 
 void s5p_hdmi_ctrl_suspend(void)
@@ -2749,6 +2769,12 @@ int s5p_tvif_ctrl_start(
 		dev_lock(s5p_tvif_ctrl_private.bus_dev,
 				s5p_tvif_ctrl_private.dev, BUSFREQ_400MHZ);
 	}
+#if defined(CONFIG_MACH_WILLOW)
+	else {
+		dev_lock(s5p_tvif_ctrl_private.bus_dev,
+				s5p_tvif_ctrl_private.dev, BUSFREQ_133MHZ);
+	}
+#endif
 #endif
 	if (s5p_tvif_ctrl_private.running &&
 			(std == s5p_tvif_ctrl_private.curr_std) &&

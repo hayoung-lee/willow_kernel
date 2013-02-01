@@ -225,13 +225,14 @@ static void s5p_mixer_ctrl_clock(bool on)
 	/* power control function is not implemented yet */
 	if (on) {
 		clk_enable(s5p_mixer_ctrl_private.clk[MUX].ptr);
-
 #ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_get();
 #endif
 
-
 		clk_enable(s5p_mixer_ctrl_private.clk[ACLK].ptr);
+
+		/* Restore mixer_base address */
+		s5p_mixer_init(s5p_mixer_ctrl_private.reg_mem.base);
 	} else {
 		clk_disable(s5p_mixer_ctrl_private.clk[ACLK].ptr);
 
@@ -239,8 +240,10 @@ static void s5p_mixer_ctrl_clock(bool on)
 		s5p_tvout_pm_runtime_put();
 #endif
 
-
 		clk_disable(s5p_mixer_ctrl_private.clk[MUX].ptr);
+
+		/* Set mixer_base address to NULL */
+		s5p_mixer_init(NULL);
 	}
 }
 
@@ -1006,6 +1009,8 @@ int s5p_mixer_ctrl_constructor(struct platform_device *pdev)
 		goto err_on_irq;
 	}
 
+	s5p_mixer_init(s5p_mixer_ctrl_private.reg_mem.base);
+
 	ret = request_irq(
 			s5p_mixer_ctrl_private.irq.no,
 			s5p_mixer_ctrl_private.irq.handler,
@@ -1017,8 +1022,6 @@ int s5p_mixer_ctrl_constructor(struct platform_device *pdev)
 			s5p_mixer_ctrl_private.irq.name);
 		goto err_on_irq;
 	}
-
-	s5p_mixer_init(s5p_mixer_ctrl_private.reg_mem.base);
 
 	return 0;
 
@@ -1048,6 +1051,7 @@ void s5p_mixer_ctrl_destructor(void)
 		if (s5p_mixer_ctrl_private.clk[i].ptr) {
 			clk_disable(s5p_mixer_ctrl_private.clk[i].ptr);
 			clk_put(s5p_mixer_ctrl_private.clk[i].ptr);
+			s5p_mixer_init(NULL);
 		}
 	}
 }
