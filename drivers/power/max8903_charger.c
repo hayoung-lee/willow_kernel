@@ -49,7 +49,9 @@ extern int fg_read_soc(void);
 extern int fg_read_vcell(void);
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1664S
 #include <linux/i2c/1664s_driver.h>
+#endif
 #ifdef FEATURE_TOUCH_NOISE
 extern void atm1664_power_noise(bool power_detect);
 #endif
