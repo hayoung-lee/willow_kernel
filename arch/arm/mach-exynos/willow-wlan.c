@@ -12,6 +12,9 @@
 #include <mach/regs-gpio.h>
 #include <mach/gpio.h>
 
+#include <mach/willow_version.h>
+extern WILLOW_HW_VERSION willow_get_hw_version(void);
+
 #ifdef CONFIG_DHD_USE_STATIC_BUF
 
 #define WLAN_STATIC_SCAN_BUF0		5
@@ -331,7 +334,9 @@ int __init brcm_wlan_init(void)
 	int ret;
 	printk("%s: start\n", __FUNCTION__);
 	
-	wlan_gpio_ldo(1);
+	if(willow_get_hw_version() != WILLOW_HW_DVT){
+		wlan_gpio_ldo(1);
+	}
 
 #ifdef CONFIG_DHD_USE_STATIC_BUF
 	brcm_init_wlan_mem();
