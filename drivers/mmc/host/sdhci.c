@@ -27,6 +27,10 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
 
+#ifdef CONFIG_MACH_WILLOW
+#include <mach/willow_version.h>
+extern WILLOW_HW_VERSION willow_get_hw_version(void);
+#endif
 #include "sdhci.h"
 
 #define DRIVER_NAME "sdhci"
@@ -2264,11 +2268,14 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 		del_timer_sync(&host->tuning_timer);
 		host->flags &= ~SDHCI_NEEDS_RETUNING;
 	}
-
-	if (host->mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME) {
-		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
-		pr_info("%s : Enter WIFI suspend\n", __func__);
+#ifdef CONFIG_MACH_WILLOW
+	if(willow_get_hw_version() != WILLOW_HW_DVT){
+		if (host->mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME) {
+			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+			pr_info("%s : Enter WIFI suspend\n", __func__);
+		}
 	}
+#endif
 
 	ret = mmc_suspend_host(host->mmc);
 	if (ret)
@@ -2598,10 +2605,12 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_DRIVER_TYPE_C;
 	if (caps[1] & SDHCI_DRIVER_TYPE_D)
 		mmc->caps |= MMC_CAP_DRIVER_TYPE_D;
-
-	if (mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME)
-		mmc->pm_caps |= MMC_PM_KEEP_POWER;
-
+#ifdef CONFIG_MACH_WILLOW
+	if(willow_get_hw_version() != WILLOW_HW_DVT){
+		if (mmc->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME)
+			mmc->pm_caps |= MMC_PM_KEEP_POWER;
+	}
+#endif
 	/*
 	 * If Power Off Notify capability is enabled by the host,
 	 * set notify to short power off notify timeout value.
