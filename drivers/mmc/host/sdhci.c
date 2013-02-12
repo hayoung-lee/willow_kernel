@@ -1992,8 +1992,8 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 	}
 
 	if (intmask & SDHCI_INT_TIMEOUT) {
-		printk(KERN_INFO "%s: cmd %d command timeout error\n",
-			 mmc_hostname(host->mmc), host->cmd->opcode);
+		//printk(KERN_INFO "%s: cmd %d command timeout error\n",
+		//	 mmc_hostname(host->mmc), host->cmd->opcode);
 		host->cmd->error = -ETIMEDOUT;
 	} else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
 			SDHCI_INT_INDEX)) {
