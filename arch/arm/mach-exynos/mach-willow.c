@@ -2102,13 +2102,13 @@ static struct sec_jack_zone sec_jack_zones[] = {
     /* adc <= 2000, unstable zone, default to 3pole if it stays
      * in this range for a half second (20ms delays, 25 samples)
      */
-    .adc_high = 100,
+    .adc_high = 2000,
     .delay_ms = 20,
     .check_count = 25,
     .jack_type = SEC_HEADSET_3POLE,
   },
   {
-    /* 2000 < adc <= 3300, 4 pole zone, default to 4pole if it
+    /* 2000 < adc, 4 pole zone, default to 4pole if it
      * stays in this range for 200ms (20ms delays, 10 samples)
      */
     .adc_high = 0x7fffffff,
