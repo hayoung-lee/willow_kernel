@@ -1997,11 +1997,11 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		host->cmd->error = -ETIMEDOUT;
 	} else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
 			SDHCI_INT_INDEX)) {
-		printk(KERN_ERR "%s: cmd %d %s error\n",
-			mmc_hostname(host->mmc), host->cmd->opcode,
-			(intmask & SDHCI_INT_CRC) ? "command crc" :
-			(intmask & SDHCI_INT_END_BIT) ? "command end bit" :
-			"command index error");
+		//printk(KERN_ERR "%s: cmd %d %s error\n",
+		//	mmc_hostname(host->mmc), host->cmd->opcode,
+		//	(intmask & SDHCI_INT_CRC) ? "command crc" :
+		//	(intmask & SDHCI_INT_END_BIT) ? "command end bit" :
+		//	"command index error");
 		host->cmd->error = -EILSEQ;
 	}
 
@@ -2102,17 +2102,17 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 	}
 
 	if (intmask & SDHCI_INT_DATA_TIMEOUT) {
-		printk(KERN_ERR "%s: cmd %d data timeout error\n",
-			mmc_hostname(host->mmc), host->mrq->cmd->opcode);
+		//printk(KERN_ERR "%s: cmd %d data timeout error\n",
+		//	mmc_hostname(host->mmc), host->mrq->cmd->opcode);
 			host->data->error = -ETIMEDOUT;
 	} else if (intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_END_BIT)) {
-		printk(KERN_ERR "%s: cmd %d %s error\n",
-			mmc_hostname(host->mmc), host->mrq->cmd->opcode,
-			(intmask & SDHCI_INT_DATA_CRC) ? "data crc" :
-			"command end bit");
+		//printk(KERN_ERR "%s: cmd %d %s error\n",
+		//	mmc_hostname(host->mmc), host->mrq->cmd->opcode,
+		//	(intmask & SDHCI_INT_DATA_CRC) ? "data crc" :
+		//	"command end bit");
 		host->data->error = -EILSEQ;
 	} else if (intmask & SDHCI_INT_ADMA_ERROR) {
-		printk(KERN_ERR "%s: ADMA error\n", mmc_hostname(host->mmc));
+		//printk(KERN_ERR "%s: ADMA error\n", mmc_hostname(host->mmc));
 		sdhci_show_adma_error(host);
 		host->data->error = -EIO;
 	}

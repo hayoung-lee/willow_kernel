@@ -177,7 +177,7 @@ void exynos4_setup_mshci_set_power(struct platform_device *dev, int en)
 			}
 
 			gpio_set_value(pdata->int_power_gpio, 1);
-			pr_info("%s : internal MMC Card ON samsung-mshc.\n",
+			pr_debug("%s : internal MMC Card ON samsung-mshc.\n",
 					__func__);
 		} else {
 			s3c_gpio_cfgpin(pdata->int_power_gpio, S3C_GPIO_OUTPUT);
@@ -203,7 +203,7 @@ void exynos4_setup_mshci_set_power(struct platform_device *dev, int en)
 				s3c_gpio_cfgpin(gpio, S3C_GPIO_INPUT);
 				s3c_gpio_setpull(gpio, S3C_GPIO_PULL_DOWN);
 			}
-			pr_info("%s : internal MMC Card OFF samsung-mshc.\n",
+			pr_debug("%s : internal MMC Card OFF samsung-mshc.\n",
 					__func__);
 			mdelay(50);
 		}
