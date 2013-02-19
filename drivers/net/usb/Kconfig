@@ -458,4 +458,12 @@ config USB_VL600
 
 	  http://ubuntuforums.org/showpost.php?p=10589647&postcount=17
 
+config USB_NET_SMSC9500
+       tristate "SMSC LAN9500 based USB 2.0 10/100 ethernet devices"
+       help
+       depends on USB_USBNET
+       select CRC32
+         This option adds support for SMSC LAN9500 based USB 2.0
+         10/100 Ethernet adapters.
+
 endmenu
