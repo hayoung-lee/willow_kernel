@@ -14,11 +14,31 @@
 #include <plat/devs.h>
 #include <plat/ehci.h>
 #include <linux/switch.h>
+#include <linux/wakelock.h>
+#include <plat/adc.h>
 
 #if USB3503_DOCK_SWITCH
 struct switch_dev switch_dock_detection = {
 	.name = "dock",
 };
+#endif
+
+#if USE_WAKELOCK_CONTROL
+static struct wake_lock dock_wakelock;
+#endif
+
+struct s3c_adc_client *dock_adc_client;
+
+#if (USB3503_DOCK_SWITCH && SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
+void change_dock_switch_state(int conn)
+{
+	if(conn){
+		switch_set_state(&switch_dock_detection, 5);
+	}else{
+		switch_set_state(&switch_dock_detection, 0);
+	}
+}
+EXPORT_SYMBOL(change_dock_switch_state);
 #endif
 
 #if USB3503_I2C_CONTROL
@@ -159,27 +179,92 @@ exit:
 }
 #endif
 
+int check_dock_adc_value(void)
+{
+	int i;
+	int adc, adc_sum = 0;
+	int adc_buff[ADC_SAMPLING_NUM] = {0};
+	int adc_min = 0, adc_max = 0;
+
+	if (IS_ERR(dock_adc_client)) {
+		return DOCK_ADC_VALUE_MAX-1;
+	}
+
+	for(i = 0; i < ADC_SAMPLING_NUM; i++)
+	{
+		adc_buff[i] = s3c_adc_read(dock_adc_client, WILLOW_DOCK_ADC_ID);
+		pr_debug(HUB_TAG "[dock] CNT : %d. ADC value = 0x%03x (%d)\n", i, adc_buff[i],adc_buff[i]);		
+		adc_sum +=adc_buff[i];
+		if(i == 0)
+		{
+			adc_min = adc_buff[0];
+			adc_max = adc_buff[0];
+		}
+		else
+		{
+			if(adc_max < adc_buff[i])
+				adc_max = adc_buff[i];
+			else if(adc_min > adc_buff[i])
+				adc_min = adc_buff[i];
+		}
+
+		if(i < ADC_SAMPLING_NUM - 1)
+			msleep(20);
+	}
+
+	adc = (adc_sum - adc_max - adc_min)/(ADC_SAMPLING_NUM-2);
+	printk(HUB_TAG "[%s] DOCK : ADC average value = 0x%03x (%d) !!\n",__func__, adc, adc);
+	return adc;
+}
+
 static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached) {
 	hc->new_dock_status = gpio_get_value(hc->usb_doc_det);
-#if USB3503_DOCK_SWITCH
-	switch_set_state(&switch_dock_detection, hc->new_dock_status ? 0 : 1);
-#endif
+	//pr_info("[%s] cur : %d, new : %d\n",__func__,hc->cur_dock_status,hc->new_dock_status);
+
 	if (force_detached)
 		hc->cur_dock_status = DOCK_STATE_DETACHED;
-	else if (hc->cur_dock_status == hc->new_dock_status)
+	else if (hc->cur_dock_status == hc->new_dock_status){
+		//pr_info("[%s] same status!!!\n",__func__);
 		return;
-    else
+	}
+	else
 		hc->cur_dock_status = hc->new_dock_status;
 
 	if (hc->cur_dock_status == DOCK_STATE_ATTACHED) {
-		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
-		hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
-		pm_runtime_get_sync(&s5p_device_ehci.dev);
-		pm_runtime_get_sync(&s5p_device_ohci.dev);
+		//pr_info(HUB_TAG"[%s] DOCK_STATE_ATTACHED @@@ \n",__func__);
+		int adc =  check_dock_adc_value();
+		if(adc < DOCK_ADC_VALUE_MAX){
+			//dock
+			hc->is_dock = 1;
+#if USE_WAKELOCK_CONTROL
+			wake_lock(&dock_wakelock);
+#endif
 
-	} else {
-		pm_runtime_put(&s5p_device_ohci.dev);
-		pm_runtime_put(&s5p_device_ehci.dev);
+#if (USB3503_DOCK_SWITCH && !SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
+			switch_set_state(&switch_dock_detection, 5);
+#endif
+		}else{
+			//others
+			hc->is_dock = 0;
+		}
+	}
+	else if(hc->cur_dock_status == DOCK_STATE_DETACHED)
+	{
+		//pr_info(HUB_TAG "[%s] STATE_DETACHED ### (%d)\n",__func__,hc->is_dock);
+		if(hc->is_dock == 1){
+			hc->is_dock = 0;
+#if USE_WAKELOCK_CONTROL
+			wake_unlock(&dock_wakelock);
+#endif
+
+#if (USB3503_DOCK_SWITCH && !SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
+			switch_set_state(&switch_dock_detection, 0);
+#endif
+		}
+	}
+	else
+	{
+		pr_err(HUB_TAG "[%s] invalid state !!! \n",__func__);
 	}
 }
 
@@ -306,8 +391,10 @@ static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
 
 int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
-	usb3503_change_status(hc, 1);
+	//struct usb3503_hubctl *hc = i2c_get_clientdata(client);
+
+	pm_runtime_put(&s5p_device_ohci.dev);
+	pm_runtime_put(&s5p_device_ehci.dev);
 
 	pr_debug(HUB_TAG "suspended\n");
 
@@ -317,7 +404,12 @@ int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 int usb3503_resume(struct i2c_client *client)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
-	usb3503_change_status(hc, 0);
+
+	hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+	hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+
+	pm_runtime_get_sync(&s5p_device_ehci.dev);
+	pm_runtime_get_sync(&s5p_device_ohci.dev);
 
 #if USB3503_I2C_CONTROL
 	if (hc->mode == USB3503_MODE_HUB)
@@ -338,19 +430,23 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	pr_info(HUB_TAG "%s:%d\n", __func__, __LINE__);
 
-#if USB3503_DOCK_SWITCH
-	if (switch_dev_register(&switch_dock_detection)) {
-		pr_err(HUB_TAG "Failed to register switch device\n", __func__);
-		return -EBUSY;
-	}
-#endif
-
 	hc = kzalloc(sizeof(struct usb3503_hubctl), GFP_KERNEL);
 	if (!hc) {
 		pr_err(HUB_TAG "private data alloc fail\n");
 		err = -ENOMEM;
 		goto exit;
 	}
+
+#if USB3503_DOCK_SWITCH
+	if (switch_dev_register(&switch_dock_detection)) {
+		pr_err(HUB_TAG "%s : Failed to register switch device\n", __func__);
+		return -EBUSY;
+	}
+#endif
+
+#if USE_WAKELOCK_CONTROL
+	wake_lock_init(&dock_wakelock, WAKE_LOCK_SUSPEND, "dock_wakelock");
+#endif
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err = -ENODEV;
@@ -381,6 +477,17 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		pdata->register_hub_handler((void (*)(void))usb3503_set_mode,
 			(void *)hc);
 #endif
+
+	dock_adc_client = s3c_adc_register((struct platform_device *)client, NULL, NULL, 0);
+	if (IS_ERR(dock_adc_client)) {
+		pr_err("%s  : failed to register dock_adc_client!n",__func__);
+	}
+
+	/*enable usb host peripheral*/
+	hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+	hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+	pm_runtime_get_sync(&s5p_device_ehci.dev);
+	pm_runtime_get_sync(&s5p_device_ohci.dev);
 
 	hc->workqueue = create_singlethread_workqueue(USB3503_I2C_NAME);
 	INIT_WORK(&hc->dock_work, usb3503_dock_worker);
@@ -414,6 +521,9 @@ exit:
 	switch_dev_unregister(&switch_dock_detection);
 #endif
 	cancel_work_sync(&hc->dock_work);
+#if USE_WAKELOCK_CONTROL
+	wake_lock_destroy(&dock_wakelock);
+#endif
 	return err;
 }
 
@@ -421,12 +531,18 @@ static int usb3503_remove(struct i2c_client *client)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
+#if USE_WAKELOCK_CONTROL
+	wake_lock_destroy(&dock_wakelock);
+#endif
+
 	pr_debug(HUB_TAG "%s\n", __func__);
 #if USB3503_DOCK_SWITCH
 	switch_dev_unregister(&switch_dock_detection);
 #endif
 	free_irq(hc->dock_irq, hc->i2c_dev);
 	cancel_work_sync(&hc->dock_work);
+	if (!IS_ERR(dock_adc_client))
+		s3c_adc_release(dock_adc_client);
 	kfree(hc);
 
 	return 0;

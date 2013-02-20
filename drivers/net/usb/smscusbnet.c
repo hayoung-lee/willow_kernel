@@ -88,7 +88,7 @@
 #define TX_PENDING_LEN    30
 /*-------------------------------------------------------------------------*/
 
-//extern void change_dock_switch_state(int conn);
+extern void change_dock_switch_state(int conn);
 
 // randomly generated ethernet address
 static u8	node_id [ETH_ALEN];

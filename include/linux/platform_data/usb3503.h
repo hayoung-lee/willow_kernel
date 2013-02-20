@@ -1,8 +1,14 @@
 #ifndef USB3503_H
 #define USB3503_H
 
-#define USB3503_I2C_CONTROL 0
-#define USB3503_DOCK_SWITCH 0
+#define USB3503_I2C_CONTROL 					0
+#define USB3503_DOCK_SWITCH					1
+#define USE_WAKELOCK_CONTROL 					1
+#define SWICH_STATE_CHANGE_IN_SMSC_DRIVER	1
+#define WILLOW_DOCK_ADC_ID					1
+#define DOCK_ADC_VALUE_MAX 					200
+#define ADC_SAMPLING_NUM						5
+
 #define USB3503_I2C_NAME "usb3503"
 #define HUB_TAG "usb3503: "
 
@@ -58,5 +64,6 @@ struct usb3503_hubctl {
 	int (*port_enable)(int, int);
 #endif
 	struct i2c_client *i2c_dev;
+	int is_dock;
 };
 #endif
