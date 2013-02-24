@@ -218,6 +218,7 @@ extern bool on_stop_process;
 extern bool on_start_process;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 extern unsigned int suspend_status;
+extern unsigned int hdcp_suspend;
 extern int s5p_hpd_get_status(void);
 extern void s5p_tvout_mutex_lock(void);
 extern void s5p_tvout_mutex_unlock(void);

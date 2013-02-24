@@ -918,6 +918,7 @@ check_ri_err:
 
 static void s5p_hdcp_work(void *arg)
 {
+	if (hdcp_suspend) return;
 	s5p_tvout_mutex_lock();
 	if (!hdcp_info.hdcp_enable || s5p_hdmi_ctrl_status() == false ||
 	    !s5p_hdmi_reg_get_hpd_status() || on_stop_process) {

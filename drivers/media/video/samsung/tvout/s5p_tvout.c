@@ -45,6 +45,7 @@ struct work_struct      tvout_resume_work;
 static struct early_suspend    s5ptv_early_suspend;
 static DEFINE_MUTEX(s5p_tvout_mutex);
 unsigned int suspend_status;
+unsigned int hdcp_suspend;
 static void s5p_tvout_early_suspend(struct early_suspend *h);
 static void s5p_tvout_late_resume(struct early_suspend *h);
 #endif
@@ -154,6 +155,7 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 	s5ptv_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 4;
 	register_early_suspend(&s5ptv_early_suspend);
 	suspend_status = 0;
+	hdcp_suspend = 0;
 #endif
 
 #ifdef CONFIG_TV_FB
@@ -207,6 +209,7 @@ static int s5p_tvout_remove(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s5p_tvout_early_suspend(struct early_suspend *h)
 {
+	hdcp_suspend = 1;
 	tvout_dbg("\n");
 	mutex_lock(&s5p_tvout_mutex);
 	s5p_vp_ctrl_suspend();
@@ -221,6 +224,7 @@ static void s5p_tvout_early_suspend(struct early_suspend *h)
 
 static void s5p_tvout_late_resume(struct early_suspend *h)
 {
+	hdcp_suspend = 0;
 	tvout_dbg("\n");
 	mutex_lock(&s5p_tvout_mutex);
 	suspend_status = 0;
