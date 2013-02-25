@@ -20,6 +20,7 @@
 #include "../s5p_tvout_common_lib.h"
 
 #undef tvout_dbg
+
 #ifdef CONFIG_HDCP_DEBUG
 #define tvout_dbg(fmt, ...)					\
 		printk(KERN_INFO "\t\t[HDCP] %s(): " fmt,	\
@@ -75,6 +76,10 @@
 
 
 #define DDC_BUF_SIZE		32
+
+#define HDCP_WORK_RETRY_CNT 30
+static int hdcp_work_count = 0;
+static bool hdcp_reset_sw_called = false;
 
 enum hdcp_event {
 	HDCP_EVENT_STOP			= 1 << 0,
@@ -485,6 +490,7 @@ static void s5p_hdcp_reset_sw(void)
 		s5p_hdmi_reg_intc_enable(HDMI_IRQ_HPD_UNPLUG, 1);
 
 	sw_reset = false;
+	hdcp_reset_sw_called = true;
 }
 
 static void s5p_hdcp_reset_auth(void)
@@ -519,6 +525,11 @@ static void s5p_hdcp_reset_auth(void)
 	/* need some delay (at least 1 frame) */
 	mdelay(16);
 
+	if (hdcp_work_count > HDCP_WORK_RETRY_CNT) {
+		hdcp_work_count = 0;
+		hdcp_reset_sw_called = false;
+	}
+	else
 	s5p_hdcp_reset_sw();
 
 	reg = readb(hdmi_base + S5P_HDMI_STATUS_EN);
@@ -961,6 +972,7 @@ work_err:
 		s5p_tvout_mutex_unlock();
 		return;
 	}
+	hdcp_work_count++;
 	s5p_hdcp_reset_auth();
 	s5p_tvout_mutex_unlock();
 }
@@ -1018,6 +1030,8 @@ irqreturn_t s5p_hdcp_irq_handler(int irq, void *dev_id)
 	if (hdcp_info.hdcp_enable && s5p_hdmi_ctrl_status() == true &&
 	    s5p_hdmi_reg_get_hpd_status() && !on_stop_process) {
 		hdcp_info.event |= event;
+		if (hdcp_reset_sw_called == false)
+			hdcp_work_count = 0;
 		queue_work_on(0, hdcp_wq, &hdcp_info.work);
 	} else {
 		hdcp_info.event		= HDCP_EVENT_STOP;

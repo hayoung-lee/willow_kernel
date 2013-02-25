@@ -136,7 +136,7 @@ static void s5p_hpd_kobject_uevent(void)
 #ifdef CONFIG_HDMI_CONTROLLED_BY_EXT_IC
 			HPDPRINTK("ext_ic power ON\n");
 			hpd_struct.ext_ic_control(true);
-			msleep(20);
+			msleep(50);
 #endif
 #ifdef CONFIG_HDMI_SWITCH_HPD
 			hpd_struct.hpd_switch.state = 0;
