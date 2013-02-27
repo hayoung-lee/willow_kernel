@@ -20,6 +20,8 @@
 static struct s3cfb_lcd ltn101al03 = {
 	.width = 1280,
 	.height = 800,
+	.p_width = 217,
+	.p_height = 136,
 	.bpp = 24,
 	.freq = 60,
 
