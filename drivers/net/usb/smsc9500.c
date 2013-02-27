@@ -3917,7 +3917,7 @@ static struct sk_buff *smsc9500_tx_fixup(struct usbnet *dev, struct sk_buff *skb
 					for(i=1;i<skbFragCnt;i++)
 					{
 						skb_frag_t *frag = &skb_shinfo(skb)->frags[i - 1];
-#if 1//#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,0,31))
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,2,0))
 						void *frag_addr = ((unsigned char *) page_address(frag->page) + frag->page_offset);
 #else
 						void *frag_addr = (void *)skb_frag_address(frag);
