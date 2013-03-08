@@ -29,13 +29,23 @@ static struct wake_lock dock_wakelock;
 
 struct s3c_adc_client *dock_adc_client;
 
-#if (USB3503_DOCK_SWITCH && SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
+#define DOCK_SWITCH_DETACH			0
+#define DOCK_SWITCH_ATTACH			1
+#define DOCK_SWITCH_ATTACH_VALUE		5
+
+#if USB3503_DOCK_SWITCH
 void change_dock_switch_state(int conn)
 {
+	int curstat  = switch_get_state(&switch_dock_detection);
+	if(curstat==DOCK_SWITCH_ATTACH_VALUE) curstat = DOCK_SWITCH_ATTACH;
+	if(conn == curstat){
+		pr_info(HUB_TAG, "[%s] same status!! (%d) \n",__func__,conn);
+		return;
+	}
 	if(conn){
-		switch_set_state(&switch_dock_detection, 5);
-	}else{
-		switch_set_state(&switch_dock_detection, 0);
+		switch_set_state(&switch_dock_detection, DOCK_SWITCH_ATTACH_VALUE);
+	}else if(curstat && !conn){
+		switch_set_state(&switch_dock_detection, DOCK_SWITCH_DETACH);
 	}
 }
 EXPORT_SYMBOL(change_dock_switch_state);
@@ -240,8 +250,8 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 			wake_lock(&dock_wakelock);
 #endif
 
-#if (USB3503_DOCK_SWITCH && !SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
-			switch_set_state(&switch_dock_detection, 5);
+#if USB3503_DOCK_SWITCH
+			change_dock_switch_state(DOCK_SWITCH_ATTACH);
 #endif
 		}else{
 			//others
@@ -257,8 +267,8 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 			wake_unlock(&dock_wakelock);
 #endif
 
-#if (USB3503_DOCK_SWITCH && !SWICH_STATE_CHANGE_IN_SMSC_DRIVER)
-			switch_set_state(&switch_dock_detection, 0);
+#if USB3503_DOCK_SWITCH
+			change_dock_switch_state(DOCK_SWITCH_DETACH);
 #endif
 		}
 	}
