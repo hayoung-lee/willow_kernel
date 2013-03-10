@@ -73,6 +73,10 @@ static int hid_submit_out(struct hid_device *hid);
 static int hid_submit_ctrl(struct hid_device *hid);
 static void hid_cancel_delayed_stuff(struct usbhid_device *usbhid);
 
+#define MAX_DISCONN_CHK_COUNT	10
+int disconnect_error_count = 0;
+extern int usb_remove_device(struct usb_device *udev);
+
 /* Start up the input URB */
 static int hid_start_in(struct hid_device *hid)
 {
@@ -139,6 +143,12 @@ static void hid_reset(struct work_struct *work)
 			hid_to_usb_dev(hid)->bus->bus_name,
 			hid_to_usb_dev(hid)->devpath,
 			usbhid->ifnum, rc);
+
+		if(++disconnect_error_count > MAX_DISCONN_CHK_COUNT){
+			struct usb_device *udev = hid_to_usb_dev(hid);
+			if(udev) usb_remove_device(udev);
+			disconnect_error_count = 0;
+		}
 		/* FALLTHROUGH */
 	case -EHOSTUNREACH:
 	case -ENODEV:
@@ -1251,6 +1261,8 @@ static void usbhid_disconnect(struct usb_interface *intf)
 {
 	struct hid_device *hid = usb_get_intfdata(intf);
 	struct usbhid_device *usbhid;
+
+	disconnect_error_count = 0;
 
 	if (WARN_ON(!hid))
 		return;
