@@ -1792,7 +1792,7 @@ void smscusbnet_disconnect (struct usb_interface *intf)
 	free_netdev(net);
 	usb_put_dev (xdev);
 
-	change_dock_switch_state(0);
+	//change_dock_switch_state(0);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -1991,7 +1991,7 @@ smscusbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	netif_device_attach (net);
 
 	// notify ethernet connection state to android frameworks
-	change_dock_switch_state(1);
+	//change_dock_switch_state(1);
 
 	return 0;
 
@@ -2007,7 +2007,7 @@ out1:
 out:
 	usb_put_dev(xdev);
 
-	change_dock_switch_state(0);
+	//change_dock_switch_state(0);
 
 	return status;
 }

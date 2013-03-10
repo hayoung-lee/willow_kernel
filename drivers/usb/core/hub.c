@@ -30,6 +30,15 @@
 
 #include "usb.h"
 
+#define NOTIFY_LAN9514_DETECT
+
+#ifdef NOTIFY_LAN9514_DETECT
+#define LAN9514_VID 0x0424
+#define LAN9514_PID 0x9514
+extern void change_dock_switch_state(int conn);
+int lan9514_devnum = 0;
+#endif
+
 /* if we are in debug mode, always announce new devices */
 #ifdef DEBUG
 #ifndef CONFIG_USB_ANNOUNCE_NEW_DEVICES
@@ -1680,6 +1689,13 @@ void usb_disconnect(struct usb_device **pdev)
 	usb_remove_ep_devs(&udev->ep0);
 	usb_unlock_device(udev);
 
+#ifdef NOTIFY_LAN9514_DETECT
+	if(udev->devnum==lan9514_devnum){
+		dev_info(&udev->dev,"%s LAN9514 Disconnected !(%d) \n",__func__,udev->devnum);
+		change_dock_switch_state(0);
+	}
+#endif
+
 	/* Unregister the device.  The device driver is responsible
 	 * for de-configuring the device and invoking the remove-device
 	 * notifier chain (used by usbfs and possibly others).
@@ -1919,6 +1935,15 @@ int usb_new_device(struct usb_device *udev)
 	(void) usb_create_ep_devs(&udev->dev, &udev->ep0, udev);
 	usb_mark_last_busy(udev);
 	pm_runtime_put_sync_autosuspend(&udev->dev);
+
+#ifdef NOTIFY_LAN9514_DETECT
+	if(le16_to_cpu(udev->descriptor.idVendor) == LAN9514_VID && le16_to_cpu(udev->descriptor.idProduct == LAN9514_PID)){
+		lan9514_devnum = udev->devnum;
+		dev_info(&udev->dev,"%s LAN9514 Connected @ (%d) \n",__func__,udev->devnum);
+		change_dock_switch_state(1);
+	}
+#endif
+
 	return err;
 
 fail:
