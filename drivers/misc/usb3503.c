@@ -16,10 +16,17 @@
 #include <linux/switch.h>
 #include <linux/wakelock.h>
 #include <plat/adc.h>
+#include <plat/gpio-cfg.h>
 
 #if USB3503_DOCK_SWITCH
 struct switch_dev switch_dock_detection = {
 	.name = "dock",
+};
+#endif
+
+#if DOCK_LINEOUT_JACK_SWITCH
+struct switch_dev switch_dock_lineout_jack_detection = {
+	.name = "usb_audio",
 };
 #endif
 
@@ -223,13 +230,13 @@ int check_dock_adc_value(void)
 	}
 
 	adc = (adc_sum - adc_max - adc_min)/(ADC_SAMPLING_NUM-2);
-	printk(HUB_TAG "[%s] DOCK : ADC average value = 0x%03x (%d) !!\n",__func__, adc, adc);
+	pr_info(HUB_TAG "[%s] DOCK : ADC average value = 0x%03x (%d) !!\n",__func__, adc, adc);
 	return adc;
 }
 
 static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached) {
 	hc->new_dock_status = gpio_get_value(hc->usb_doc_det);
-	//pr_info("[%s] cur : %d, new : %d\n",__func__,hc->cur_dock_status,hc->new_dock_status);
+	pr_debug(HUB_TAG "[%s] cur : %d, new : %d\n",__func__,hc->cur_dock_status,hc->new_dock_status);
 
 	if (force_detached)
 		hc->cur_dock_status = DOCK_STATE_DETACHED;
@@ -270,6 +277,10 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 #if USB3503_DOCK_SWITCH
 			change_dock_switch_state(DOCK_SWITCH_DETACH);
 #endif
+
+#if DOCK_LINEOUT_JACK_SWITCH
+			switch_set_state(&switch_dock_lineout_jack_detection, 0);
+#endif
 		}
 	}
 	else
@@ -291,6 +302,58 @@ static irqreturn_t usb3503_dock_irq_thread(int irq, void *data) {
 
 	disable_irq_nosync(hc->dock_irq);
 	queue_work(hc->workqueue, &hc->dock_work);
+
+	return IRQ_HANDLED;
+}
+
+void check_dock_lineout_jack_status(struct usb3503_hubctl *hc, bool force_check)
+{
+	hc->new_lineout_jack_status = gpio_get_value(hc->lineout_jack_det);
+
+	pr_info(HUB_TAG "[%s] ## cur (%d) new (%d)\n",__func__,hc->cur_lineout_jack_status,hc->new_lineout_jack_status);
+
+	if(!force_check && hc->cur_lineout_jack_status == hc->new_lineout_jack_status){
+		pr_debug("[%s] same status!!!\n",__func__);
+		return;
+	}
+
+	hc->cur_lineout_jack_status = hc->new_lineout_jack_status;
+
+	if(hc->cur_lineout_jack_status == DOCK_STATE_ATTACHED)
+	{
+		pr_debug(HUB_TAG "[%s] LINEOUT JACK DOCK_STATE_ATTACHED @\n",__func__);
+#if DOCK_LINEOUT_JACK_SWITCH
+		//android  : BIT_USB_HEADSET_ANLG (0x1)
+		switch_set_state(&switch_dock_lineout_jack_detection, 0x01);
+#endif
+	}
+	else if(hc->cur_lineout_jack_status == DOCK_STATE_DETACHED)
+	{
+		pr_debug(HUB_TAG "[%s] LINEOUT JACK DOCK_STATE_DETACHED #\n",__func__);
+#if DOCK_LINEOUT_JACK_SWITCH
+		switch_set_state(&switch_dock_lineout_jack_detection, 0);
+#endif
+	}
+	else
+	{
+		pr_err(HUB_TAG "[%s] invalid state !!! \n",__func__);
+	}
+
+}
+
+void dock_lineout_jack_intr_handle(struct work_struct *work)
+{
+	struct usb3503_hubctl *hc = container_of(work, struct usb3503_hubctl, lineout_jack_work);
+	check_dock_lineout_jack_status(hc, 0);
+	enable_irq(hc->lineout_jack_irq);
+}
+
+irqreturn_t dock_lineout_jack_thread(int irq, void *data)
+{
+	struct usb3503_hubctl *hc = (struct usb3503_hubctl *)data;
+
+	disable_irq_nosync(hc->lineout_jack_irq);
+	queue_work(hc->lineout_jack_workqueue, &hc->lineout_jack_work);
 
 	return IRQ_HANDLED;
 }
@@ -444,13 +507,21 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (!hc) {
 		pr_err(HUB_TAG "private data alloc fail\n");
 		err = -ENOMEM;
-		goto exit;
+		goto err_kzalloc;
 	}
 
 #if USB3503_DOCK_SWITCH
-	if (switch_dev_register(&switch_dock_detection)) {
-		pr_err(HUB_TAG "%s : Failed to register switch device\n", __func__);
-		return -EBUSY;
+	err = switch_dev_register(&switch_dock_detection);
+	if (err < 0) {
+		pr_err(HUB_TAG "%s : Failed to register switch device (switch_dock_detection)\n", __func__);
+		goto err_switch_dev_register1;
+	}
+#endif
+
+#if DOCK_LINEOUT_JACK_SWITCH
+	if (switch_dev_register(&switch_dock_lineout_jack_detection)) {
+		pr_err(HUB_TAG "%s : Failed to register switch device (switch_dock_lineout_jack_detection) \n", __func__);
+		goto err_switch_dev_register2;
 	}
 #endif
 
@@ -460,19 +531,23 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err = -ENODEV;
-		goto exit;
+		goto exit1;
 	}
 
 	pdata = client->dev.platform_data;
 	if (pdata == NULL) {
 		pr_err(HUB_TAG "device's platform data is NULL!\n");
 		err = -ENODEV;
-		goto exit;
+		goto exit1;
 	}
 
 	hc->cur_dock_status = DOCK_STATE_UNKNOWN;
 	hc->new_dock_status = DOCK_STATE_UNKNOWN;
 	hc->usb_doc_det = pdata->usb_doc_det;
+
+	hc->cur_lineout_jack_status = DOCK_STATE_UNKNOWN;
+	hc->new_lineout_jack_status = DOCK_STATE_UNKNOWN;
+	hc->lineout_jack_det = GPIO_LINEOUT_DET_N;
 
 	hc->i2c_dev = client;
 	hc->reset_n = pdata->reset_n;
@@ -506,15 +581,40 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (!hc->dock_irq) {
 		pr_err(HUB_TAG "Failed to get USB_DOCK_DET IRQ\n");
 		err = -ENODEV;
-		goto exit;
+		goto err_usb_doc_det;
 	}
 	err = request_irq(hc->dock_irq, usb3503_dock_irq_thread,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING|IRQF_ONESHOT, "USB_DOCK_DET", hc);
 	if (err) {
 		pr_err(HUB_TAG "Failed to allocate an USB_DOCK_DET interrupt(%d)\n",
 				hc->dock_irq);
-		goto exit;
+		goto err_usb_doc_det;
 	}
+	enable_irq_wake(hc->dock_irq);
+
+	hc->lineout_jack_workqueue = create_singlethread_workqueue("lineout_jack_workqueue");
+	INIT_WORK(&hc->lineout_jack_work, dock_lineout_jack_intr_handle);
+	err = gpio_request(hc->lineout_jack_det, "GPIO_LINEOUT_DET_N");
+	if (err < 0) {
+		pr_err(HUB_TAG "gpio_request failed for GPIO_DOCK_DET_N \n");
+		goto err_lineout_jack_det_req;
+	}
+	s3c_gpio_cfgpin(hc->lineout_jack_det, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(hc->lineout_jack_det, S3C_GPIO_PULL_NONE);
+	//pr_info(HUB_TAG "[dock] is %s\n",	previous_dock_lineout_jack_state ? "removed/not connected" : "connected");
+	hc->lineout_jack_irq = gpio_to_irq(hc->lineout_jack_det);
+	if (!hc->lineout_jack_irq) {
+		pr_err(HUB_TAG "Failed to get GPIO_LINEOUT_DET_N IRQ\n");
+		err = -ENODEV;
+		goto err_lineout_jack_det;
+	}
+	err = request_irq(hc->lineout_jack_irq, dock_lineout_jack_thread,
+		IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING|IRQF_ONESHOT, "Dock lineout jack Detected", hc);
+	if (err < 0){
+		pr_err(HUB_TAG "Failed to allocate an GPIO_LINEOUT_DET_N interrupt(%d)\n", hc->lineout_jack_irq);
+		goto err_lineout_jack_det;
+	}
+	enable_irq_wake(hc->lineout_jack_irq);
 
 	i2c_set_clientdata(client, hc);
 
@@ -526,14 +626,27 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	return 0;
 
-exit:
-#if USB3503_DOCK_SWITCH
-	switch_dev_unregister(&switch_dock_detection);
-#endif
+err_lineout_jack_det:
+	gpio_free(hc->lineout_jack_det);
+err_lineout_jack_det_req:
+	cancel_work_sync(&hc->lineout_jack_work);
+err_usb_doc_det:
+	gpio_free(hc->usb_doc_det);
 	cancel_work_sync(&hc->dock_work);
+exit1:
 #if USE_WAKELOCK_CONTROL
 	wake_lock_destroy(&dock_wakelock);
 #endif
+#if DOCK_LINEOUT_JACK_SWITCH
+	switch_dev_unregister(&switch_dock_lineout_jack_detection);
+#endif
+err_switch_dev_register2:
+#if USB3503_DOCK_SWITCH
+	switch_dev_unregister(&switch_dock_detection);
+#endif
+err_switch_dev_register1:
+	kfree(hc);
+err_kzalloc:
 	return err;
 }
 
@@ -549,8 +662,19 @@ static int usb3503_remove(struct i2c_client *client)
 #if USB3503_DOCK_SWITCH
 	switch_dev_unregister(&switch_dock_detection);
 #endif
+
+#if DOCK_LINEOUT_JACK_SWITCH
+	switch_dev_unregister(&switch_dock_lineout_jack_detection);
+#endif
+
+	gpio_free(hc->usb_doc_det);
 	free_irq(hc->dock_irq, hc->i2c_dev);
 	cancel_work_sync(&hc->dock_work);
+
+	gpio_free(hc->lineout_jack_det);
+	free_irq(hc->lineout_jack_irq, hc->i2c_dev);
+	cancel_work_sync(&hc->dock_work);
+
 	if (!IS_ERR(dock_adc_client))
 		s3c_adc_release(dock_adc_client);
 	kfree(hc);

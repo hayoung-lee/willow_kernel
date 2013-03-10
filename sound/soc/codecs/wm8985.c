@@ -32,6 +32,8 @@
 
 #include "wm8985.h"
 
+#define LINEOUT_CONTROL
+
 #define WM8985_NUM_SUPPLIES 4
 static const char *wm8985_supply_names[WM8985_NUM_SUPPLIES] = {
 	"DCVDD",
@@ -310,6 +312,11 @@ static const struct snd_kcontrol_new wm8985_snd_controls[] = {
 	SOC_DOUBLE_R("Speaker Switch", WM8985_LOUT2_SPK_VOLUME_CTRL,
 		WM8985_ROUT2_SPK_VOLUME_CTRL, 6, 1, 1),
 
+#ifdef LINEOUT_CONTROL
+	SOC_DOUBLE_R("Lineout Switch", WM8985_OUT3_MIXER_CTRL,
+		WM8985_OUT4_MONO_MIX_CTRL, 6, 1, 1),
+#endif
+
 	SOC_SINGLE("High Pass Filter Switch", WM8985_ADC_CONTROL, 8, 1, 0),
 	SOC_ENUM("High Pass Filter Mode", filter_mode),
 	SOC_SINGLE("High Pass Filter Cutoff", WM8985_ADC_CONTROL, 4, 7, 0),
@@ -352,12 +359,18 @@ static const struct snd_kcontrol_new left_out_mixer[] = {
 	SOC_DAPM_SINGLE("Line Switch", WM8985_LEFT_MIXER_CTRL, 1, 1, 0),
 	SOC_DAPM_SINGLE("Aux Switch", WM8985_LEFT_MIXER_CTRL, 5, 1, 0),
 	SOC_DAPM_SINGLE("PCM Switch", WM8985_LEFT_MIXER_CTRL, 0, 1, 0),
+#ifdef LINEOUT_CONTROL
+	SOC_DAPM_SINGLE("Lineout PCM Switch", WM8985_POWER_MANAGEMENT_1, 6, 1, 0),
+#endif
 };
 
 static const struct snd_kcontrol_new right_out_mixer[] = {
 	SOC_DAPM_SINGLE("Line Switch", WM8985_RIGHT_MIXER_CTRL, 1, 1, 0),
 	SOC_DAPM_SINGLE("Aux Switch", WM8985_RIGHT_MIXER_CTRL, 5, 1, 0),
 	SOC_DAPM_SINGLE("PCM Switch", WM8985_RIGHT_MIXER_CTRL, 0, 1, 0),
+#ifdef LINEOUT_CONTROL
+	SOC_DAPM_SINGLE("Lineout PCM Switch", WM8985_POWER_MANAGEMENT_1, 7, 1, 0),
+#endif
 };
 
 static const struct snd_kcontrol_new left_input_mixer[] = {
@@ -426,6 +439,13 @@ static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 	SND_SOC_DAPM_PGA("Right Speaker Out", WM8985_POWER_MANAGEMENT_3,
 		5, 0, NULL, 0),
 
+#ifdef LINEOUT_CONTROL
+	SND_SOC_DAPM_PGA("Left Lineout Out", WM8985_POWER_MANAGEMENT_3,
+		7, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("Right Lineout Out", WM8985_POWER_MANAGEMENT_3,
+		8, 0, NULL, 0),
+#endif
+
 	/* we want mic to be turned on always */
 	//SND_SOC_DAPM_MICBIAS("Mic Bias", WM8985_POWER_MANAGEMENT_1, 4, 0),
 
@@ -440,17 +460,26 @@ static const struct snd_soc_dapm_widget wm8985_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HPL"),
 	SND_SOC_DAPM_OUTPUT("HPR"),
 	SND_SOC_DAPM_OUTPUT("SPKL"),
-	SND_SOC_DAPM_OUTPUT("SPKR")
+	SND_SOC_DAPM_OUTPUT("SPKR"),
+#ifdef LINEOUT_CONTROL
+	SND_SOC_DAPM_OUTPUT("LOL"),
+	SND_SOC_DAPM_OUTPUT("LOR")
+#endif
 };
 
 static const struct snd_soc_dapm_route audio_map[] = {
 	{ "Right Output Mixer", "PCM Switch", "Right DAC" },
 	{ "Right Output Mixer", "Aux Switch", "AUXR" },
 	{ "Right Output Mixer", "Line Switch", "Right Boost Mixer" },
-
+#ifdef LINEOUT_CONTROL
+	{ "Right Output Mixer", "Lineout PCM Switch", "Right DAC" },
+#endif
 	{ "Left Output Mixer", "PCM Switch", "Left DAC" },
 	{ "Left Output Mixer", "Aux Switch", "AUXL" },
 	{ "Left Output Mixer", "Line Switch", "Left Boost Mixer" },
+#ifdef LINEOUT_CONTROL
+	{ "Left Output Mixer", "Lineout PCM Switch", "Left DAC" },
+#endif
 
 	{ "Right Headphone Out", NULL, "Right Output Mixer" },
 	{ "HPR", NULL, "Right Headphone Out" },
@@ -463,6 +492,14 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{ "Left Speaker Out", NULL, "Left Output Mixer" },
 	{ "SPKL", NULL, "Left Speaker Out" },
+
+#ifdef LINEOUT_CONTROL
+	{ "Right Lineout Out", NULL, "Right Output Mixer" },
+	{ "LOR", NULL, "Right Lineout Out" },
+
+	{ "Left Lineout Out", NULL, "Left Output Mixer" },
+	{ "LOL", NULL, "Left Lineout Out" },
+#endif
 
 	{ "Right ADC", NULL, "Right Boost Mixer" },
 

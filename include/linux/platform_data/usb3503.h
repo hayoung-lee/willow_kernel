@@ -3,6 +3,7 @@
 
 #define USB3503_I2C_CONTROL 					0
 #define USB3503_DOCK_SWITCH					1
+#define DOCK_LINEOUT_JACK_SWITCH				1
 #define USE_WAKELOCK_CONTROL 					1
 #define SWICH_STATE_CHANGE_IN_SMSC_DRIVER	1
 #define WILLOW_DOCK_ADC_ID					1
@@ -58,6 +59,14 @@ struct usb3503_hubctl {
 	int cur_dock_status;
 	int new_dock_status;
 	unsigned int usb_doc_det;
+
+	struct workqueue_struct * lineout_jack_workqueue;
+	struct work_struct lineout_jack_work;
+	int lineout_jack_irq;
+	int cur_lineout_jack_status;
+	int new_lineout_jack_status;
+	unsigned int lineout_jack_det;
+
 	int (*reset_n)(int);
 #if USB3503_I2C_CONTROL
 	int mode;
