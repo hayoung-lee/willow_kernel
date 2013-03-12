@@ -21,6 +21,17 @@ struct secchunk_info {
 	size_t		size;
 };
 
+struct secmem_fd_info {
+	uint32_t phys_addr;
+	size_t size;
+};
+
+struct secmem_fd_list {
+	struct secmem_fd_list *next;
+	struct secmem_fd_list *prev;
+	struct secmem_fd_info fdinfo;
+};
+
 extern struct miscdevice secmem;
 
 struct secmem_crypto_driver_ftn {
@@ -34,7 +45,7 @@ struct secmem_region {
 	unsigned long	len;
 };
 
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION)
 void secmem_crypto_register(struct secmem_crypto_driver_ftn *ftn);
 void secmem_crypto_deregister(void);
 #else

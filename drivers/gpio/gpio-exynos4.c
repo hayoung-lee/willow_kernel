@@ -45,12 +45,14 @@ s3c_gpio_pull_t s3c_gpio_getpull_exynos4(struct s3c_gpio_chip *chip,
 
 static struct s3c_gpio_cfg gpio_cfg = {
 	.set_config	= s3c_gpio_setcfg_s3c64xx_4bit,
+	.get_config	= s3c_gpio_getcfg_s3c64xx_4bit,
 	.set_pull	= s3c_gpio_setpull_exynos4,
 	.get_pull	= s3c_gpio_getpull_exynos4,
 };
 
 static struct s3c_gpio_cfg gpio_cfg_noint = {
 	.set_config	= s3c_gpio_setcfg_s3c64xx_4bit,
+	.get_config	= s3c_gpio_getcfg_s3c64xx_4bit,
 	.set_pull	= s3c_gpio_setpull_exynos4,
 	.get_pull	= s3c_gpio_getpull_exynos4,
 };

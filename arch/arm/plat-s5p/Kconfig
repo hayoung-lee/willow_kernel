@@ -45,9 +45,8 @@ config S5P_HRT
 
 config S5P_SYSTEM_MMU
 	bool "System MMU for Exynos families"
-	depends on ARCH_EXYNOS4
-	select IOMMU_EXYNOS4_API
-	select IOVMM
+	depends on ARCH_EXYNOS
+	select IOMMU_API
 	help
 	  Say Y here if you want to enable System MMU
 
@@ -74,11 +73,7 @@ config S5P_SYSTEM_MMU_WA5250ERR
 
 	  If unsure, n here.
 
-config IOVMM
-	bool
-	select GENERIC_ALLOCATOR
-
-config IOMMU_EXYNOS4_API
+config IOMMU_API
 	bool
 
 config S3C_DEV_FIMC
@@ -123,6 +118,8 @@ config S5P_DEV_I2C_HDMIPHY
 
 config S5P_DEV_TV
 	bool
+	depends on VIDEO_EXYNOS_TV
+	default y
 	help
 	  Compile in platform device definition for TV interface
 

@@ -280,6 +280,26 @@ static LIST_HEAD(cma_regions);
 #define cma_foreach_region(reg) \
 	list_for_each_entry(reg, &cma_regions, list)
 
+bool cma_is_registered_region(phys_addr_t start, size_t size)
+{
+	struct cma_region *reg;
+
+	//printk("%s %d paddr=0x%x, size=0x%x\n",__func__,__LINE__,start,size);
+	cma_foreach_region(reg) {
+		if ((start >= reg->start) &&
+			((start + size) <= (reg->start + reg->size)))
+			return true;
+	}
+	/* FAKE MEMORY */
+	/*				MFC			FIMC3(cache_maint_phys)  FIMC3(fimc_qbuf_output) FIMC3(cache_maint_phys) */
+	//if(start == 0x655a8000 || start == 0x6679e000 || start == 0x665a0000 || start == 0x667a2000)
+	if(start >= 0x655a8000 && start <= 0x67000000 )
+		return true;
+	else
+		return false;
+
+}
+
 int __must_check cma_region_register(struct cma_region *reg)
 {
 	const char *name, *alloc_name;

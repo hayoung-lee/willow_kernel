@@ -132,11 +132,6 @@ config EXYNOS4_SETUP_DP
 	help
 	  Common setup code for DP.
 
-config EXYNOS_DEV_SYSMMU
-	bool
-	help
-	  Common setup code for SYSTEM MMU in EXYNOS
-
 config EXYNOS_DEV_PD
 	bool
 	select SAMSUNG_PD
@@ -393,6 +388,12 @@ config EXYNOS4X12_1200MHZ_SUPPORT
 	depends on EXYNOS4_CPUFREQ && (CPU_EXYNOS4212 || CPU_EXYNOS4412)
 	help
 	  Max 1.2Ghz support
+
+config EXYNOS4X12_1000MHZ_SUPPORT
+	bool "Max 1000MHz CPUFREQ LEVEL"
+	depends on EXYNOS4_CPUFREQ && (CPU_EXYNOS4412)
+	help
+	  Max 1.0Ghz support
 
 config EXYNOS5250_1400MHZ_SUPPORT
 	bool "Max 1400MHz CPUFREQ LEVEL"

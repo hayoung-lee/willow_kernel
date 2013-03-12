@@ -26,7 +26,7 @@
 #include <mach/map.h>
 #include <mach/regs-sysmmu.h>
 
-#include <plat/s5p-sysmmu.h>
+#include <plat/sysmmu.h>
 
 #define CTRL_ENABLE	0x5
 #define CTRL_BLOCK	0x7
@@ -352,7 +352,7 @@ static bool __sysmmu_disable(struct sysmmu_drvdata *data)
 	if (set_sysmmu_inactive(data)) {
 		__raw_writel(CTRL_DISABLE, data->sfrbase + S5P_MMU_CTRL);
 		if (data->clk)
-		clk_disable(data->clk);
+			clk_disable(data->clk);
 		disabled = true;
 	}
 
@@ -385,7 +385,7 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 		ret = set_sysmmu_active(mmudata);
 		if (!ret && need_sysmmu_initialize(mmudata)) {
 			if (mmudata->clk)
-			clk_enable(mmudata->clk);
+				clk_enable(mmudata->clk);
 
 			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
 

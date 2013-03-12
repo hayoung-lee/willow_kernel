@@ -1709,7 +1709,6 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	struct mfc_pre_cfg *precfg;
 	struct list_head *pos, *nxt;
 	int ret;
-	long mem_ofs;
 
 	ret = mfc_set_decoder(ctx, init_arg->in_codec_type);
 	if (ret < 0) {
@@ -1796,14 +1795,9 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		}
 	}
 
-	/* FIXME: move to pre_seq_start */
-	mem_ofs = mfc_mem_ext_ofs(dec_ctx->streamaddr, dec_ctx->streamsize, PORT_A);
-	if (mem_ofs < 0) {
-		ret = MFC_DEC_INIT_FAIL;
-		goto err_mem_ofs;
-	} else  {
-		mfc_set_stream_info(ctx, mem_ofs >> 11, dec_ctx->streamsize, 0);
-	}
+	/* FIXME: postion */
+	mfc_set_stream_info(ctx, mfc_mem_base_ofs(dec_ctx->streamaddr) >> 11,
+		dec_ctx->streamsize, 0);
 
 	ret = mfc_cmd_seq_start(ctx);
 	if (ret < 0)
@@ -1936,7 +1930,6 @@ err_seq_start:
 	dump_stream(dec_ctx->streamaddr, dec_ctx->streamsize);
 #endif
 
-err_mem_ofs:
 err_pre_seq:
 	mfc_free_buf_type(ctx->id, MBT_DESC);
 
@@ -2054,7 +2047,6 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 	unsigned char *stream_vir;
 	int ret;
 	struct mfc_dec_ctx *dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
-	long mem_ofs;
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	void *ump_handle;
 #endif
@@ -2090,13 +2082,9 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 		dec_ctx->dpbflush = 0;
 	}
 
-	mem_ofs = mfc_mem_ext_ofs(exe_arg->in_strm_buf, exe_arg->in_strm_size,
-			PORT_A);
-	if (mem_ofs < 0)
-		return MFC_DEC_EXE_ERR;
-	else
-		mfc_set_stream_info(ctx, mem_ofs >> 11, exe_arg->in_strm_size,
-			start_ofs);
+	/* FIXME: postion */
+	mfc_set_stream_info(ctx, mfc_mem_base_ofs(exe_arg->in_strm_buf) >> 11,
+		exe_arg->in_strm_size, start_ofs);
 
 	/* lastframe: mfc_dec_cfg */
 	ret = mfc_cmd_frame_start(ctx);
@@ -2312,12 +2300,6 @@ int mfc_exec_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 			offset = CheckMPEG4StartCode(stream_vir+consumed,
 					dec_ctx->streamsize - consumed);
-
-			if (offset == -1) {
-				mfc_warn("No start code in remained bitstream: %d\n", offset);
-				return ret;
-			}
-
 			if (offset > 4)
 				consumed += offset;
 
