@@ -198,7 +198,6 @@ void willow_check_hw_version( void )
 		"WILLOW_HW_MVT",
 		"WILLOW_HW_PP",
 		"WILLOW_HW_MP",
-		"WILLOW_HW_MP2",
 		"WILLOW_HW_UNKNOWN"
 	};
 
@@ -224,10 +223,7 @@ void willow_check_hw_version( void )
 	 * --------------------------------------------------
 	 * MP  |       0      |       1      |       1      | //3
 	 * --------------------------------------------------
-	 * MP2 |       1      |       1      |       1      | //7
-	 * --------------------------------------------------
 	 */
-
 	ADC0_HW = gpio_get_value(GPIO_HW_VERSION_0) << 0; //bit0
 	printk("ADC0_HW[0x%01X]\n", ADC0_HW);
 	ADC1_HW = gpio_get_value(GPIO_HW_VERSION_1) << 1; //bit1
@@ -235,12 +231,7 @@ void willow_check_hw_version( void )
 	ADC2_HW = gpio_get_value(GPIO_HW_VERSION_2) << 2; //bit2
 	printk("ADC2_HW[0x%01X]\n", ADC2_HW);
 
-	if(ADC0_HW && ADC1_HW && ADC2_HW){//MP2
-		g_willow_hw_version = WILLOW_HW_MP2;
-	}else{//OTHERS
-		g_willow_hw_version = ADC2_HW | ADC1_HW | ADC0_HW;
-	}
-
+	g_willow_hw_version = /*ADC2_HW |*/ ADC1_HW | ADC0_HW;
 	printk("g_willow_hw_version[0x%01X]\n", g_willow_hw_version);
 
 	printk("WILLOW HW_VERSION: [%s]\n", str_version[g_willow_hw_version]);
@@ -248,10 +239,15 @@ void willow_check_hw_version( void )
 
 WILLOW_HW_VERSION willow_get_hw_version( void )
 {
-	if(g_willow_hw_version == WILLOW_HW_UNKNOWN){
-		willow_check_hw_version();
-	}
-	return g_willow_hw_version;
+	static int ADC0_HW = 0; // GPL2_2, GPIO_HW_VERSION_0
+	static int ADC1_HW = 0; // GPL2_1, GPIO_HW_VERSION_1
+	static int ADC2_HW = 0; // GPL2_0, GPIO_HW_VERSION_2 //RESERVERD e.g. LCD
+
+	ADC0_HW = gpio_get_value(GPIO_HW_VERSION_0) << 0; //bit0
+	ADC1_HW = gpio_get_value(GPIO_HW_VERSION_1) << 1; //bit1
+	ADC2_HW = gpio_get_value(GPIO_HW_VERSION_2) << 2; //bit2
+
+	return g_willow_hw_version = /*ADC2_HW |*/ ADC1_HW | ADC0_HW;
 }
 EXPORT_SYMBOL(willow_get_hw_version);
 #endif /* CONFIG_MACH_WILLOW */
@@ -3712,7 +3708,7 @@ static void __init willow_machine_init(void)
 	s3c_gpio_setpull(GPIO_USB_BOOT_EN, S3C_GPIO_PULL_NONE);
 
 	willow_config_gpio_table();
-	//willow_check_hw_version();
+	willow_check_hw_version();
 #ifdef CONFIG_BATTERY_MAX17040
 	max8903_gpio_init();
 #endif
@@ -3876,7 +3872,7 @@ static void __init willow_machine_init(void)
 	s3c_sdhci1_set_platdata(&willow_hsmmc1_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC2
-	if(willow_get_hw_version() >= WILLOW_HW_MP)
+	if(willow_get_hw_version() == WILLOW_HW_MP)
 		s3c_sdhci2_set_platdata(&willow_hsmmc2_pdata_MP);
 	else
 		s3c_sdhci2_set_platdata(&willow_hsmmc2_pdata);
