@@ -30,6 +30,7 @@
 
 #include "usb.h"
 
+#ifdef CONFIG_USBHUB_USB3503
 #define NOTIFY_LAN9514_DETECT
 
 #ifdef NOTIFY_LAN9514_DETECT
@@ -37,6 +38,7 @@
 #define LAN9514_PID 0x9514
 extern void change_dock_switch_state(int conn);
 int lan9514_devnum = 0;
+#endif
 #endif
 
 /* if we are in debug mode, always announce new devices */
