@@ -2151,6 +2151,27 @@ static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
   }
 };
 
+static struct sec_jack_buttons_zone sec_jack_buttons_zones_mp2[] = {
+  {
+        /* 20 < adc <= 100 - Media Key */
+        .adc_high = 100,
+        .adc_low = 20,
+        .code = KEY_MEDIA,
+  },
+  {
+        /* 300 < adc <= 400 - Volume Up Key */
+        .adc_high = 400,
+        .adc_low = 300,
+        .code = KEY_VOLUMEUP,
+  },
+  {
+        /* 800 < adc <= 900 - Volume Down Key */
+        .adc_high = 900,
+        .adc_low = 800,
+        .code = KEY_VOLUMEDOWN,
+  }
+};
+
 extern int jack_mgr_get_adc_data(void);
 static int sec_jack_get_adc_value(void)
 {
@@ -2167,8 +2188,8 @@ struct sec_jack_platform_data willow_jack_pdata = {
   .get_adc_value = sec_jack_get_adc_value,
   .zones = sec_jack_zones,
   .num_zones = ARRAY_SIZE(sec_jack_zones),
-  .buttons_zones = sec_jack_buttons_zones,
-  .num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
+//  .buttons_zones = sec_jack_buttons_zones,
+//  .num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
   .det_gpio = GPIO_JACK_DET,
   .send_end_gpio = GPIO_REMOTE_KEY_INT,
   .det_active_high = 1,
@@ -3859,10 +3880,22 @@ static void __init willow_machine_init(void)
 	s3c_gpio_setpull(GPIO_LSENSOR_INT, S3C_GPIO_PULL_UP);
 #endif
 #ifdef CONFIG_JACK_MGR
-	if(willow_get_hw_version() > WILLOW_HW_MVT)
+	struct sec_jack_platform_data *jack_mgr_pdata = willow_device_jack.dev.platform_data;
+	int is_jack_mgr_mp2 = 0;
+	if(willow_get_hw_version() > WILLOW_HW_MVT){
 		s3c_gpio_setpull(GPIO_REMOTE_KEY_INT, S3C_GPIO_PULL_DOWN);
-	else
+		if(willow_get_hw_version() > WILLOW_HW_MP)
+			is_jack_mgr_mp2 = 1;
+	}else{
 		s3c_gpio_setpull(GPIO_REMOTE_KEY_INT, S3C_GPIO_PULL_UP);
+	}
+	if(is_jack_mgr_mp2){
+		jack_mgr_pdata->buttons_zones = sec_jack_buttons_zones_mp2;
+		jack_mgr_pdata->num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones_mp2);
+	}else{
+		jack_mgr_pdata->buttons_zones = sec_jack_buttons_zones;
+		jack_mgr_pdata->num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones);
+	}
 #endif
 
 	samsung_bl_set(&willow_bl_gpio_info, &willow_bl_data);
