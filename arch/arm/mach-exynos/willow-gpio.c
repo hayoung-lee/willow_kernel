@@ -482,6 +482,7 @@ void willow_config_sleep_gpio_table(void)
 				willow_pp_sleep_gpio_table);
 		break;
 	case WILLOW_HW_MP:
+	case WILLOW_HW_MP2:
 	default:
 		config_sleep_gpio_table(ARRAY_SIZE(willow_mp_sleep_gpio_table),
 				willow_mp_sleep_gpio_table);
