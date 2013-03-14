@@ -74,5 +74,6 @@ struct usb3503_hubctl {
 #endif
 	struct i2c_client *i2c_dev;
 	int is_dock;
+	int host_pwr_enabled;
 };
 #endif

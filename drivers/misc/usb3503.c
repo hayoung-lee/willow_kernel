@@ -234,6 +234,24 @@ int check_dock_adc_value(void)
 	return adc;
 }
 
+void usb_host_pwr_enable(struct usb3503_hubctl *hc, int enable){
+
+	if(hc->host_pwr_enabled == enable) return;
+	hc->host_pwr_enabled  = enable;
+
+	if(enable){
+		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+		hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+
+		pm_runtime_get_sync(&s5p_device_ehci.dev);
+		pm_runtime_get_sync(&s5p_device_ohci.dev);
+	}else{
+		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+		pm_runtime_put(&s5p_device_ohci.dev);
+		pm_runtime_put(&s5p_device_ehci.dev);
+	}
+}
+
 static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached) {
 	hc->new_dock_status = gpio_get_value(hc->usb_doc_det);
 	pr_debug(HUB_TAG "[%s] cur : %d, new : %d\n",__func__,hc->cur_dock_status,hc->new_dock_status);
@@ -249,6 +267,7 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 
 	if (hc->cur_dock_status == DOCK_STATE_ATTACHED) {
 		//pr_info(HUB_TAG"[%s] DOCK_STATE_ATTACHED @@@ \n",__func__);
+		usb_host_pwr_enable(hc, 1);
 		int adc =  check_dock_adc_value();
 		if(adc < DOCK_ADC_VALUE_MAX){
 			//dock
@@ -464,10 +483,9 @@ static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
 
 int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-	//struct usb3503_hubctl *hc = i2c_get_clientdata(client);
+	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
-	pm_runtime_put(&s5p_device_ohci.dev);
-	pm_runtime_put(&s5p_device_ehci.dev);
+	usb_host_pwr_enable(hc, 0);
 
 	pr_debug(HUB_TAG "suspended\n");
 
@@ -478,11 +496,10 @@ int usb3503_resume(struct i2c_client *client)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
-	hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
-	hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
-
-	pm_runtime_get_sync(&s5p_device_ehci.dev);
-	pm_runtime_get_sync(&s5p_device_ohci.dev);
+	if(gpio_get_value(hc->usb_doc_det)==DOCK_STATE_ATTACHED){
+		pr_debug(HUB_TAG "[%s] dock is connected. usb_host_pwr_enable(1)!\n",__func__);
+		usb_host_pwr_enable(hc, 1);
+	}
 
 #if USB3503_I2C_CONTROL
 	if (hc->mode == USB3503_MODE_HUB)
@@ -567,12 +584,6 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (IS_ERR(dock_adc_client)) {
 		pr_err("%s  : failed to register dock_adc_client!n",__func__);
 	}
-
-	/*enable usb host peripheral*/
-	hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
-	hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
-	pm_runtime_get_sync(&s5p_device_ehci.dev);
-	pm_runtime_get_sync(&s5p_device_ohci.dev);
 
 	hc->workqueue = create_singlethread_workqueue(USB3503_I2C_NAME);
 	INIT_WORK(&hc->dock_work, usb3503_dock_worker);
