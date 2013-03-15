@@ -240,15 +240,29 @@ void usb_host_pwr_enable(struct usb3503_hubctl *hc, int enable){
 	hc->host_pwr_enabled  = enable;
 
 	if(enable){
-		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
-		hc->reset_n(1); s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
-
+#ifdef CONFIG_USB_EHCI_S5P
+		hc->reset_n(0);
+		s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+		hc->reset_n(1);
+		s5p_ehci_port_control(&s5p_device_ehci, 2, 1);
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
 		pm_runtime_get_sync(&s5p_device_ehci.dev);
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
 		pm_runtime_get_sync(&s5p_device_ohci.dev);
+#endif
 	}else{
-		hc->reset_n(0); s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+#ifdef CONFIG_USB_EHCI_S5P
+		hc->reset_n(0);
+		s5p_ehci_port_control(&s5p_device_ehci, 2, 0);
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
 		pm_runtime_put(&s5p_device_ohci.dev);
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
 		pm_runtime_put(&s5p_device_ehci.dev);
+#endif
 	}
 }
 
