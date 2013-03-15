@@ -5348,4 +5348,3 @@ module_exit(mxt_exit);
 MODULE_DESCRIPTION("Atmel MaXTouch driver");
 MODULE_AUTHOR("ki_won.kim<ki_won.kim@samsung.com>");
 MODULE_LICENSE("GPL");
-

@@ -813,6 +813,4 @@ struct mxt_runmode_registers_t {
 	/* T42 */
 	/* uint8_t t42_maxnumtchs; */
 };
-#endif 
-
-
+#endif
