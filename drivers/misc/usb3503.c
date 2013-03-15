@@ -615,7 +615,6 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				hc->dock_irq);
 		goto err_usb_doc_det;
 	}
-	enable_irq_wake(hc->dock_irq);
 
 	hc->lineout_jack_workqueue = create_singlethread_workqueue("lineout_jack_workqueue");
 	INIT_WORK(&hc->lineout_jack_work, dock_lineout_jack_intr_handle);
@@ -639,7 +638,6 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		pr_err(HUB_TAG "Failed to allocate an GPIO_LINEOUT_DET_N interrupt(%d)\n", hc->lineout_jack_irq);
 		goto err_lineout_jack_det;
 	}
-	enable_irq_wake(hc->lineout_jack_irq);
 
 	i2c_set_clientdata(client, hc);
 
