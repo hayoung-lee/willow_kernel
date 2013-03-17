@@ -262,7 +262,7 @@ static unsigned int exynos4412_int_volt[ASV_GROUP][LV_END] = {
 	{1037500,  987500,  987500, 900000, 900000, 862500, 850000}, /* ASV10 */
 	{1025000,  975000,  975000, 887500, 887500, 850000, 850000}, /* RESERVED */
 };
-
+#endif
 static unsigned int exynos4412_mif_volt_rev2[ASV_GROUP+1][LV_END] = {
 	/*440 Mhz  440 Mhz  293 Mhz  293 Mhz  176 Mhz  146 Mhz  110 Mhz*/ 
 	{1150000, 1150000, 1050000, 1050000, 1000000, 1000000, 1000000}, /* ASV0 */
@@ -1019,9 +1019,9 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data, bool pop)
 	if (cpufreq_register_notifier(&data->exynos_cpufreq_notifier,
 	   CPUFREQ_TRANSITION_NOTIFIER))
 		pr_err("Falied to register cpufreq notifier\n");
-
+#ifndef BUSFREQ_QOS_NONE
 	data->exynos_busqos_notifier.notifier_call = exynos4x12_bus_qos_notifiy;
 	exynos4x12_bus_qos_notifier_init(&data->exynos_busqos_notifier);
-
+#endif
 	return 0;
 }
