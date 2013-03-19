@@ -151,19 +151,19 @@ typedef struct _FTS_CTP_PROJECT_SETTING_T
 u8 g_num_digit_index = 0;
 u8 g_config_data_out = 0;
 
-u8 t0_info_data[2] = {0, 8};
+u8 t0_info_data[2] = {0, 9};
 u8 t7_config_data[4] = {64, 255, 50, 3};
 u8 t8_config_data[10] = {80, 0, 5, 3, 0, 0, 5, 0, 20, 1};
-u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 0, 0, 0, 10, 20, 20, 0, 31, 127, 4, 4, 5, 6, 145, 30, 141, 18, 20, 15, 0, 0, 0, 0};
+u8 t9_config_data[34] = {143, 0, 0, 32, 52, 0, 135, 80, 2, 3, 20, 0, 0, 79, 10, 20, 20, 0, 31, 127, 4, 4, 5, 6, 145, 30, 141, 18, 20, 15, 0, 0, 0, 0};
 u8 t15_config_data[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-u8 t25_config_data[9] = {3, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t25_config_data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t40_config_data[5] = {0, 0, 0, 0, 0};
-u8 t42_config_data[46] = {0, 25, 29, 90, 254, 0, 0, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t42_config_data[46] = {35, 0, 24, 20, 128, 0, 10, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t43_config_data[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t46_config_data[10] = {4, 0, 16, 24, 0, 0, 1, 0, 0, 12};
-u8 t47_config_data[13] = {0, 25, 45, 4, 2, 50, 40, 254, 1, 16, 0, 0, 3};
+u8 t47_config_data[13] = {9, 20, 45, 4, 2, 50, 40, 254, 1, 8, 192, 0, 3};
 u8 t55_config_data[6] = {0, 0, 0, 0, 0, 0};
-u8 t56_config_data[47] = {3, 0, 0, 43, 23, 24, 23, 23, 23, 23, 23, 23, 22, 22, 22, 22, 21, 21, 21, 20, 20, 19, 19, 18, 18, 18, 18, 18, 17, 17, 17, 16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+u8 t56_config_data[47] = {3, 0, 0, 43, 23, 24, 23, 23, 23, 23, 23, 23, 22, 22, 22, 22, 21, 21, 21, 20, 20, 19, 19, 19, 18, 18, 18, 18, 17, 17, 17, 16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t62_config_data[74] = {3, 3, 0, 6, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 5, 0, 10, 5, 5, 135, 25, 50, 52, 25, 54, 6, 6, 4, 54, 0, 0, 0, 0, 0, 135, 120, 2, 1, 0, 0, 10, 20, 20, 4, 4, 5, 6, 145, 30, 141, 18, 20, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 u8 t63_config_data[12] = {0, 6, 20, 215, 15, 97, 162, 3, 28, 255, 100, 0};
 #endif
@@ -763,17 +763,7 @@ int mxt_PROCI_TOUCHSUPPRESSION_T42(struct mxt_data *mxt)
 	
 	memset(&t42_config, 0, sizeof(t42_config));
 
-#if 1 //def FEATURE_TOUCH_PASSIVEPEN
-	if (!g_power_noise && g_passivepen_mode) {
-	//if (g_passivepen_mode) {
-		t42_config.nCTRL=35;
-		i++;
-	}
-	else
-		t42_config_data[i++];	
-#else
 	t42_config.nCTRL=t42_config_data[i++];
-#endif
 	t42_config.nAPPRTHR=t42_config_data[i++];
 	t42_config.nMAXAPPRAREA=t42_config_data[i++];
 	t42_config.nMAXTCHAREA=t42_config_data[i++];
@@ -884,14 +874,13 @@ int mxt_PROCI_STYLUS_T47(struct mxt_data *mxt)
 	//printk("mxt_PROCI_STYLUS_T47 obj_size=%d obj_addr=%d  OBJECT_SIZE=22  OBJECT_ADDRESS=674 \n",obj_size,obj_addr );
 	memset(&t47_config, 0, sizeof(t47_config));
 
-#if 1 //def FEATURE_TOUCH_PASSIVEPEN
-		if (!g_power_noise && g_passivepen_mode) {
-		//if (g_passivepen_mode) {
-			t47_config.nCTRL=9;
+#ifdef FEATURE_TOUCH_NOISE
+		if (g_power_noise) {
+			t47_config.nCTRL=0;
 			i++;
+		} else {
+			t47_config.nCTRL=t47_config_data[i++];
 		}
-		else
-			t42_config_data[i++];	
 #else
 		t47_config.nCTRL=t47_config_data[i++];
 #endif
@@ -1111,24 +1100,32 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	//printk("mxt_PROCG_NOISESUPPRESSION_T62 obj_size=%d obj_addr=%d OBJECT_SIZE=74  OBJECT_ADDRESS=799 \n",obj_size,obj_addr );
 	memset(&t62_config, 0, sizeof(t62_config));
 
+
+#ifdef FEATURE_TOUCH_NOISE
 	if (g_power_noise) {
-		t62_config.nCTRL=39; //t62_config_data[i++];
+		t62_config.nCTRL=39;
 		i++;
-	}
-	else
+	} else {
 		t62_config.nCTRL=t62_config_data[i++];
+	}
+#else
+	t62_config.nCTRL=t62_config_data[i++];
+#endif
 	
 	t62_config.nCALCFG1=t62_config_data[i++];
 	t62_config.nCALCFG2=t62_config_data[i++];
 
+#ifdef FEATURE_TOUCH_NOISE
 	if (g_power_noise) {
-		t62_config.nCALCFG3=7; //t62_config_data[i++];
+		t62_config.nCALCFG3=7;
 		i++;
-	}
-	else
+	} else {
 		t62_config.nCALCFG3=t62_config_data[i++];
-	
-	//t62_config.nCALCFG3=t62_config_data[i++];
+	}
+#else
+	t62_config.nCALCFG3=t62_config_data[i++];
+#endif
+
 	t62_config.nCFG1=t62_config_data[i++];
 	t62_config.nRESERVED1=t62_config_data[i++];
 	t62_config.nRESERVED2=t62_config_data[i++];
@@ -1145,14 +1142,17 @@ int mxt_PROCG_NOISESUPPRESSION_T62(struct mxt_data *mxt)
 	t62_config.nHOPEVALTO=t62_config_data[i++];
 	t62_config.nHOPST=t62_config_data[i++];
 
+#ifdef FEATURE_TOUCH_NOISE
 	if (g_power_noise) {
-		t62_config.nNLGAIN=160; //t62_config_data[i++];
+		t62_config.nNLGAIN=160;
 		i++;
-	}
-	else
+	} else {
 		t62_config.nNLGAIN=t62_config_data[i++];
+	}
+#else
+	t62_config.nNLGAIN=t62_config_data[i++];
+#endif
 
-	//t62_config.nNLGAIN=t62_config_data[i++];
 	t62_config.nMINNLTHR=t62_config_data[i++];
 	t62_config.nINCNLTHR=t62_config_data[i++];
 	t62_config.nADCSPERXTHR=t62_config_data[i++];
@@ -2636,7 +2636,6 @@ static int mxt_internal_resume(struct mxt_data *data)
 #ifdef FEATURE_TOUCH_NOISE		
 		if(g_touch_debug == 1) printk("mxt_internal_resume : g_power_noise (%d)", g_power_noise);
 
-		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
 		mxt_PROCI_STYLUS_T47(copy_data);
 		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);
 		mxt_PROCI_ACTIVESTYLUS_T63(copy_data);
@@ -4460,7 +4459,6 @@ void atm1664_power_noise(bool power_detect)
 	if(g_touch_debug == 1) printk("atm1664_power_noise (%d)\n", g_power_noise);
 
 	if (!g_touch_suspend) {
-		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
 		mxt_PROCI_STYLUS_T47(copy_data);
 		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
 	}
@@ -4496,7 +4494,6 @@ static ssize_t atm1664_passivepen_store(struct device *dev,
 		g_passivepen_mode = 0;		
 	}
 
-	mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
 	mxt_PROCI_STYLUS_T47(copy_data);
 	mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
 
@@ -4985,7 +4982,10 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 #endif
                 goto err_init_drv;
         }
-				
+
+#ifdef FEATURE_TOUCH_NOISE
+	g_power_noise = gpio_get_value(nDC_OK) ? 0 : 1;
+#endif
 
         /* tsp_family_id - 0xA2 : MXT-1446-S series */
         if (data->family_id == 0xA2) {
@@ -5043,7 +5043,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
         }
 	}
 	else {
-		mxt_PROCI_TOUCHSUPPRESSION_T42(copy_data);
 		mxt_PROCI_STYLUS_T47(copy_data);
 		mxt_PROCG_NOISESUPPRESSION_T62(copy_data);	
 	}	
