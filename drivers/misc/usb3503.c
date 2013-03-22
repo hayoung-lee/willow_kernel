@@ -40,13 +40,45 @@ struct s3c_adc_client *dock_adc_client;
 #define DOCK_SWITCH_ATTACH			1
 #define DOCK_SWITCH_ATTACH_VALUE		5
 
+#if HUB_UNIDENTIFIED_RECOVERY
+void usb_host_pwr_enable(struct usb3503_hubctl *hc, int enable, int force_change);
+extern void udc_power_control(int enable);
+extern int ehci_power_control(struct device *dev, int force_enable,const char *buf);
+static atomic_t dock_hub_connected = ATOMIC_INIT(0);
+
+void dock_hub_status(int is_dock)
+{
+	atomic_set(&dock_hub_connected, is_dock);
+}
+int check_dock_hub(void)
+{
+	return atomic_read(&dock_hub_connected);
+}
+static void unidentified_recovery_work_func(struct work_struct *work)
+{
+	struct usb3503_hubctl *hc = container_of(work, struct usb3503_hubctl, recovery_work);
+
+	if(!check_dock_hub())
+	{
+		pr_err(HUB_TAG "Start unidentified_recovery!...\n");
+		udc_power_control(0);
+		ehci_power_control(NULL, 0, NULL);
+		msleep(20);
+		ehci_power_control(NULL, 1, NULL);
+		usb_host_pwr_enable(hc, 1, 1);
+		udc_power_control(1);
+	}
+}
+#endif
+
+
 #if USB3503_DOCK_SWITCH
 void change_dock_switch_state(int conn)
 {
 	int curstat  = switch_get_state(&switch_dock_detection);
 	if(curstat==DOCK_SWITCH_ATTACH_VALUE) curstat = DOCK_SWITCH_ATTACH;
 	if(conn == curstat){
-		pr_info(HUB_TAG, "[%s] same status!! (%d) \n",__func__,conn);
+		pr_info(HUB_TAG "[%s] same status!! (%d) \n",__func__,conn);
 		return;
 	}
 	if(conn){
@@ -234,9 +266,9 @@ int check_dock_adc_value(void)
 	return adc;
 }
 
-void usb_host_pwr_enable(struct usb3503_hubctl *hc, int enable){
+void usb_host_pwr_enable(struct usb3503_hubctl *hc, int enable, int force_change){
 
-	if(hc->host_pwr_enabled == enable) return;
+	if(!force_change && hc->host_pwr_enabled == enable) return;
 	hc->host_pwr_enabled  = enable;
 
 	if(enable){
@@ -281,11 +313,15 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 
 	if (hc->cur_dock_status == DOCK_STATE_ATTACHED) {
 		//pr_info(HUB_TAG"[%s] DOCK_STATE_ATTACHED @@@ \n",__func__);
-		usb_host_pwr_enable(hc, 1);
+		usb_host_pwr_enable(hc, 1, 0);
 		int adc =  check_dock_adc_value();
 		if(adc < DOCK_ADC_VALUE_MAX){
 			//dock
 			hc->is_dock = 1;
+#if HUB_UNIDENTIFIED_RECOVERY
+			schedule_delayed_work(&hc->recovery_work,   msecs_to_jiffies(UNIDENTIFY_CHECK_TIME));
+#endif
+
 #if USE_WAKELOCK_CONTROL
 			wake_lock(&dock_wakelock);
 #endif
@@ -303,6 +339,11 @@ static void usb3503_change_status(struct usb3503_hubctl *hc, int force_detached)
 		//pr_info(HUB_TAG "[%s] STATE_DETACHED ### (%d)\n",__func__,hc->is_dock);
 		if(hc->is_dock == 1){
 			hc->is_dock = 0;
+#if HUB_UNIDENTIFIED_RECOVERY
+			dock_hub_status(0);
+			cancel_delayed_work_sync(&hc->recovery_work);
+#endif
+
 #if USE_WAKELOCK_CONTROL
 			wake_unlock(&dock_wakelock);
 #endif
@@ -499,7 +540,11 @@ int usb3503_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct usb3503_hubctl *hc = i2c_get_clientdata(client);
 
-	usb_host_pwr_enable(hc, 0);
+	usb_host_pwr_enable(hc, 0, 0);
+
+#if HUB_UNIDENTIFIED_RECOVERY
+	cancel_delayed_work_sync(&hc->recovery_work);
+#endif
 
 	pr_debug(HUB_TAG "suspended\n");
 
@@ -512,7 +557,7 @@ int usb3503_resume(struct i2c_client *client)
 
 	if(gpio_get_value(hc->usb_doc_det)==DOCK_STATE_ATTACHED){
 		pr_debug(HUB_TAG "[%s] dock is connected. usb_host_pwr_enable(1)!\n",__func__);
-		usb_host_pwr_enable(hc, 1);
+		usb_host_pwr_enable(hc, 1, 0);
 	}
 
 #if USB3503_I2C_CONTROL
@@ -599,6 +644,10 @@ int usb3503_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		pr_err("%s  : failed to register dock_adc_client!n",__func__);
 	}
 
+#if HUB_UNIDENTIFIED_RECOVERY
+	INIT_DELAYED_WORK(&hc->recovery_work, unidentified_recovery_work_func);
+#endif
+
 	hc->workqueue = create_singlethread_workqueue(USB3503_I2C_NAME);
 	INIT_WORK(&hc->dock_work, usb3503_dock_worker);
 
@@ -656,6 +705,9 @@ err_lineout_jack_det_req:
 err_usb_doc_det:
 	gpio_free(hc->usb_doc_det);
 	cancel_work_sync(&hc->dock_work);
+#if HUB_UNIDENTIFIED_RECOVERY
+	cancel_delayed_work_sync(&hc->recovery_work);
+#endif
 exit1:
 #if USE_WAKELOCK_CONTROL
 	wake_lock_destroy(&dock_wakelock);
@@ -697,6 +749,10 @@ static int usb3503_remove(struct i2c_client *client)
 	gpio_free(hc->lineout_jack_det);
 	free_irq(hc->lineout_jack_irq, hc->i2c_dev);
 	cancel_work_sync(&hc->dock_work);
+
+#if HUB_UNIDENTIFIED_RECOVERY
+	cancel_delayed_work_sync(&hc->recovery_work);
+#endif
 
 	if (!IS_ERR(dock_adc_client))
 		s3c_adc_release(dock_adc_client);

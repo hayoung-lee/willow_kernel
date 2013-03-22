@@ -9,6 +9,8 @@
 #define WILLOW_DOCK_ADC_ID					1
 #define DOCK_ADC_VALUE_MAX 					200
 #define ADC_SAMPLING_NUM						5
+#define HUB_UNIDENTIFIED_RECOVERY				1
+#define UNIDENTIFY_CHECK_TIME					1500
 
 #define USB3503_I2C_NAME "usb3503"
 #define HUB_TAG "usb3503: "
@@ -66,6 +68,8 @@ struct usb3503_hubctl {
 	int cur_lineout_jack_status;
 	int new_lineout_jack_status;
 	unsigned int lineout_jack_det;
+
+	struct delayed_work recovery_work;
 
 	int (*reset_n)(int);
 #if USB3503_I2C_CONTROL

@@ -318,6 +318,19 @@ static int udc_enable(struct s3c_udc *dev)
 	return 0;
 }
 
+void udc_power_control(int enable){
+	struct s3c_udc *dev = the_controller;
+	if(!dev) {
+		printk(KERN_ERR "Error! s3c_udc is not valid!!\n");
+		return;
+	}
+	if(enable)
+		udc_enable(dev);
+	else
+		udc_disable(dev);
+}
+EXPORT_SYMBOL(udc_power_control);
+
 int s3c_vbus_enable(struct usb_gadget *gadget, int is_active)
 {
 	unsigned long flags;

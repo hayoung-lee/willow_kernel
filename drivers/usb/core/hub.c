@@ -37,6 +37,7 @@
 #define LAN9514_VID 0x0424
 #define LAN9514_PID 0x9514
 extern void change_dock_switch_state(int conn);
+extern void dock_hub_status(int is_dock);
 int lan9514_devnum = 0;
 #endif
 #endif
@@ -1694,6 +1695,7 @@ void usb_disconnect(struct usb_device **pdev)
 #ifdef NOTIFY_LAN9514_DETECT
 	if(udev->devnum==lan9514_devnum){
 		dev_info(&udev->dev,"%s LAN9514 Disconnected !(%d) \n",__func__,udev->devnum);
+		dock_hub_status(0);
 		change_dock_switch_state(0);
 	}
 #endif
@@ -1942,6 +1944,7 @@ int usb_new_device(struct usb_device *udev)
 	if(le16_to_cpu(udev->descriptor.idVendor) == LAN9514_VID && le16_to_cpu(udev->descriptor.idProduct == LAN9514_PID)){
 		lan9514_devnum = udev->devnum;
 		dev_info(&udev->dev,"%s LAN9514 Connected @ (%d) \n",__func__,udev->devnum);
+		dock_hub_status(1);
 		change_dock_switch_state(1);
 	}
 #endif
