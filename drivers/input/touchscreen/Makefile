@@ -66,4 +66,12 @@ obj-$(CONFIG_TOUCHSCREEN_W90X900)	+= w90p910_ts.o
 obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_FOCALTECH_I2C) += ft5x06_ts.o
-obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S) += 1664s_driver.o
+ifeq ($(CONFIG_TOUCHSCREEN_ATMEL_MXT1664S),y)
+
+ifeq ($(CONFIG_MXT1664S_V13),y)
+obj-y += 1664s_driver_v13.o
+else
+obj-y += 1664s_driver.o
+endif
+
+endif
