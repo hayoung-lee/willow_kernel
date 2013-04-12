@@ -146,7 +146,7 @@ u32 bulkin_delay=DEFAULT_BULK_IN_DELAY;
 #endif
 MODULE_PARM_DESC(bulkin_delay,"16 bit value in units of 16ns to delay UTX sending data");
 
-int TurboMode=TRUE;
+int TurboMode=FALSE;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
 	module_param(TurboMode,bool, 0);
 #else

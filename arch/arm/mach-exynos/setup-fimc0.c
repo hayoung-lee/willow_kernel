@@ -45,6 +45,8 @@ void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(2));
+#endif
+#if 0 //EXYNOS4212_GPM0(3) is used for wlan enable
 		/* CAM B port(b0011) : PCLK, DATA[0-6] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
 		/* CAM B port(b0011) : FIELD, DATA[7]*/
