@@ -106,11 +106,11 @@ static int operational_mode = 0;
 module_param(operational_mode,int, 0);
 MODULE_PARM_DESC(operational_mode,"Enable operational mode");
 
-static unsigned long rx_queue_size = 60UL;
+static unsigned long rx_queue_size = 4UL;
 module_param(rx_queue_size, ulong, 0);
 MODULE_PARM_DESC(rx_queue_size,"Specifies the size of the rx queue lenght");
 
-static unsigned long tx_queue_size = 60UL;
+static unsigned long tx_queue_size = 4UL;
 module_param(tx_queue_size, ulong, 0);
 MODULE_PARM_DESC(tx_queue_size,"Specifies the size of the tx queue lenght");
 
