@@ -1974,6 +1974,10 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 	case V4L2_CID_CAMERA_CAPTURE_STATUS:
 		willow_capture_status=c->value;
  		printk("[FIMC] V4L2_CID_CAMERA_CAPTURE_STATUS =%d \n", c->value);
+#if defined(CONFIG_VIDEO_MT9M113)
+		if (willow_capture_status == 0)
+			ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
+#endif
 		ret = 0;
 		break;
 		
@@ -2307,15 +2311,11 @@ int fimc_streamon_capture(void *fh)
 #endif
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
-#if 0
-#if 1
-				if(willow_capture_status==0)
-					ret=v4l2_subdev_call(cam->sd, video, s_stream, 1);  //preview
-				else if(willow_capture_status==1)
-							ret=v4l2_subdev_call(cam->sd, video, s_stream, 3);  //Snapshot
-#else
+#if defined(CONFIG_VIDEO_MT9M113)
+				if (willow_capture_status == 0)
 				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
-#endif
+				else
+				ret = v4l2_subdev_call(cam->sd, video, s_stream, 3);
 #endif
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",

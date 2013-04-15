@@ -1,20 +1,11 @@
 /* linux/drivers/media/video/mt9m113.h
  *
- * Copyright (c) 2010 Samsung Electronics Co., Ltd.
- *	http://www.samsung.com/
- *
- * Driver for MT9M113 (SXGA camera) from Samsung Electronics
- * 1/6" 1.3Mp CMOS Image Sensor SoC with an Embedded Image Processor
- * supporting MIPI CSI-2
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
 
-#define MT9M113_COMPLETE
-#undef MT9M113_COMPLETE
-#ifndef __MT9M113_H__
+#ifndef MT9M113_H
 #define MT9M113_H
 
 #define MT9M113_DRIVER_NAME	"MT9M113"
@@ -26,7 +17,7 @@ enum mt9m113_runmode {
 	MT9M113_RUNMODE_IDLE,
 	MT9M113_RUNMODE_RUNNING,
 };
-#if 0
+
 struct mt9m113_state {
 	struct v4l2_subdev sd;
 	/*
@@ -47,13 +38,12 @@ struct mt9m113_state {
 
 	int check_dataline;
 	int set_vhflip;
-	int revision;
 };
 
 static inline struct mt9m113_state *to_state(struct v4l2_subdev *sd) {
 	return container_of(sd, struct mt9m113_state, sd);
 }
-#endif 
+
 struct mt9m113_reg {
 	unsigned short waddr;
 	unsigned short wdata;
@@ -65,95 +55,6 @@ struct mt9m113_tbl {
 	int size;
 };
 
-struct mt9m113_reg set_resol_640x480[] =
-{
-	
-{ 0x098C, 0x2703,0},// output a
-{ 0x0990, 0x0280,0},////640 w
-{  0x098C, 0x2705,0},// output a
- { 0x0990, 0x01E0,0},//// 480 w
-
-{  0x098C, 0x2739,0},// crop x0 a
-{  0x0990, 0x0000,0},//
-{  0x098C, 0x273B,0},// crop x1 a
-{  0x0990, 0x027F,0},//
-{  0x098C, 0x273D,0},// crop y0 a
-{  0x0990, 0x0000,0},//
-{  0x098C, 0x273F,0},//crop y1 a
-{  0x0990, 0x01DF,0},//
-};
-
-struct mt9m113_reg set_resol_1280x960[]={
-	
-{   0x098C, 0x2703,0},// output a
-{   0x0990, 1280,0},//
-{   0x098C, 0x2705,0},// output a
-{   0x0990, 960,0},//
-
-{   0x098C, 0x2739,0},// crop x0 a
-{   0x0990, 0x0000,0},//
-{   0x098C, 0x273B,0},// crop x1 a
-{   0x0990, 1280-1,0},
-{   0x098C, 0x273D,0},// crop y0 a
-{   0x0990, 0x0000,0},//
-{   0x098C, 0x273F,0},//crop y1 a
-{   0x0990, 960-1,0},
-};
-
-struct mt9m113_reg set_cap_resol_640x480[] =
-{
-	
-{ 0x098C, 0x2703,0},// output a
-{ 0x0990, 0x0280,0},////640 w
-{  0x098C, 0x2705,0},// output a
- { 0x0990, 0x01E0,0},//// 480 w
-
-{ 0x098C, 0x2747, 0 }, //	MCU_ADDRESS	[MODE_CROP_X0_B	[=	0]]
-{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
-{ 0x098C, 0x2749, 0 }, //	MCU_ADDRESS	[MODE_CROP_X1_B	[=	1279]]
-{ 0x0990, 640-1, 0 }, //	MCU_DATA_0
-
-{ 0x098C, 0x274B, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y0_B	[=	22]]
-{ 0x0990, 0x0016, 0 }, //	MCU_DATA_0
-{ 0x098C, 0x274D, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y1_B	[=	1001]]
-{ 0x0990, 480-1, 0 }, //	MCU_DATA_0
-
-};
-
-struct mt9m113_reg set_cap_resol_1280x960[]={
-	
-{   0x098C, 0x2703,0},// output a
-{   0x0990, 1280,0},//
-{   0x098C, 0x2705,0},// output a
-{   0x0990, 960,0},//
-
-{ 0x098C, 0x2747, 0 }, //	MCU_ADDRESS	[MODE_CROP_X0_B	[=	0]]
-{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
-{ 0x098C, 0x2749, 0 }, //	MCU_ADDRESS	[MODE_CROP_X1_B	[=	1279]]
-{ 0x0990, 0x04FF, 0 }, //	MCU_DATA_0
-
-{ 0x098C, 0x274B, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y0_B	[=	22]]
-{ 0x0990, 0x0016, 0 }, //	MCU_DATA_0
-{ 0x098C, 0x274D, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y1_B	[=	1001]]
-{ 0x0990, 0x03E9, 0 }, //	MCU_DATA_0
-
-};
-
-
-struct mt9m113_reg Refresh[]={
-
-	//enter refresh mode
-
-{   0x098C,0xA103 ,0},//
-
-{   0x0990,0x0006 ,300},//
-
-{   0x098C,0xA103 ,0},//
-
-{   0x0990,0x0005 ,300},//
-
-};
-	
 struct mt9m113_reg mt9m113_init_regs[] =
 {
 	{ 0x001C, 0x0001, 0 }, //	MCU_BOOT_MODE
@@ -161,7 +62,6 @@ struct mt9m113_reg mt9m113_init_regs[] =
 	{ 0x001A, 0x0011, 0 }, //	RESET_AND_MISC_CONTROL
 	{ 0x001A, 0x0010, 0 }, //	RESET_AND_MISC_CONTROL
 	{ 0x0016, 0x00FF, 0 }, //	CLOCKS_CONTROL
-//	{ 0x0016, 0x0400, 0 }, //	CLOCKS_CONTROL
 	{ 0x0018, 0x0028, 0 }, //	STANDBY_CONTROL
 	{ 0x0014, 0x2145, 0 }, //	PLL_CONTROL
 	{ 0x0010, 0x0114, 0 }, //	PLL_DIVIDERS
@@ -171,21 +71,16 @@ struct mt9m113_reg mt9m113_init_regs[] =
 	{ 0x0014, 0x3447, 10 }, //	PLL_CONTROL
 	{ 0x0014, 0x3047, 0 }, //	PLL_CONTROL
 	{ 0x0014, 0x3046, 0 }, //	PLL_CONTROL
-
-   { 0x001E, 0x0777, 0 }, //   SYSCTL Register
-
+	{ 0x001E, 0x0777, 0 }, //   SYSCTL Register
 	{ 0x321C, 0x0003, 0 }, //	By Pass TxFIFO = 3
-
 	{ 0x098C, 0x2703, 0 }, //	MCU_ADDRESS	[MODE_OUTPUT_WIDTH_A	[=	640]]
 	{ 0x0990, 0x0280, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x2705, 0 }, //	MCU_ADDRESS	[MODE_OUTPUT_HEIGHT_A	[=	480]]
 	{ 0x0990, 0x01E0, 0 }, //	MCU_DATA_0
-	
 	{ 0x098C, 0x2707, 0 }, //	MCU_ADDRESS	[MODE_OUTPUT_WIDTH_B	[=	1280]]
 	{ 0x0990, 0x0500, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x2709, 0 }, //	MCU_ADDRESS	[MODE_OUTPUT_HEIGHT_B	[=	960]]
 	{ 0x0990, 0x03C0, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0x270D, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_ROW_START_A	[=	0]]
 	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x270F, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_COL_START_A	[=	0]]
@@ -204,10 +99,8 @@ struct mt9m113_reg mt9m113_init_regs[] =
 	{ 0x0990, 0x01F1, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x271D, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_FINE_IT_MAX_MARGIN_A	[=	319]]
 	{ 0x0990, 0x013F, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0x271F, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_FRAME_LENGTH_A	[=	872]]
 	{ 0x0990, 0x0368, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0x2721, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_LINE_LENGTH_PCK_A	[=	1228]]
 	{ 0x0990, 0x04CC, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x2723, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_ROW_START_B	[=	4]]
@@ -232,32 +125,22 @@ struct mt9m113_reg mt9m113_init_regs[] =
 	{ 0x0990, 0x0461, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x2737, 0 }, //	MCU_ADDRESS	[MODE_SENSOR_LINE_LENGTH_PCK_B	[=	1826]]
 	{ 0x0990, 0x0722, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0x2739, 0 }, //	MCU_ADDRESS	[MODE_CROP_X0_A	[=	0]]
 	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x273B, 0 }, //	MCU_ADDRESS	[MODE_CROP_X1_A	[=	639]]
 	{ 0x0990, 0x027F, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0x273D, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y0_A	[=	0]]
 	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x273F, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y1_A	[=	479]]
 	{ 0x0990, 0x01DF, 0 }, //	MCU_DATA_0
-	
 	{ 0x098C, 0x2747, 0 }, //	MCU_ADDRESS	[MODE_CROP_X0_B	[=	0]]
 	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x2749, 0 }, //	MCU_ADDRESS	[MODE_CROP_X1_B	[=	1279]]
 	{ 0x0990, 0x04FF, 0 }, //	MCU_DATA_0
-#if 1
-	{ 0x098C, 0x274B, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y0_B	[=	22]]
-	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
-	{ 0x098C, 0x274D, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y1_B	[=	1001]]
-	{ 0x0990, 960-1, 0 }, //	MCU_DATA_0
-#else
 	{ 0x098C, 0x274B, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y0_B	[=	22]]
 	{ 0x0990, 0x0016, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0x274D, 0 }, //	MCU_ADDRESS	[MODE_CROP_Y1_B	[=	1001]]
 	{ 0x0990, 0x03E9, 0 }, //	MCU_DATA_0
-#endif	
 	{ 0x098C, 0x222D, 0 }, //	MCU_ADDRESS	[AE_R9_STEP	[=	204]]
 	{ 0x0990, 0x00CC, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0xA404, 0 }, //	MCU_ADDRESS	[FD_MODE	[=	16]]
@@ -282,10 +165,8 @@ struct mt9m113_reg mt9m113_init_regs[] =
 	{ 0x0990, 0x0002, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0xA40E, 0 }, //	MCU_ADDRESS	[FD_STAT_MAX	[=	3]]
 	{ 0x0990, 0x0003, 0 }, //	MCU_DATA_0
-
 	{ 0x098C, 0xA410, 0 }, //	MCU_ADDRESS	[FD_MIN_AMPLITUDE	[=	10]]
 	{ 0x0990, 0x000A, 0 }, //	MCU_DATA_0
-
 	{ 0x3658, 0x0210, 0 }, //	P_RD_P0Q0
 	{ 0x365A, 0x98AD, 0 }, //	P_RD_P0Q1
 	{ 0x365C, 0x07F1, 0 }, //	P_RD_P0Q2
@@ -621,7 +502,7 @@ struct mt9m113_reg mt9m113_init_regs[] =
 
 struct mt9m113_reg const mt9m113_preview_regs[] =
 {
- 	{ 0x098C, 0xA115, 0 }, //	MCU_ADDRESS	[SEQ_CAP_MODE]
+	{ 0x098C, 0xA115, 0 }, //	MCU_ADDRESS	[SEQ_CAP_MODE]
 	{ 0x0990, 0x0000, 0 }, //	MCU_DATA_0
 	{ 0x098C, 0xA103, 0 }, //	MCU_ADDRESS	[SEQ_CMD]
 	{ 0x0990, 0x0001, 0 }, //	MCU_DATA_0
@@ -865,5 +746,4 @@ unsigned short const mt9m113_brightness[9][2] =
 	{ 0x0084, 0x0000 }, // EV_PLUS_4
 };
 
-#endif
-
+#endif /* MT9M113_H */
