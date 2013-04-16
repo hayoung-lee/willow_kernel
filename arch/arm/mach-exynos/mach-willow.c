@@ -416,13 +416,8 @@ static int mt9m113_power_en(int onoff)
 	int err;
 	/* Camera A */
 	// Vdd_cam_io 1.8 vdd_cam 2.8v
-	struct regulator *camera_vio = regulator_get(NULL, "vdd_cam");    
-
-#if defined(FEATURE_TW_CAMERA_LDO_CHAGNE)
-	struct regulator *camera_vdd = regulator_get(NULL, "vdd_ldo21");
-#else
-	struct regulator *camera_vdd = regulator_get(NULL, "vdd_cam_io");
-#endif
+	struct regulator *camera_vio = regulator_get(NULL, "vdd_cam_io");
+	struct regulator *camera_vdd = regulator_get(NULL, "vdd_cam");
 	
 	err = gpio_request(EXYNOS4212_GPM1(4), "GPM1_4"); //reset
 	if (err)
@@ -446,9 +441,9 @@ static int mt9m113_power_en(int onoff)
 		mdelay(10);		
 		gpio_direction_output(EXYNOS4212_GPM1(5), 0); // stnby
 		
-		regulator_enable(camera_vio);
-		//mdelay(50);
 		regulator_enable(camera_vdd);
+		mdelay(50);
+		regulator_enable(camera_vio);
 		mdelay(10);
 		
 		//gpio_direction_output(EXYNOS4212_GPM1(5), 1); // stnby
@@ -1727,9 +1722,17 @@ static struct regulator_init_data __initdata max77686_ldo17_data = {
 	.constraints	= {
 		.name		= "vdd_cam range",
 		.min_uV		= 2800000,
+#ifdef CONFIG_VIDEO_MT9M113
+		.max_uV		= 2800000,
+#else
 		.max_uV		= 2900000,
+#endif
 		.apply_uV	= 1,
+#ifdef CONFIG_VIDEO_MT9M113
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+#else
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+#endif
 		.state_mem	= {
 			.disabled	= 1,
 			.enabled	= 0,
@@ -3819,7 +3822,7 @@ static void __init willow_machine_init(void)
 
 #ifdef CONFIG_VIDEO_MT9M113
 	mt9m113_gpio_init();
-#elif CONFIG_VIDEO_AS0260
+#elif defined(CONFIG_VIDEO_AS0260)
 	as0260_i2c_gpio_init();
 #endif
 
