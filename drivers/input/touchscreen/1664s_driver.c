@@ -5244,7 +5244,9 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
                         dev_attr_find_delta_channel.attr.name);
 #endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
-        data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+        //data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	// Touch should be resumed before LCD resume.
+        data->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
         data->early_suspend.suspend = mxt_early_suspend;
         data->early_suspend.resume = mxt_late_resume;
         register_early_suspend(&data->early_suspend);
